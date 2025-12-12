@@ -1,0 +1,123 @@
+Academy Management System — Complete Page-by-Page Report (End-to-End)
+This document explains every page/screen included in the Academy Management Application and what each page is used for. Categorized by user roles: Admin, Branch Manager, Receptionist, Trainer, Parent.
+
+1. Web Portal (Admin / Branch Manager / Receptionist)
+The web portal is used for backend management: students, attendance, fees, trainers, branches, reports.
+
+1.1 Login Page
+Purpose: Secure login for all users (admin/manager/receptionist/trainer/parent).
+Enter email & password
+Forgot password
+Branch auto-detect after login
+
+1.2 Dashboard Page
+Purpose: Overview of daily academy operations. Shows:
+Total students
+Today’s attendance (present/absent)
+Fees collected today
+Pending dues
+Today’s classes
+Trainer check-ins
+Each widget is clickable to view more details.
+
+2. Student Management Pages
+2.1 Student List Page
+Purpose: View all students in a branch.
+Search
+Filters (program, status, batch)
+Quick actions: View, Edit, Collect Fees
+2.2 Add Student Page
+Purpose: Register a new student.
+Basic info
+Program selection
+Batch selection
+Fee plan
+2.3 Student Profile Page
+Purpose: Full details about a student. Contains:
+Personal info
+Program & batch
+Attendance overview
+Payment history
+Invoices
+Notes
+2.4 Student Attendance History Page
+Purpose: Shows month-wise attendance calendar for a student.
+
+3. Program & Batch Management
+3.1 Program List Page
+Purpose: View all programs (Karate, Dance, Yoga, Arts).
+3.2 Batch / Class List Page
+Purpose: View all classes/timings for each program.
+Batch name
+Days
+Trainer assigned
+Capacity
+3.3 Add / Edit Batch Page
+Purpose: Create or modify class schedules.
+
+4. Attendance Module Pages
+4.1 Attendance Dashboard Page
+Purpose: Overview of today’s attendance for all classes.
+4.2 Class Attendance Page
+Purpose: Mark attendance for a specific class.
+Present
+Absent
+Leave
+4.3 Attendance Calendar Page
+Purpose: Month-wise attendance overview per class.
+4.4 QR Scan Attendance Page
+Purpose: For scanning QR cards of students.
+
+5. Fees, Billing & Receipts Pages
+5.1 Fees Due List Page
+Purpose: Shows all students with pending fees.
+Sort by oldest due
+5.2 Collect Fees Page
+Purpose: Make a payment for a student.
+Invoice details
+Amount to collect
+Mode of payment
+5.3 Invoice List Page
+Purpose: Shows all generated invoices.
+5.4 Payment History Page
+Purpose: View all payments received.
+5.5 Receipt Download Page
+Purpose: Download PDF receipts.
+
+6. Trainer Management & Tracking Pages
+6.1 Trainer List Page
+Purpose: View all trainers.
+6.2 Add Trainer Page
+Purpose: Register a new trainer.
+6.3 Trainer Profile Page
+Purpose: Shows all details about the trainer.
+Assigned batches
+Check-in history
+Weekly school visits
+6.4 Weekly Trainer Schedule Page
+Purpose: Shows the school/class visits for trainers.
+6.5 Trainer Check-in Logs Page
+Purpose: Shows GPS check-in records.
+
+7. Branch Management Pages
+7.1 Branch List Page
+Purpose: View all branches.
+7.2 Branch Dashboard Page
+Purpose: View branch-level data:
+Students
+Attendance
+Fees collected
+Trainer visits
+7.3 Branch Settings Page
+Purpose: Configure branch details.
+
+8. Reporting & Analytics Pages
+8.1 Attendance Reports Page
+Purpose: Generate class-wise and program-wise reports.
+8.2 Fees Reports Page
+Purpose: Revenue, dues, monthly collections.
+8.3 Trainer Performance Report Page
+Purpose: Trainer activities, punctuality, visits.
+8.4 Growth Report Page
+Purpose: Student enrollment trends.
+
