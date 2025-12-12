@@ -6,12 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Loader2, ChevronRight, CheckCircle, CreditCard } from "lucide-react";
+import { Loader2, ChevronRight, CheckCircle, CreditCard, Download, Printer } from "lucide-react";
 import { PROGRAMS, BATCHES } from "@/lib/mockData";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function AddStudent() {
   const [, setLocation] = useLocation();
@@ -63,6 +62,17 @@ export default function AddStudent() {
   const handleClose = () => {
     setShowIdCard(false);
     setLocation("/students");
+  };
+
+  const handleDownloadId = () => {
+    toast({
+      title: "Downloading ID Card...",
+      description: "PDF generation started.",
+    });
+    // Simulate download delay then print
+    setTimeout(() => {
+        window.print();
+    }, 500);
   };
 
   return (
@@ -188,13 +198,13 @@ export default function AddStudent() {
                 Registration Successful
               </DialogTitle>
             </DialogHeader>
-            <div className="flex flex-col items-center space-y-4 py-4">
-              <p className="text-sm text-muted-foreground text-center">
+            <div className="flex flex-col items-center space-y-4 py-4 print:py-0">
+              <p className="text-sm text-muted-foreground text-center print:hidden">
                 Digital ID Card has been generated. <br/>Use this for attendance scanning.
               </p>
               
-              {/* ID Card Mockup */}
-              <div className="w-full max-w-sm bg-gradient-to-br from-primary to-primary/80 text-white rounded-xl shadow-lg overflow-hidden relative">
+              {/* ID Card Mockup - Added print-specific styles */}
+              <div id="id-card-print-area" className="w-full max-w-sm bg-gradient-to-br from-primary to-primary/80 text-white rounded-xl shadow-lg overflow-hidden relative print:shadow-none print:w-[350px] print:h-[220px] print:fixed print:top-0 print:left-0 print:m-4">
                 <div className="absolute top-0 right-0 p-4 opacity-20">
                   <CreditCard className="h-24 w-24" />
                 </div>
@@ -235,8 +245,12 @@ export default function AddStudent() {
               </div>
 
             </div>
-            <DialogFooter className="sm:justify-center">
-              <Button type="button" className="w-full" onClick={handleClose}>
+            <DialogFooter className="sm:justify-between sm:space-x-2 gap-2 print:hidden">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={handleDownloadId}>
+                <Download className="mr-2 h-4 w-4" />
+                Download / Print
+              </Button>
+              <Button type="button" className="w-full sm:w-auto" onClick={handleClose}>
                 Done & Go to List
               </Button>
             </DialogFooter>

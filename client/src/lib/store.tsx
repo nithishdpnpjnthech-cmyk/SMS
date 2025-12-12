@@ -28,6 +28,7 @@ interface AppState {
   attendance: AttendanceRecord[];
   classes: ClassSession[];
   addStudent: (student: Omit<Student, "id">) => void;
+  updateStudent: (id: string, updates: Partial<Student>) => void;
   addFee: (fee: Omit<FeeRecord, "id">) => void;
   markAttendance: (record: AttendanceRecord) => void;
   getStudent: (id: string) => Student | undefined;
@@ -87,6 +88,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setStudents(prev => [studentWithId, ...prev]);
   };
 
+  const updateStudent = (id: string, updates: Partial<Student>) => {
+    setStudents(prev => prev.map(s => (s.id === id ? { ...s, ...updates } : s)));
+  };
+
   const addFee = (newFee: Omit<FeeRecord, "id">) => {
     const id = `INV-${(fees.length + 1).toString().padStart(3, "0")}`;
     const feeWithId = { ...newFee, id };
@@ -113,7 +118,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getStudent = (id: string) => students.find(s => s.id === id);
 
   return (
-    <AppContext.Provider value={{ students, fees, attendance, classes, addStudent, addFee, markAttendance, getStudent }}>
+    <AppContext.Provider value={{ students, fees, attendance, classes, addStudent, updateStudent, addFee, markAttendance, getStudent }}>
       {children}
     </AppContext.Provider>
   );

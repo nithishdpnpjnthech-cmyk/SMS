@@ -4,16 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, BookOpen, Clock, FileText, Download } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, BookOpen, Clock, FileText, Download, Edit } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StudentProfile() {
-  const { students, fees, attendance } = useAppStore();
+  const { students, fees, attendance, updateStudent } = useAppStore();
+  const { toast } = useToast();
   const [, params] = useRoute("/students/:id");
   const studentId = params?.id; 
   const student = students.find(s => s.id === studentId);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   if (!student) {
     return (
@@ -29,10 +36,28 @@ export default function StudentProfile() {
   }
 
   const studentFees = fees.filter(f => f.studentId === student.id || f.studentName === student.name);
-  // Simple attendance stat
   const studentAttendance = attendance.filter(a => a.studentId === student.id);
   const presentCount = studentAttendance.filter(a => a.status === 'present').length;
   const attendanceRate = studentAttendance.length > 0 ? Math.round((presentCount / studentAttendance.length) * 100) : 0;
+
+  const handleUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    
+    updateStudent(student.id, {
+        name: formData.get("name") as string,
+        parentName: formData.get("parentName") as string,
+        phone: formData.get("phone") as string,
+        // Add more fields as needed
+    });
+
+    setIsEditOpen(false);
+    toast({
+        title: "Profile Updated",
+        description: "Student details have been saved.",
+        className: "bg-green-600 text-white border-none"
+    });
+  };
 
   return (
     <DashboardLayout>
@@ -76,7 +101,9 @@ export default function StudentProfile() {
               
               <div className="w-full mt-6 flex gap-2">
                 <Button className="flex-1" variant="outline">Message</Button>
-                <Button className="flex-1">Edit</Button>
+                <Button className="flex-1" onClick={() => setIsEditOpen(true)}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -211,6 +238,34 @@ export default function StudentProfile() {
             </Tabs>
           </div>
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Edit Student Profile</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleUpdate} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input id="name" name="name" defaultValue={student.name} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="parentName">Guardian Name</Label>
+                        <Input id="parentName" name="parentName" defaultValue={student.parentName} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input id="phone" name="phone" defaultValue={student.phone} />
+                    </div>
+                    {/* Add more fields as necessary */}
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+                        <Button type="submit">Save Changes</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
