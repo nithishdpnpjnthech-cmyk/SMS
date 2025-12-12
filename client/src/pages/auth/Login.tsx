@@ -22,6 +22,9 @@ export default function Login() {
     setTimeout(() => {
       setIsLoading(false);
       
+      // Store role in localStorage for mockup purposes
+      localStorage.setItem("userRole", role);
+      
       switch(role) {
         case "trainer":
           setLocation("/dashboard/trainer");
@@ -29,11 +32,15 @@ export default function Login() {
         case "parent":
           setLocation("/dashboard/parent");
           break;
-        case "receptionist":
         case "manager":
+          setLocation("/dashboard/manager");
+          break;
+        case "receptionist":
+          setLocation("/dashboard/receptionist");
+          break;
         case "admin":
         default:
-          setLocation("/dashboard"); // Shared dashboard for admin/manager/receptionist for now
+          setLocation("/dashboard");
           break;
       }
     }, 1500);

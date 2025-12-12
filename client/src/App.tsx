@@ -8,6 +8,8 @@ import Login from "@/pages/auth/Login";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import TrainerDashboard from "@/pages/dashboard/TrainerDashboard";
 import ParentDashboard from "@/pages/dashboard/ParentDashboard";
+import ManagerDashboard from "@/pages/dashboard/ManagerDashboard";
+import ReceptionistDashboard from "@/pages/dashboard/ReceptionistDashboard";
 import StudentList from "@/pages/students/StudentList";
 import StudentProfile from "@/pages/students/StudentProfile";
 import AddStudent from "@/pages/students/AddStudent";
@@ -25,7 +27,9 @@ function Router() {
       <Route path="/" component={Login} />
       
       {/* Dashboard Variants */}
-      <Route path="/dashboard" component={Dashboard} /> {/* Admin & Manager Default */}
+      <Route path="/dashboard" component={Dashboard} /> {/* Admin Default */}
+      <Route path="/dashboard/manager" component={ManagerDashboard} />
+      <Route path="/dashboard/receptionist" component={ReceptionistDashboard} />
       <Route path="/dashboard/trainer" component={TrainerDashboard} />
       <Route path="/dashboard/parent" component={ParentDashboard} />
       
