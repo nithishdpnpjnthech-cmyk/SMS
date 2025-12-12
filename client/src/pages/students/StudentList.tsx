@@ -5,17 +5,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { STUDENTS, PROGRAMS, BATCHES } from "@/lib/mockData";
-import { Search, Plus, Filter, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
+import { PROGRAMS } from "@/lib/mockData";
+import { useAppStore } from "@/lib/store";
+import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function StudentList() {
+  const { students } = useAppStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [programFilter, setProgramFilter] = useState("all");
 
-  const filteredStudents = STUDENTS.filter(student => {
+  const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           student.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesProgram = programFilter === "all" || student.program === programFilter;
@@ -30,10 +32,12 @@ export default function StudentList() {
             <h1 className="text-3xl font-bold tracking-tight font-heading">Students</h1>
             <p className="text-muted-foreground">Manage student enrollments and profiles.</p>
           </div>
-          <Button className="gap-2 shadow-md">
-            <Plus className="h-4 w-4" />
-            Add New Student
-          </Button>
+          <Link href="/students/add">
+            <Button className="gap-2 shadow-md">
+              <Plus className="h-4 w-4" />
+              Add New Student
+            </Button>
+          </Link>
         </div>
 
         <Card>

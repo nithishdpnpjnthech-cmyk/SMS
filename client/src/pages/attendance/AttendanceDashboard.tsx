@@ -5,22 +5,77 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PROGRAMS, BATCHES } from "@/lib/mockData";
-import { CalendarCheck, Check, X, Clock, User, Filter } from "lucide-react";
-import { useState } from "react";
+import { useAppStore } from "@/lib/store";
+import { Check, X, Clock, Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 export default function AttendanceDashboard() {
+  const { students, markAttendance, attendance } = useAppStore();
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedProgram, setSelectedProgram] = useState(PROGRAMS[0]);
+  const [selectedBatch, setSelectedBatch] = useState(BATCHES[0]);
+  const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
   
-  // Mock data for class list
-  const studentsInClass = [
-    { id: 1, name: "Alex Johnson", status: "present" },
-    { id: 2, name: "Mia Williams", status: "present" },
-    { id: 3, name: "Ethan Brown", status: "absent" },
-    { id: 4, name: "Sophia Davis", status: "present" },
-    { id: 5, name: "Lucas Miller", status: "present" },
-    { id: 6, name: "Olivia Wilson", status: "late" },
-  ];
+  // Filter students based on selection
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => s.program === selectedProgram && s.batch === selectedBatch);
+  }, [students, selectedProgram, selectedBatch]);
+
+  // Get current attendance status for selected date/batch
+  const getStatus = (studentId: string) => {
+    if (!date) return undefined;
+    const dateStr = format(date, "yyyy-MM-dd");
+    const record = attendance.find(r => 
+      r.studentId === studentId && 
+      r.date === dateStr &&
+      r.batch === selectedBatch
+    );
+    return record?.status;
+  };
+
+  const handleMark = (studentId: string, status: "present" | "absent" | "late") => {
+    if (!date) return;
+    markAttendance({
+      id: "", // generated in store
+      date: format(date, "yyyy-MM-dd"),
+      program: selectedProgram,
+      batch: selectedBatch,
+      studentId,
+      status
+    });
+  };
+
+  const handleSaveAll = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      toast({
+        title: "Attendance Saved",
+        description: `Records updated for ${format(date!, "MMM dd, yyyy")}`,
+        className: "bg-green-600 text-white border-none"
+      });
+    }, 800);
+  };
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    if (!date) return { present: 0, absent: 0, late: 0, total: 0 };
+    const dateStr = format(date, "yyyy-MM-dd");
+    const todayRecords = attendance.filter(r => r.date === dateStr);
+    
+    // This is a global stat for the day, not just the filtered view, to make the sidebar summary useful
+    const present = todayRecords.filter(r => r.status === 'present').length;
+    const absent = todayRecords.filter(r => r.status === 'absent').length;
+    const late = todayRecords.filter(r => r.status === 'late').length;
+    
+    return { present, absent, late, total: todayRecords.length };
+  }, [attendance, date]);
+
+  const presentPercentage = stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
 
   return (
     <DashboardLayout>
@@ -30,10 +85,6 @@ export default function AttendanceDashboard() {
             <h1 className="text-3xl font-bold tracking-tight font-heading">Attendance</h1>
             <p className="text-muted-foreground">Track and manage daily class attendance.</p>
           </div>
-          <Button variant="outline" className="gap-2">
-            <CalendarCheck className="h-4 w-4" />
-            Download Report
-          </Button>
         </div>
 
         <div className="grid gap-6 md:grid-cols-12">
@@ -52,20 +103,16 @@ export default function AttendanceDashboard() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Summary for Today</CardTitle>
+                <CardTitle className="text-sm font-medium">Summary for {date ? format(date, "MMM dd") : "Today"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Present</span>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">92%</Badge>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{presentPercentage}%</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Absent</span>
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">5%</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Late</span>
-                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">3%</Badge>
+                  <span className="text-sm text-muted-foreground">Count</span>
+                  <span className="text-sm font-medium">{stats.present} / {stats.total}</span>
                 </div>
               </CardContent>
             </Card>
@@ -75,22 +122,22 @@ export default function AttendanceDashboard() {
           <div className="md:col-span-8 lg:col-span-9 space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <CardTitle>Class Attendance</CardTitle>
                     <CardDescription>Mark attendance for specific batches.</CardDescription>
                   </div>
-                  <div className="flex gap-2">
-                    <Select defaultValue={PROGRAMS[0]}>
-                      <SelectTrigger className="w-[140px]">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Select value={selectedProgram} onValueChange={setSelectedProgram}>
+                      <SelectTrigger className="w-full sm:w-[140px]">
                         <SelectValue placeholder="Program" />
                       </SelectTrigger>
                       <SelectContent>
                         {PROGRAMS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Select defaultValue={BATCHES[0]}>
-                      <SelectTrigger className="w-[140px]">
+                    <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+                      <SelectTrigger className="w-full sm:w-[160px]">
                         <SelectValue placeholder="Batch" />
                       </SelectTrigger>
                       <SelectContent>
@@ -101,71 +148,67 @@ export default function AttendanceDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-1">
-                  {studentsInClass.map((student) => (
-                    <div key={student.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/40 border border-transparent hover:border-border transition-all">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 border border-border">
-                          <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-sm">{student.name}</p>
-                          <p className="text-xs text-muted-foreground">ID: ST-00{student.id}</p>
+                <div className="space-y-1 max-h-[500px] overflow-y-auto">
+                  {filteredStudents.length > 0 ? (
+                    filteredStudents.map((student) => {
+                      const status = getStatus(student.id);
+                      return (
+                        <div key={student.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg hover:bg-muted/40 border border-transparent hover:border-border transition-all gap-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 border border-border">
+                              <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm">{student.name}</p>
+                              <p className="text-xs text-muted-foreground">ID: {student.id}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            <Button 
+                              size="sm" 
+                              variant={status === 'present' ? 'default' : 'outline'}
+                              className={status === 'present' ? 'bg-green-600 hover:bg-green-700 flex-1 sm:flex-none' : 'text-muted-foreground flex-1 sm:flex-none'}
+                              onClick={() => handleMark(student.id, 'present')}
+                            >
+                              <Check className="h-4 w-4 mr-1" /> Present
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant={status === 'absent' ? 'destructive' : 'outline'}
+                              className={status === 'absent' ? 'flex-1 sm:flex-none' : 'text-muted-foreground flex-1 sm:flex-none'}
+                              onClick={() => handleMark(student.id, 'absent')}
+                            >
+                              <X className="h-4 w-4 mr-1" /> Absent
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant={status === 'late' ? 'secondary' : 'outline'}
+                              className={status === 'late' ? 'bg-orange-100 text-orange-800 flex-1 sm:flex-none' : 'text-muted-foreground flex-1 sm:flex-none'}
+                              onClick={() => handleMark(student.id, 'late')}
+                            >
+                              <Clock className="h-4 w-4 mr-1" /> Late
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          size="sm" 
-                          variant={student.status === 'present' ? 'default' : 'outline'}
-                          className={student.status === 'present' ? 'bg-green-600 hover:bg-green-700' : 'text-muted-foreground'}
-                        >
-                          <Check className="h-4 w-4 mr-1" /> Present
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant={student.status === 'absent' ? 'destructive' : 'outline'}
-                          className={student.status === 'absent' ? '' : 'text-muted-foreground'}
-                        >
-                          <X className="h-4 w-4 mr-1" /> Absent
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant={student.status === 'late' ? 'secondary' : 'outline'}
-                          className={student.status === 'late' ? 'bg-orange-100 text-orange-800' : 'text-muted-foreground'}
-                        >
-                          <Clock className="h-4 w-4 mr-1" /> Late
-                        </Button>
-                      </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No students found in this batch.
                     </div>
-                  ))}
+                  )}
                 </div>
                 
-                <div className="mt-6 flex justify-end gap-3">
+                <div className="mt-6 flex justify-end gap-3 border-t pt-4">
                   <Button variant="outline">Reset</Button>
-                  <Button>Save Attendance</Button>
+                  <Button onClick={handleSaveAll} disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Attendance
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="bg-primary/5 border-primary/20">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-full bg-primary/10 text-primary">
-                      <div className="h-4 w-4" >QR</div> 
-                    </div>
-                    <CardTitle className="text-base">QR Mode</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Enable QR code scanning for touchless student check-in at the front desk.
-                  </p>
-                  <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/10">Launch Scanner</Button>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         </div>
       </div>

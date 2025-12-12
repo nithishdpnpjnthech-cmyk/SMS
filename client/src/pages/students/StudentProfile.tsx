@@ -6,13 +6,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, BookOpen, Clock, FileText, Download } from "lucide-react";
 import { Link, useRoute } from "wouter";
-import { STUDENTS } from "@/lib/mockData";
+import { useAppStore } from "@/lib/store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function StudentProfile() {
+  const { students, fees, attendance } = useAppStore();
   const [, params] = useRoute("/students/:id");
-  const studentId = params?.id || "ST-001"; // Fallback for dev/mock
-  const student = STUDENTS.find(s => s.id === studentId) || STUDENTS[0];
+  const studentId = params?.id; 
+  const student = students.find(s => s.id === studentId);
+
+  if (!student) {
+    return (
+        <DashboardLayout>
+            <div className="flex flex-col items-center justify-center h-full">
+                <h2 className="text-xl font-bold">Student Not Found</h2>
+                <Link href="/students">
+                    <Button variant="link">Return to list</Button>
+                </Link>
+            </div>
+        </DashboardLayout>
+    )
+  }
+
+  const studentFees = fees.filter(f => f.studentId === student.id || f.studentName === student.name);
+  // Simple attendance stat
+  const studentAttendance = attendance.filter(a => a.studentId === student.id);
+  const presentCount = studentAttendance.filter(a => a.status === 'present').length;
+  const attendanceRate = studentAttendance.length > 0 ? Math.round((presentCount / studentAttendance.length) * 100) : 0;
 
   return (
     <DashboardLayout>
@@ -144,9 +164,9 @@ export default function StudentProfile() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center py-8 text-muted-foreground">
-                      Attendance calendar view would go here.
-                      <br />
-                      Current Attendance: <span className="font-bold text-foreground">{student.attendance}%</span>
+                      <p className="mb-4">Recorded Attendance Rate</p>
+                      <span className="text-4xl font-bold text-foreground">{attendanceRate}%</span>
+                      <p className="text-sm mt-2">{presentCount} classes present</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -162,25 +182,28 @@ export default function StudentProfile() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {[1,2,3].map(i => (
-                        <div key={i} className="flex items-center justify-between border p-3 rounded-lg">
+                      {studentFees.length > 0 ? (
+                        studentFees.map(fee => (
+                        <div key={fee.id} className="flex items-center justify-between border p-3 rounded-lg">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 bg-muted rounded-lg flex items-center justify-center">
                               <FileText className="h-5 w-5 text-muted-foreground" />
                             </div>
                             <div>
-                              <p className="font-medium text-sm">Tuition Fee - May</p>
-                              <p className="text-xs text-muted-foreground">Paid on May 0{i}, 2025</p>
+                              <p className="font-medium text-sm">{fee.type}</p>
+                              <p className="text-xs text-muted-foreground">Paid on {fee.date}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <span className="font-bold">$150.00</span>
+                            <span className="font-bold">${fee.amount.toFixed(2)}</span>
                             <Button variant="ghost" size="icon">
                               <Download className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
-                      ))}
+                      ))) : (
+                        <p className="text-center text-muted-foreground py-4">No payments recorded yet.</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

@@ -1,37 +1,57 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { QrCode, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { QrCode, CheckCircle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAppStore } from "@/lib/store";
+import { format } from "date-fns";
 
 export default function QRScanner() {
   const [isScanning, setIsScanning] = useState(true);
   const [lastScanned, setLastScanned] = useState<{name: string, time: string, status: string} | null>(null);
   const { toast } = useToast();
+  const { students, markAttendance } = useAppStore();
 
   // Simulate scanning process
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isScanning) {
+    if (isScanning && students.length > 0) {
       interval = setInterval(() => {
         // Randomly "scan" a student every 5 seconds for demo
         const random = Math.random();
-        if (random > 0.7) {
-          const student = "Alex Johnson";
+        if (random > 0.8) {
+          // Pick a random student from the simulated DB
+          const randomStudent = students[Math.floor(Math.random() * students.length)];
           const time = new Date().toLocaleTimeString();
-          setLastScanned({ name: student, time, status: "Present" });
+          
+          setLastScanned({ name: randomStudent.name, time, status: "Present" });
+          
+          // Actually mark them present in the store
+          markAttendance({
+             id: "",
+             date: format(new Date(), "yyyy-MM-dd"),
+             program: randomStudent.program,
+             batch: randomStudent.batch,
+             studentId: randomStudent.id,
+             status: "present"
+          });
+
           toast({
             title: "Check-in Successful",
-            description: `${student} marked present at ${time}`,
+            description: `${randomStudent.name} marked present at ${time}`,
             variant: "default",
             className: "bg-green-600 text-white border-none"
           });
+          
+          // Pause scanning briefly after success
+          setIsScanning(false);
+          setTimeout(() => setIsScanning(true), 2000);
         }
-      }, 3000);
+      }, 2000);
     }
     return () => clearInterval(interval);
-  }, [isScanning, toast]);
+  }, [isScanning, toast, students, markAttendance]);
 
   return (
     <DashboardLayout>
@@ -45,11 +65,13 @@ export default function QRScanner() {
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50 z-10"></div>
             
             {/* Scanning Animation Line */}
-            <div className="absolute w-full h-1 bg-green-500/80 shadow-[0_0_15px_rgba(34,197,94,0.8)] z-20 animate-[scan_2s_ease-in-out_infinite] top-0"></div>
+            {isScanning && (
+               <div className="absolute w-full h-1 bg-green-500/80 shadow-[0_0_15px_rgba(34,197,94,0.8)] z-20 animate-[scan_2s_ease-in-out_infinite] top-0"></div>
+            )}
             
             <div className="text-white/50 z-0 flex flex-col items-center gap-2">
               <QrCode className="h-32 w-32 opacity-20" />
-              <p className="text-sm">Camera Active</p>
+              <p className="text-sm">{isScanning ? "Scanning..." : "Ready"}</p>
             </div>
 
             {/* Corner Markers */}
@@ -78,7 +100,7 @@ export default function QRScanner() {
           <Button variant={isScanning ? "destructive" : "default"} onClick={() => setIsScanning(!isScanning)}>
             {isScanning ? "Stop Scanning" : "Start Scanning"}
           </Button>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" onClick={() => setLastScanned(null)}>
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>

@@ -44,13 +44,8 @@ const NAV_CONFIG = {
   ],
   trainer: [
     { label: "My Schedule", icon: LayoutDashboard, href: "/dashboard/trainer" },
-    { label: "My Students", icon: Users, href: "/students" }, // Could be filtered view
+    { label: "My Students", icon: Users, href: "/students" },
   ],
-  parent: [
-    { label: "Overview", icon: LayoutDashboard, href: "/dashboard/parent" },
-    { label: "Schedule", icon: Clock, href: "/dashboard/parent/schedule" }, // Placeholder
-    { label: "Payments", icon: CreditCard, href: "/fees" },
-  ]
 };
 
 export function Sidebar() {

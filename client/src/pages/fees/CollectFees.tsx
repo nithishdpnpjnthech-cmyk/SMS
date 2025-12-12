@@ -7,17 +7,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Loader2, DollarSign, CreditCard, ChevronRight } from "lucide-react";
-import { STUDENTS } from "@/lib/mockData";
+import { useAppStore } from "@/lib/store";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CollectFees() {
   const [, setLocation] = useLocation();
+  const { students, addFee } = useAppStore();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState("");
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+
+  const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const amount = parseFloat(formData.get("amount") as string);
+    
     setTimeout(() => {
+      if (selectedStudent) {
+        addFee({
+          studentId: selectedStudent.id,
+          studentName: selectedStudent.name,
+          amount: amount,
+          date: new Date().toISOString().split('T')[0],
+          type: formData.get("feeType") as string,
+          mode: formData.get("paymentMode") as string,
+          status: "paid"
+        });
+
+        toast({
+          title: "Payment Recorded",
+          description: `Successfully collected $${amount} from ${selectedStudent.name}`,
+          className: "bg-green-600 text-white border-none"
+        });
+      }
+
       setIsLoading(false);
       setLocation("/fees");
     }, 1500);
@@ -44,12 +71,12 @@ export default function CollectFees() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="student">Select Student</Label>
-                  <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                  <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Search student by name or ID" />
                     </SelectTrigger>
                     <SelectContent>
-                      {STUDENTS.map(s => (
+                      {students.map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name} ({s.id})</SelectItem>
                       ))}
                     </SelectContent>
@@ -57,14 +84,16 @@ export default function CollectFees() {
                 </div>
 
                 {selectedStudent && (
-                  <div className="p-4 bg-muted/50 rounded-lg space-y-2 text-sm">
+                  <div className="p-4 bg-muted/50 rounded-lg space-y-2 text-sm animate-in fade-in">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Current Program:</span>
-                      <span className="font-medium">Karate</span>
+                      <span className="font-medium">{selectedStudent.program}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Pending Dues:</span>
-                      <span className="font-bold text-orange-600">$0.00</span>
+                      <span className="text-muted-foreground">Status:</span>
+                      <Badge variant={selectedStudent.feesStatus === 'paid' ? 'default' : 'destructive'} className="text-xs">
+                        {selectedStudent.feesStatus.toUpperCase()}
+                      </Badge>
                     </div>
                   </div>
                 )}
@@ -72,15 +101,15 @@ export default function CollectFees() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="feeType">Fee Type</Label>
-                    <Select defaultValue="tuition">
+                    <Select name="feeType" defaultValue="Tuition">
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="tuition">Monthly Tuition</SelectItem>
-                        <SelectItem value="registration">Registration Fee</SelectItem>
-                        <SelectItem value="uniform">Uniform/Kit</SelectItem>
-                        <SelectItem value="exam">Exam Fee</SelectItem>
+                        <SelectItem value="Tuition">Monthly Tuition</SelectItem>
+                        <SelectItem value="Registration">Registration Fee</SelectItem>
+                        <SelectItem value="Uniform">Uniform/Kit</SelectItem>
+                        <SelectItem value="Exam">Exam Fee</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -88,22 +117,22 @@ export default function CollectFees() {
                     <Label htmlFor="amount">Amount ($)</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input id="amount" className="pl-9" placeholder="0.00" defaultValue="150.00" />
+                      <Input name="amount" id="amount" className="pl-9" placeholder="0.00" defaultValue="150.00" />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="paymentMode">Payment Mode</Label>
-                  <Select defaultValue="cash">
+                  <Select name="paymentMode" defaultValue="Cash">
                     <SelectTrigger>
                       <SelectValue placeholder="Select mode" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Credit/Debit Card</SelectItem>
-                      <SelectItem value="upi">UPI / Online Transfer</SelectItem>
-                      <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="Cash">Cash</SelectItem>
+                      <SelectItem value="Card">Credit/Debit Card</SelectItem>
+                      <SelectItem value="UPI">UPI / Online Transfer</SelectItem>
+                      <SelectItem value="Cheque">Cheque</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -116,7 +145,7 @@ export default function CollectFees() {
 
               <div className="flex justify-end gap-4 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={() => setLocation("/fees")}>Cancel</Button>
-                <Button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700">
+                <Button type="submit" disabled={isLoading || !selectedStudent} className="bg-green-600 hover:bg-green-700">
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Record Payment
                 </Button>
@@ -128,3 +157,5 @@ export default function CollectFees() {
     </DashboardLayout>
   );
 }
+
+import { Badge } from "@/components/ui/badge";
