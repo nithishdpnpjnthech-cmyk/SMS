@@ -18,10 +18,24 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate login delay
+    // Simulate login delay and role-based redirect
     setTimeout(() => {
       setIsLoading(false);
-      setLocation("/dashboard");
+      
+      switch(role) {
+        case "trainer":
+          setLocation("/dashboard/trainer");
+          break;
+        case "parent":
+          setLocation("/dashboard/parent");
+          break;
+        case "receptionist":
+        case "manager":
+        case "admin":
+        default:
+          setLocation("/dashboard"); // Shared dashboard for admin/manager/receptionist for now
+          break;
+      }
     }, 1500);
   };
 

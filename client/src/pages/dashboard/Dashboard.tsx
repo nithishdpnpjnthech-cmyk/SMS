@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Link } from "wouter";
 
 const chartData = [
   { name: "Mon", attendance: 85, revenue: 1200 },
@@ -35,8 +36,12 @@ export default function Dashboard() {
             <p className="text-muted-foreground">Overview of today's academy operations.</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline">Download Report</Button>
-            <Button>Add Student</Button>
+            <Link href="/reports">
+              <Button variant="outline">Download Report</Button>
+            </Link>
+            <Link href="/students/add">
+              <Button>Add Student</Button>
+            </Link>
           </div>
         </div>
 
@@ -198,22 +203,30 @@ export default function Dashboard() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors">
-                <Users className="h-5 w-5" />
-                <span className="text-xs">Add Student</span>
-              </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors">
-                <CreditCard className="h-5 w-5" />
-                <span className="text-xs">Collect Fee</span>
-              </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors">
-                <CalendarCheck className="h-5 w-5" />
-                <span className="text-xs">Attendance</span>
-              </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors">
-                <TrendingUp className="h-5 w-5" />
-                <span className="text-xs">Reports</span>
-              </Button>
+              <Link href="/students/add">
+                <Button variant="outline" className="w-full h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors">
+                  <Users className="h-5 w-5" />
+                  <span className="text-xs">Add Student</span>
+                </Button>
+              </Link>
+              <Link href="/fees/collect">
+                <Button variant="outline" className="w-full h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors">
+                  <CreditCard className="h-5 w-5" />
+                  <span className="text-xs">Collect Fee</span>
+                </Button>
+              </Link>
+              <Link href="/attendance">
+                <Button variant="outline" className="w-full h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors">
+                  <CalendarCheck className="h-5 w-5" />
+                  <span className="text-xs">Attendance</span>
+                </Button>
+              </Link>
+              <Link href="/reports">
+                <Button variant="outline" className="w-full h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors">
+                  <TrendingUp className="h-5 w-5" />
+                  <span className="text-xs">Reports</span>
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
