@@ -7,43 +7,60 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { api } from "@/lib/api";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState("admin");
+  const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
     
-    // Simulate login delay and role-based redirect
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const formData = new FormData(e.target as HTMLFormElement);
+      const username = formData.get("email") as string;
+      const password = formData.get("password") as string;
       
-      // Store role in localStorage for mockup purposes
-      localStorage.setItem("userRole", role);
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
       
-      switch(role) {
-        case "trainer":
-          setLocation("/dashboard/trainer");
-          break;
-        case "parent":
-          setLocation("/dashboard/parent");
-          break;
-        case "manager":
-          setLocation("/dashboard/manager");
-          break;
-        case "receptionist":
-          setLocation("/dashboard/receptionist");
-          break;
-        case "admin":
-        default:
-          setLocation("/dashboard");
-          break;
+      if (!response.ok) {
+        throw new Error('Invalid credentials');
       }
-    }, 1500);
+      
+      const { user } = await response.json();
+      
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Role-based redirect
+      switch(user.role) {
+        case 'admin':
+          setLocation('/dashboard');
+          break;
+        case 'manager':
+          setLocation('/dashboard/manager');
+          break;
+        case 'receptionist':
+          setLocation('/dashboard/receptionist');
+          break;
+        case 'trainer':
+          setLocation('/dashboard/trainer');
+          break;
+        default:
+          setLocation('/dashboard');
+      }
+    } catch (error) {
+      setError('Invalid username or password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -62,24 +79,15 @@ export default function Login() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="role">Select Role</Label>
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Branch Manager</SelectItem>
-                  <SelectItem value="receptionist">Receptionist</SelectItem>
-                  <SelectItem value="trainer">Trainer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
+
+            {error && (
+              <div className="text-red-600 text-sm text-center">{error}</div>
+            )}
+            
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="name@example.com" required />
+              <Label htmlFor="email">Username</Label>
+              <Input id="email" name="email" placeholder="admin" required />
             </div>
             
             <div className="space-y-2">
@@ -92,6 +100,7 @@ export default function Login() {
               <div className="relative">
                 <Input 
                   id="password" 
+                  name="password"
                   type={showPassword ? "text" : "password"} 
                   required 
                   className="pr-10"

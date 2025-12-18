@@ -26,8 +26,14 @@ function Router() {
     <Switch>
       <Route path="/" component={Login} />
       
-      {/* Dashboard Variants */}
-      <Route path="/dashboard" component={Dashboard} /> {/* Admin Default */}
+      {/* Role-Based Dashboards */}
+      <Route path="/admin" component={Dashboard} />
+      <Route path="/manager" component={ManagerDashboard} />
+      <Route path="/receptionist" component={ReceptionistDashboard} />
+      <Route path="/trainer" component={TrainerDashboard} />
+      
+      {/* Legacy routes for backward compatibility */}
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/manager" component={ManagerDashboard} />
       <Route path="/dashboard/receptionist" component={ReceptionistDashboard} />
       <Route path="/dashboard/trainer" component={TrainerDashboard} />

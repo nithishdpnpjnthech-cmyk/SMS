@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test</h1>
+    <button onclick="testCreateStudent()">Test Create Student</button>
+    <div id="result"></div>
+
+    <script>
+        async function testCreateStudent() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testing...';
+            
+            try {
+                // Test creating a student
+                const response = await fetch('/api/students', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: 'Test Student',
+                        branchId: 'test-branch',
+                        email: 'test@email.com',
+                        phone: '123456789',
+                        program: 'Karate',
+                        status: 'active'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `SUCCESS: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    const error = await response.text();
+                    result.innerHTML = `ERROR ${response.status}: ${error}`;
+                }
+            } catch (error) {
+                result.innerHTML = `NETWORK ERROR: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
