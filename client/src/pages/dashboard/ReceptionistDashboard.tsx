@@ -2,29 +2,152 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, CreditCard, CalendarCheck, Search, Bell, Clock } from "lucide-react";
+import { Users, UserPlus, CreditCard, CalendarCheck, Search, MapPin, IndianRupee } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { formatAmount } from "@/lib/currency";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ReceptionistDashboard() {
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    pendingDues: 0,
+    feesCollectedToday: 0,
+    presentToday: 0
+  });
+  const [branch, setBranch] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadReceptionistData();
+  }, []);
+
+  const loadReceptionistData = async () => {
+    try {
+      if (!user?.branch_id) {
+        setStats({ totalStudents: 0, pendingDues: 0, feesCollectedToday: 0, presentToday: 0 });
+        setBranch({ name: 'No Branch Assigned', address: '' });
+        return;
+      }
+
+      const [dashboardStats, branches] = await Promise.all([
+        api.getDashboardStats(user.branch_id),
+        api.getBranches()
+      ]);
+      
+      const userBranch = branches.find(b => b.id === user.branch_id);
+      
+      setStats(dashboardStats || {
+        totalStudents: 0,
+        pendingDues: 0,
+        feesCollectedToday: 0,
+        presentToday: 0
+      });
+      setBranch(userBranch || { name: 'Branch Not Found', address: '' });
+    } catch (error) {
+      console.error("Failed to load receptionist data:", error);
+      setStats({ totalStudents: 0, pendingDues: 0, feesCollectedToday: 0, presentToday: 0 });
+      setBranch({ name: 'Error Loading Branch', address: '' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      toast({
+        title: "Search Required",
+        description: "Please enter a student name, ID, or phone number",
+        variant: "destructive"
+      });
+      return;
+    }
+    // Implement search functionality
+    toast({
+      title: "Search",
+      description: `Searching for: ${searchTerm}`,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading reception desk...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading">Front Desk</h1>
-            <p className="text-muted-foreground">Welcome back, Sarah. Ready for today's check-ins?</p>
+            <h1 className="text-3xl font-bold tracking-tight font-heading">Reception Desk</h1>
+            <p className="text-muted-foreground flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              <strong>{branch?.name || 'Reception Dashboard'}</strong>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">{branch?.address}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" className="gap-2">
-              <Bell className="h-4 w-4" />
-              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">3</span>
-            </Button>
-            <div className="text-sm font-medium text-right hidden md:block">
-              <p>{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</p>
-              <p className="text-muted-foreground">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
-            </div>
+          <div className="text-sm font-medium text-right">
+            <p>{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</p>
+            <p className="text-muted-foreground">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
           </div>
+        </div>
+
+        {/* Branch Stats */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalStudents}</div>
+              <p className="text-xs text-muted-foreground">In this branch</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Today's Collection</CardTitle>
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{formatAmount(stats.feesCollectedToday)}</div>
+              <p className="text-xs text-muted-foreground">Fees collected</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Dues</CardTitle>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{formatAmount(stats.pendingDues)}</div>
+              <p className="text-xs text-muted-foreground">Outstanding</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Present Today</CardTitle>
+              <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{stats.presentToday}</div>
+              <p className="text-xs text-muted-foreground">Students</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick Search */}
@@ -35,27 +158,22 @@ export default function ReceptionistDashboard() {
                 <label className="text-sm font-medium">Quick Student Lookup</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search by name, ID, or phone number..." className="pl-10 bg-white" />
+                  <Input 
+                    placeholder="Search by name, ID, or phone number..." 
+                    className="pl-10 bg-white"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  />
                 </div>
               </div>
-              <Button size="lg" className="w-full md:w-auto">Search</Button>
+              <Button size="lg" className="w-full md:w-auto" onClick={handleSearch}>Search</Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Quick Actions Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link href="/attendance/qr">
-            <Card className="hover:border-primary/50 cursor-pointer transition-colors hover:bg-muted/30">
-              <CardContent className="p-6 flex flex-col items-center text-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                  <CalendarCheck className="h-6 w-6" />
-                </div>
-                <h3 className="font-semibold">QR Check-in</h3>
-              </CardContent>
-            </Card>
-          </Link>
-          
           <Link href="/students/add">
             <Card className="hover:border-primary/50 cursor-pointer transition-colors hover:bg-muted/30">
               <CardContent className="p-6 flex flex-col items-center text-center gap-3">
@@ -88,59 +206,17 @@ export default function ReceptionistDashboard() {
               </CardContent>
             </Card>
           </Link>
-        </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Today's Classes</CardTitle>
-              <CardDescription>Ongoing and upcoming sessions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { time: "05:00 PM", class: "Karate - Kids", status: "Ongoing", color: "text-green-600 bg-green-100" },
-                  { time: "06:00 PM", class: "Yoga - Evening", status: "Upcoming", color: "text-blue-600 bg-blue-100" },
-                  { time: "07:00 PM", class: "Dance - Advanced", status: "Upcoming", color: "text-blue-600 bg-blue-100" },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Clock className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{item.class}</p>
-                        <p className="text-xs text-muted-foreground">{item.time}</p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className={item.color}>{item.status}</Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Notifications</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-3 items-start">
-                  <div className="h-2 w-2 mt-2 rounded-full bg-red-500 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">Payment Overdue: John Doe</p>
-                    <p className="text-xs text-muted-foreground">Parent promised to pay by evening.</p>
-                  </div>
+          <Link href="/attendance">
+            <Card className="hover:border-primary/50 cursor-pointer transition-colors hover:bg-muted/30">
+              <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                  <CalendarCheck className="h-6 w-6" />
                 </div>
-                <div className="flex gap-3 items-start">
-                  <div className="h-2 w-2 mt-2 rounded-full bg-blue-500 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">New Enquiry: Dance Class</p>
-                    <p className="text-xs text-muted-foreground">Walk-in enquiry for 7yr old.</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                <h3 className="font-semibold">Attendance</h3>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </div>
     </DashboardLayout>

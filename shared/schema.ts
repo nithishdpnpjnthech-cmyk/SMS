@@ -31,8 +31,9 @@ export const students = pgTable("students", {
   parentPhone: text("parent_phone"),
   address: text("address"),
   branchId: varchar("branch_id").notNull(),
-  program: text("program"),
-  batch: text("batch"),
+  program: text("program"), // Legacy field - kept for compatibility
+  batch: text("batch"), // Legacy field - kept for compatibility
+  batchId: varchar("batch_id"), // New field for proper batch relationship
   joiningDate: timestamp("joining_date").defaultNow(),
   status: text("status").default("active"), // active, inactive, suspended
   createdAt: timestamp("created_at").defaultNow(),

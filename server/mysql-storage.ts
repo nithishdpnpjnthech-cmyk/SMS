@@ -11,394 +11,490 @@ import type {
 } from "@shared/schema";
 
 export class MySQLStorage implements IStorage {
+  // Raw query method
+  async query<T = any>(sql: string, params?: any[]): Promise<T[]> {
+    return await db.query<T>(sql, params);
+  }
 
   // ============= USERS =============
   async getUser(id: string): Promise<User | undefined> {
-    try {
-      return await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [id]);
-    } catch (error) {
-      console.error("Error getting user:", error);
-      throw error;
-    }
+    return await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [id]);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    try {
-      console.log("Searching for user:", username);
-      const result = await db.queryOne<User>("SELECT * FROM users WHERE username = ?", [username]);
-      console.log("Database result:", result);
-      return result;
-    } catch (error) {
-      console.error("Database error in getUserByUsername:", error);
-      throw error;
-    }
+  async getUserByUsername(identifier: string): Promise<User | undefined> {
+    return await db.queryOne<User>(
+      "SELECT * FROM users WHERE username = ? OR email = ?",
+      [identifier, identifier]
+    );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    try {
-      const id = randomUUID();
-      const now = new Date();
+    const id = randomUUID();
+    const now = new Date();
 
-      await db.query(
-        `INSERT INTO users (id, username, password, role, email, name, branchId, createdAt) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          insertUser.username,
-          insertUser.password,
-          insertUser.role || "admin",
-          insertUser.email || null,
-          insertUser.name || null,
-          insertUser.branchId || null,
-          now
-        ]
-      );
-
-      return {
+    await db.query(
+      `INSERT INTO users (id, username, password, role, email, name, branch_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
         id,
-        username: insertUser.username,
-        password: insertUser.password,
-        role: insertUser.role || "admin",
-        email: insertUser.email || null,
-        name: insertUser.name || null,
-        branchId: insertUser.branchId || null,
-        createdAt: now
-      };
-    } catch (error) {
-      console.error("Error creating user:", error);
-      throw error;
-    }
+        insertUser.username,
+        insertUser.password,
+        insertUser.role || "admin",
+        insertUser.email || null,
+        insertUser.name || null,
+        insertUser.branchId || null,
+        now
+      ]
+    );
+
+    return {
+      id,
+      username: insertUser.username,
+      password: insertUser.password,
+      role: insertUser.role || "admin",
+      email: insertUser.email || null,
+      name: insertUser.name || null,
+      branch_id: insertUser.branchId || null,
+      created_at: now
+    } as any;
   }
 
   // ============= STUDENTS =============
   async getStudents(branchId?: string): Promise<Student[]> {
-    try {
-      if (branchId) {
-        return await db.query<Student>(
-          "SELECT * FROM students WHERE branchId = ? ORDER BY createdAt DESC",
-          [branchId]
-        );
-      }
-      return await db.query<Student>("SELECT * FROM students ORDER BY createdAt DESC");
-    } catch (error) {
-      console.error("Error getting students:", error);
-      throw error;
+    if (branchId) {
+      return await db.query<Student>(
+        "SELECT * FROM students WHERE branch_id = ? AND status = 'active' ORDER BY created_at DESC",
+        [branchId]
+      );
     }
+    return await db.query<Student>("SELECT * FROM students WHERE status = 'active' ORDER BY created_at DESC");
+  }
+
+  async getAllStudents(branchId?: string): Promise<Student[]> {
+    if (branchId) {
+      return await db.query<Student>(
+        "SELECT * FROM students WHERE branch_id = ? ORDER BY created_at DESC",
+        [branchId]
+      );
+    }
+    return await db.query<Student>("SELECT * FROM students ORDER BY created_at DESC");
   }
 
   async getStudent(id: string): Promise<Student | undefined> {
-    try {
-      return await db.queryOne<Student>("SELECT * FROM students WHERE id = ?", [id]);
-    } catch (error) {
-      console.error("Error getting student:", error);
-      throw error;
-    }
+    return await db.queryOne<Student>("SELECT * FROM students WHERE id = ?", [id]);
   }
 
   async createStudent(insertStudent: InsertStudent): Promise<Student> {
+    const id = randomUUID();
+    const now = new Date();
+
+    // Create student_programs table if it doesn't exist
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS student_programs (
+        student_id VARCHAR(36) NOT NULL,
+        program_id VARCHAR(36) NOT NULL,
+        PRIMARY KEY (student_id, program_id),
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+        FOREIGN KEY (program_id) REFERENCES programs(id)
+      )
+    `);
+
+    // Add batch_id column to students table if it doesn't exist
     try {
-      const id = randomUUID();
-      const now = new Date();
-
-      console.log("Creating student with data:", insertStudent);
-
-      await db.query(
-        `INSERT INTO students (id, name, email, phone, parentPhone, address, branchId, program, batch, joiningDate, status, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          insertStudent.name,
-          insertStudent.email || null,
-          insertStudent.phone || null,
-          insertStudent.parentPhone || null,
-          insertStudent.address || null,
-          insertStudent.branchId,
-          insertStudent.program || null,
-          insertStudent.batch || null,
-          insertStudent.joiningDate || now,
-          insertStudent.status || "active",
-          now
-        ]
-      );
-
-      const student = {
-        id,
-        name: insertStudent.name,
-        email: insertStudent.email || null,
-        phone: insertStudent.phone || null,
-        parentPhone: insertStudent.parentPhone || null,
-        address: insertStudent.address || null,
-        branchId: insertStudent.branchId,
-        program: insertStudent.program || null,
-        batch: insertStudent.batch || null,
-        joiningDate: insertStudent.joiningDate || now,
-        status: insertStudent.status || "active",
-        createdAt: now
-      };
-
-      console.log("Student created successfully:", student);
-      return student;
+      await db.query("ALTER TABLE students ADD COLUMN batch_id VARCHAR(36)");
     } catch (error) {
-      console.error("Error creating student:", error);
-      throw error;
+      // Column already exists, ignore error
     }
+
+    // Get batch name for legacy program/batch columns
+    let batchName = null;
+    if (insertStudent.batchId) {
+      const batch = await db.queryOne("SELECT name FROM batches WHERE id = ?", [insertStudent.batchId]);
+      batchName = batch?.name || null;
+    }
+
+    // Get program names for legacy program column (comma-separated)
+    let programNames = null;
+    if (insertStudent.programs && insertStudent.programs.length > 0) {
+      const programs = await db.query(
+        `SELECT name FROM programs WHERE id IN (${insertStudent.programs.map(() => '?').join(',')})`,
+        insertStudent.programs
+      );
+      programNames = programs.map((p: any) => p.name).join(', ');
+    }
+
+    await db.query(
+      `INSERT INTO students
+       (id, name, email, phone, parent_phone, address, branch_id, batch_id, program, batch, joining_date, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        insertStudent.name,
+        insertStudent.email || null,
+        insertStudent.phone || null,
+        insertStudent.parentPhone || null,
+        insertStudent.address || null,
+        insertStudent.branchId,
+        insertStudent.batchId || null,
+        programNames,
+        batchName,
+        insertStudent.joiningDate || now,
+        insertStudent.status || "active",
+        now
+      ]
+    );
+    
+    // Insert student-program relationships
+    if (insertStudent.programs && insertStudent.programs.length > 0) {
+      for (const programId of insertStudent.programs) {
+        await db.query(
+          "INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)",
+          [id, programId]
+        );
+      }
+    }
+
+    return {
+      id,
+      name: insertStudent.name,
+      email: insertStudent.email || null,
+      phone: insertStudent.phone || null,
+      parent_phone: insertStudent.parentPhone || null,
+      address: insertStudent.address || null,
+      branch_id: insertStudent.branchId,
+      batch_id: insertStudent.batchId || null,
+      program: programNames,
+      batch: batchName,
+      joining_date: insertStudent.joiningDate || now,
+      status: insertStudent.status || "active",
+      created_at: now
+    } as any;
   }
 
   async updateStudent(id: string, updates: Partial<Student>): Promise<Student | undefined> {
-    try {
-      const fields: string[] = [];
-      const values: any[] = [];
+    const columnMap: Record<string, string> = {
+      branchId: "branch_id",
+      parentPhone: "parent_phone",
+      joiningDate: "joining_date",
+      createdAt: "created_at"
+    };
 
-      for (const [key, value] of Object.entries(updates)) {
-        if (key !== "id" && key !== "createdAt") {
-          fields.push(`${key} = ?`);
-          values.push(value);
-        }
-      }
+    const fields: string[] = [];
+    const values: any[] = [];
 
-      if (fields.length === 0) {
-        return await this.getStudent(id);
-      }
-
-      values.push(id);
-      await db.query(`UPDATE students SET ${fields.join(", ")} WHERE id = ?`, values);
-      return await this.getStudent(id);
-    } catch (error) {
-      console.error("Error updating student:", error);
-      throw error;
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === "id") continue;
+      const column = columnMap[key] || key;
+      fields.push(`${column} = ?`);
+      values.push(value);
     }
+
+    if (!fields.length) return this.getStudent(id);
+
+    values.push(id);
+    await db.query(`UPDATE students SET ${fields.join(", ")} WHERE id = ?`, values);
+    return this.getStudent(id);
+  }
+
+  async deleteStudent(id: string): Promise<boolean> {
+    // Soft delete: Mark student as inactive instead of hard delete
+    // This preserves historical data integrity for attendance and fees
+    const result = await db.query(
+      "UPDATE students SET status = 'inactive' WHERE id = ?", 
+      [id]
+    );
+    return (result as any).affectedRows > 0;
   }
 
   // ============= BRANCHES =============
   async getBranches(): Promise<Branch[]> {
-    try {
-      return await db.query<Branch>("SELECT * FROM branches ORDER BY createdAt DESC");
-    } catch (error) {
-      console.error("Error getting branches:", error);
-      throw error;
-    }
+    return await db.query<Branch>("SELECT * FROM branches ORDER BY created_at DESC");
   }
 
   async createBranch(insertBranch: InsertBranch): Promise<Branch> {
-    try {
-      const id = randomUUID();
-      const now = new Date();
+    const id = randomUUID();
+    const now = new Date();
 
-      await db.query(
-        `INSERT INTO branches (id, name, address, phone, managerId, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          insertBranch.name,
-          insertBranch.address || null,
-          insertBranch.phone || null,
-          insertBranch.managerId || null,
-          now
-        ]
-      );
-
-      return {
+    await db.query(
+      `INSERT INTO branches (id, name, address, phone, manager_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
         id,
-        name: insertBranch.name,
-        address: insertBranch.address || null,
-        phone: insertBranch.phone || null,
-        managerId: insertBranch.managerId || null,
-        createdAt: now
-      };
-    } catch (error) {
-      console.error("Error creating branch:", error);
-      throw error;
-    }
+        insertBranch.name,
+        insertBranch.address || null,
+        insertBranch.phone || null,
+        insertBranch.managerId || null,
+        now
+      ]
+    );
+
+    return {
+      id,
+      name: insertBranch.name,
+      address: insertBranch.address || null,
+      phone: insertBranch.phone || null,
+      manager_id: insertBranch.managerId || null,
+      created_at: now
+    } as any;
   }
 
   // ============= TRAINERS =============
   async getTrainers(branchId?: string): Promise<Trainer[]> {
-    try {
-      if (branchId) {
-        return await db.query<Trainer>(
-          "SELECT * FROM trainers WHERE branchId = ? ORDER BY createdAt DESC",
-          [branchId]
-        );
-      }
-      return await db.query<Trainer>("SELECT * FROM trainers ORDER BY createdAt DESC");
-    } catch (error) {
-      console.error("Error getting trainers:", error);
-      throw error;
+    if (branchId) {
+      return await db.query<Trainer>(
+        "SELECT * FROM trainers WHERE branch_id = ? ORDER BY created_at DESC",
+        [branchId]
+      );
     }
+    return await db.query<Trainer>("SELECT * FROM trainers ORDER BY created_at DESC");
   }
 
   async createTrainer(insertTrainer: InsertTrainer): Promise<Trainer> {
-    try {
-      const id = randomUUID();
-      const now = new Date();
+    const id = randomUUID();
+    const now = new Date();
 
-      await db.query(
-        `INSERT INTO trainers (id, name, email, phone, specialization, branchId, userId, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          insertTrainer.name,
-          insertTrainer.email || null,
-          insertTrainer.phone || null,
-          insertTrainer.specialization || null,
-          insertTrainer.branchId,
-          insertTrainer.userId || null,
-          now
-        ]
-      );
-
-      return {
+    await db.query(
+      `INSERT INTO trainers
+       (id, name, email, phone, specialization, branch_id, user_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
         id,
-        name: insertTrainer.name,
-        email: insertTrainer.email || null,
-        phone: insertTrainer.phone || null,
-        specialization: insertTrainer.specialization || null,
-        branchId: insertTrainer.branchId,
-        userId: insertTrainer.userId || null,
-        createdAt: now
-      };
-    } catch (error) {
-      console.error("Error creating trainer:", error);
-      throw error;
-    }
+        insertTrainer.name,
+        insertTrainer.email || null,
+        insertTrainer.phone || null,
+        insertTrainer.specialization || null,
+        insertTrainer.branchId,
+        insertTrainer.userId || null,
+        now
+      ]
+    );
+
+    return {
+      id,
+      name: insertTrainer.name,
+      email: insertTrainer.email || null,
+      phone: insertTrainer.phone || null,
+      specialization: insertTrainer.specialization || null,
+      branch_id: insertTrainer.branchId,
+      user_id: insertTrainer.userId || null,
+      created_at: now
+    } as any;
+  }
+
+  async deleteTrainer(id: string): Promise<boolean> {
+    const result = await db.query("DELETE FROM trainers WHERE id = ?", [id]);
+    return (result as any).affectedRows > 0;
   }
 
   // ============= ATTENDANCE =============
   async getAttendance(studentId?: string, date?: Date): Promise<Attendance[]> {
-    try {
-      let sql = "SELECT * FROM attendance WHERE 1=1";
-      const params: any[] = [];
+    let sql = `
+      SELECT 
+        a.*,
+        s.name as student_name,
+        s.program,
+        s.batch
+      FROM attendance a
+      LEFT JOIN students s ON a.student_id = s.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
 
-      if (studentId) {
-        sql += " AND studentId = ?";
-        params.push(studentId);
-      }
-
-      if (date) {
-        sql += " AND DATE(date) = DATE(?)";
-        params.push(date);
-      }
-
-      sql += " ORDER BY date DESC";
-      return await db.query<Attendance>(sql, params);
-    } catch (error) {
-      console.error("Error getting attendance:", error);
-      throw error;
+    if (studentId) {
+      sql += " AND a.student_id = ?";
+      params.push(studentId);
     }
+
+    if (date) {
+      sql += " AND DATE(a.date) = DATE(?)";
+      params.push(date);
+    }
+
+    sql += " ORDER BY a.date DESC, s.name ASC";
+
+    return await db.query<Attendance>(sql, params);
   }
 
   async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
-    try {
-      const id = randomUUID();
-      const now = new Date();
+    const id = randomUUID();
+    const now = new Date();
 
+    await db.query(
+      `INSERT INTO attendance
+       (id, student_id, date, status, check_in, check_out, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        insertAttendance.studentId,
+        insertAttendance.date,
+        insertAttendance.status,
+        insertAttendance.checkIn || null,
+        insertAttendance.checkOut || null,
+        insertAttendance.notes || null,
+        now
+      ]
+    );
+
+    return { id, ...insertAttendance, created_at: now } as any;
+  }
+
+  async upsertAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
+    // Check if attendance already exists for this student and date
+    const existing = await db.queryOne<Attendance>(
+      "SELECT * FROM attendance WHERE student_id = ? AND DATE(date) = DATE(?)",
+      [insertAttendance.studentId, insertAttendance.date]
+    );
+
+    if (existing) {
+      // Update existing record
       await db.query(
-        `INSERT INTO attendance (id, studentId, date, status, checkIn, checkOut, notes, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `UPDATE attendance SET 
+         status = ?, check_in = ?, check_out = ?, notes = ?
+         WHERE id = ?`,
         [
-          id,
-          insertAttendance.studentId,
-          insertAttendance.date,
           insertAttendance.status,
           insertAttendance.checkIn || null,
           insertAttendance.checkOut || null,
           insertAttendance.notes || null,
-          now
+          existing.id
         ]
       );
-
-      return {
-        id,
-        studentId: insertAttendance.studentId,
-        date: insertAttendance.date,
-        status: insertAttendance.status,
-        checkIn: insertAttendance.checkIn || null,
-        checkOut: insertAttendance.checkOut || null,
-        notes: insertAttendance.notes || null,
-        createdAt: now
-      };
-    } catch (error) {
-      console.error("Error creating attendance:", error);
-      throw error;
+      
+      return { ...existing, ...insertAttendance } as any;
+    } else {
+      // Create new record
+      return this.createAttendance(insertAttendance);
     }
+  }
+
+  async updateAttendance(id: string, updates: Partial<Attendance>): Promise<Attendance | undefined> {
+    const columnMap: Record<string, string> = {
+      studentId: "student_id",
+      checkIn: "check_in",
+      checkOut: "check_out",
+      createdAt: "created_at"
+    };
+
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === "id") continue;
+      const column = columnMap[key] || key;
+      fields.push(`${column} = ?`);
+      values.push(value);
+    }
+
+    if (!fields.length) {
+      return await db.queryOne<Attendance>("SELECT * FROM attendance WHERE id = ?", [id]);
+    }
+
+    values.push(id);
+    await db.query(`UPDATE attendance SET ${fields.join(", ")} WHERE id = ?`, values);
+    return await db.queryOne<Attendance>("SELECT * FROM attendance WHERE id = ?", [id]);
   }
 
   // ============= FEES =============
   async getFees(studentId?: string): Promise<Fee[]> {
-    try {
-      if (studentId) {
-        return await db.query<Fee>(
-          "SELECT * FROM fees WHERE studentId = ? ORDER BY dueDate DESC",
-          [studentId]
-        );
-      }
-      return await db.query<Fee>("SELECT * FROM fees ORDER BY dueDate DESC");
-    } catch (error) {
-      console.error("Error getting fees:", error);
-      throw error;
+    let sql = `
+      SELECT f.*, s.name as student_name
+      FROM fees f
+      LEFT JOIN students s ON f.student_id = s.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+
+    if (studentId) {
+      sql += " AND f.student_id = ?";
+      params.push(studentId);
     }
+
+    sql += " ORDER BY f.due_date DESC";
+
+    const fees = await db.query<Fee>(sql, params);
+    
+    // Calculate overdue status
+    const today = new Date();
+    return fees.map(fee => ({
+      ...fee,
+      status: fee.status === 'pending' && new Date(fee.due_date) < today ? 'overdue' : fee.status
+    }));
   }
 
   async createFee(insertFee: InsertFee): Promise<Fee> {
-    try {
-      const id = randomUUID();
-      const now = new Date();
+    const id = randomUUID();
+    const now = new Date();
 
-      await db.query(
-        `INSERT INTO fees (id, studentId, amount, dueDate, paidDate, status, paymentMethod, notes, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          insertFee.studentId,
-          insertFee.amount,
-          insertFee.dueDate,
-          insertFee.paidDate || null,
-          insertFee.status || "pending",
-          insertFee.paymentMethod || null,
-          insertFee.notes || null,
-          now
-        ]
-      );
-
-      return {
+    await db.query(
+      `INSERT INTO fees
+       (id, student_id, amount, due_date, paid_date, status, payment_method, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
         id,
-        studentId: insertFee.studentId,
-        amount: insertFee.amount,
-        dueDate: insertFee.dueDate,
-        paidDate: insertFee.paidDate || null,
-        status: insertFee.status || "pending",
-        paymentMethod: insertFee.paymentMethod || null,
-        notes: insertFee.notes || null,
-        createdAt: now
-      };
-    } catch (error) {
-      console.error("Error creating fee:", error);
-      throw error;
-    }
+        insertFee.studentId,
+        insertFee.amount,
+        insertFee.dueDate,
+        insertFee.paidDate || null,
+        insertFee.status || "pending",
+        insertFee.paymentMethod || null,
+        insertFee.notes || null,
+        now
+      ]
+    );
+
+    return { id, ...insertFee, created_at: now } as any;
   }
 
   async updateFee(id: string, updates: Partial<Fee>): Promise<Fee | undefined> {
-    try {
-      const fields: string[] = [];
-      const values: any[] = [];
+    const columnMap: Record<string, string> = {
+      paidDate: "paid_date",
+      dueDate: "due_date",
+      paymentMethod: "payment_method",
+      createdAt: "created_at"
+    };
 
-      for (const [key, value] of Object.entries(updates)) {
-        if (key !== "id" && key !== "createdAt") {
-          fields.push(`${key} = ?`);
-          values.push(value);
-        }
-      }
+    const fields: string[] = [];
+    const values: any[] = [];
 
-      if (fields.length === 0) {
-        return await db.queryOne<Fee>("SELECT * FROM fees WHERE id = ?", [id]);
-      }
-
-      values.push(id);
-      await db.query(`UPDATE fees SET ${fields.join(", ")} WHERE id = ?`, values);
-      return await db.queryOne<Fee>("SELECT * FROM fees WHERE id = ?", [id]);
-    } catch (error) {
-      console.error("Error updating fee:", error);
-      throw error;
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === "id") continue;
+      const column = columnMap[key] || key;
+      fields.push(`${column} = ?`);
+      values.push(value);
     }
+
+    if (!fields.length) {
+      return await db.queryOne<Fee>("SELECT * FROM fees WHERE id = ?", [id]);
+    }
+
+    values.push(id);
+    await db.query(`UPDATE fees SET ${fields.join(", ")} WHERE id = ?`, values);
+    return await db.queryOne<Fee>("SELECT * FROM fees WHERE id = ?", [id]);
+  }
+
+  // ============= TRAINER BATCHES =============
+  async getTrainerBatches(trainerId: string): Promise<any[]> {
+    return await db.query(
+      "SELECT * FROM trainer_batches WHERE trainer_id = ?",
+      [trainerId]
+    );
+  }
+
+  async assignTrainerToBatch(trainerId: string, batchName: string, program: string): Promise<void> {
+    await db.query(
+      `INSERT IGNORE INTO trainer_batches (trainer_id, batch_name, program)
+       VALUES (?, ?, ?)`,
+      [trainerId, batchName, program]
+    );
+  }
+
+  async getStudentsByTrainerBatches(trainerId: string, branchId: string): Promise<Student[]> {
+    return await db.query<Student>(
+      `SELECT DISTINCT s.* FROM students s
+       JOIN trainer_batches tb ON s.batch = tb.batch_name AND s.program = tb.program
+       WHERE tb.trainer_id = ? AND s.branch_id = ? AND s.status = 'active'
+       ORDER BY s.name`,
+      [trainerId, branchId]
+    );
   }
 }

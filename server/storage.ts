@@ -20,6 +20,9 @@ import { MySQLStorage } from "./mysql-storage";
  * Defines all operations used by routes
  */
 export interface IStorage {
+  // Raw query method for custom queries
+  query<T = any>(sql: string, params?: any[]): Promise<T[]>;
+  
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -27,13 +30,16 @@ export interface IStorage {
 
   // Students
   getStudents(branchId?: string): Promise<Student[]>;
+  getAllStudents(branchId?: string): Promise<Student[]>;
   getStudent(id: string): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
   updateStudent(id: string, student: Partial<Student>): Promise<Student | undefined>;
+  deleteStudent(id: string): Promise<boolean>;
 
   // Trainers
   getTrainers(branchId?: string): Promise<Trainer[]>;
   createTrainer(trainer: InsertTrainer): Promise<Trainer>;
+  deleteTrainer(id: string): Promise<boolean>;
 
   // Branches
   getBranches(): Promise<Branch[]>;
@@ -42,6 +48,8 @@ export interface IStorage {
   // Attendance
   getAttendance(studentId?: string, date?: Date): Promise<Attendance[]>;
   createAttendance(attendance: InsertAttendance): Promise<Attendance>;
+  upsertAttendance(attendance: InsertAttendance): Promise<Attendance>;
+  updateAttendance(id: string, attendance: Partial<Attendance>): Promise<Attendance | undefined>;
 
   // Fees
   getFees(studentId?: string): Promise<Fee[]>;

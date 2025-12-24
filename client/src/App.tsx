@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/lib/store";
+import { AuthProvider } from "@/lib/auth";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/auth/Login";
 import Dashboard from "@/pages/dashboard/Dashboard";
@@ -13,48 +14,50 @@ import ReceptionistDashboard from "@/pages/dashboard/ReceptionistDashboard";
 import StudentList from "@/pages/students/StudentList";
 import StudentProfile from "@/pages/students/StudentProfile";
 import AddStudent from "@/pages/students/AddStudent";
+import EditStudent from "@/pages/students/EditStudent";
 import AttendanceDashboard from "@/pages/attendance/AttendanceDashboard";
-import QRScanner from "@/pages/attendance/QRScanner";
+import MarkAttendance from "@/pages/attendance/MarkAttendance";
 import FeesDashboard from "@/pages/fees/FeesDashboard";
 import CollectFees from "@/pages/fees/CollectFees";
 import TrainerList from "@/pages/trainers/TrainerList";
-import BranchList from "@/pages/branches/BranchList";
+import MasterData from "@/pages/admin/MasterData";
+import BranchManagement from "@/pages/branches/BranchManagement";
+import BranchDetail from "@/pages/branches/BranchDetail";
 import ReportsDashboard from "@/pages/reports/ReportsDashboard";
+import Profile from "@/pages/profile/Profile";
+import Settings from "@/pages/settings/Settings";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Login} />
       
-      {/* Role-Based Dashboards */}
-      <Route path="/admin" component={Dashboard} />
-      <Route path="/manager" component={ManagerDashboard} />
-      <Route path="/receptionist" component={ReceptionistDashboard} />
-      <Route path="/trainer" component={TrainerDashboard} />
+      {/* Protected Routes */}
+      <ProtectedRoute path="/dashboard" component={Dashboard} requiredRole="admin" />
+      <ProtectedRoute path="/dashboard/manager" component={ManagerDashboard} requiredRole="manager" />
+      <ProtectedRoute path="/dashboard/receptionist" component={ReceptionistDashboard} requiredRole="receptionist" />
+      <ProtectedRoute path="/dashboard/trainer" component={TrainerDashboard} requiredRole="trainer" />
       
-      {/* Legacy routes for backward compatibility */}
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/dashboard/manager" component={ManagerDashboard} />
-      <Route path="/dashboard/receptionist" component={ReceptionistDashboard} />
-      <Route path="/dashboard/trainer" component={TrainerDashboard} />
+      <ProtectedRoute path="/students" component={StudentList} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
+      <ProtectedRoute path="/students/add" component={AddStudent} allowedRoles={["admin", "receptionist"]} />
+      <ProtectedRoute path="/students/:id/edit" component={EditStudent} allowedRoles={["admin", "receptionist"]} />
+      <ProtectedRoute path="/students/:id" component={StudentProfile} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
       
-      {/* Student Module */}
-      <Route path="/students" component={StudentList} />
-      <Route path="/students/add" component={AddStudent} />
-      <Route path="/students/:id" component={StudentProfile} />
+      <ProtectedRoute path="/attendance" component={AttendanceDashboard} allowedRoles={["admin", "manager", "trainer"]} />
+      <ProtectedRoute path="/attendance/mark" component={MarkAttendance} allowedRoles={["admin", "trainer"]} />
       
-      {/* Attendance Module */}
-      <Route path="/attendance" component={AttendanceDashboard} />
-      <Route path="/attendance/qr" component={QRScanner} />
+      <ProtectedRoute path="/fees" component={FeesDashboard} allowedRoles={["admin", "manager", "receptionist"]} />
+      <ProtectedRoute path="/fees/collect" component={CollectFees} allowedRoles={["admin", "receptionist"]} />
       
-      {/* Fees Module */}
-      <Route path="/fees" component={FeesDashboard} />
-      <Route path="/fees/collect" component={CollectFees} />
+      <ProtectedRoute path="/trainers" component={TrainerList} allowedRoles={["admin", "manager"]} />
+      <ProtectedRoute path="/admin/master-data" component={MasterData} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/branches" component={BranchManagement} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/branches/:id/manage" component={BranchDetail} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/reports" component={ReportsDashboard} allowedRoles={["admin", "manager"]} />
       
-      {/* Other Modules */}
-      <Route path="/trainers" component={TrainerList} />
-      <Route path="/branches" component={BranchList} />
-      <Route path="/reports" component={ReportsDashboard} />
+      <ProtectedRoute path="/profile" component={Profile} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
+      <ProtectedRoute path="/settings" component={Settings} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
       
       <Route component={NotFound} />
     </Switch>
@@ -64,12 +67,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </AppProvider>
+      <AuthProvider>
+        <AppProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </AppProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

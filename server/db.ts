@@ -1,4 +1,8 @@
-import mysql from 'mysql2/promise';
+// 🔴 MUST BE FIRST — load env HERE
+import dotenv from "dotenv";
+dotenv.config();
+
+import mysql from "mysql2/promise";
 
 interface DatabaseConfig {
   host: string;
@@ -13,20 +17,26 @@ class Database {
 
   constructor() {
     const config: DatabaseConfig = {
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'sms',
-      port: parseInt(process.env.DB_PORT || '3306'),
+      host: process.env.DB_HOST || "localhost",
+      user: process.env.DB_USER || "root",
+      password: process.env.DB_PASSWORD as string, // 🔑 DO NOT DEFAULT TO EMPTY
+      database: process.env.DB_NAME || "sms",
+      port: Number(process.env.DB_PORT) || 3306,
     };
 
-    this.pool = mysql.createPool({
-  ...config,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
+    // 🔍 TEMP DEBUG (REMOVE AFTER CONFIRMATION)
+    console.log(
+      "DB CONFIG CHECK →",
+      config.user,
+      config.password ? "PASSWORD_LOADED" : "PASSWORD_MISSING"
+    );
 
+    this.pool = mysql.createPool({
+      ...config,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+    });
   }
 
   async query<T = any>(sql: string, params?: any[]): Promise<T[]> {
@@ -34,7 +44,7 @@ class Database {
       const [rows] = await this.pool.execute(sql, params);
       return rows as T[];
     } catch (error) {
-      console.error('Database query error:', error);
+      console.error("Database query error:", error);
       throw error;
     }
   }

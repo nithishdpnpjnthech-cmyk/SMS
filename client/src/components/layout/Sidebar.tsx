@@ -10,14 +10,13 @@ import {
   FileBarChart, 
   LogOut,
   Menu,
-  Clock,
-  User
+  Settings
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/lib/auth";
 
-// Define role-based navigation items
 const NAV_CONFIG = {
   admin: [
     { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
@@ -26,6 +25,7 @@ const NAV_CONFIG = {
     { label: "Fees & Billing", icon: CreditCard, href: "/fees" },
     { label: "Trainers", icon: GraduationCap, href: "/trainers" },
     { label: "Branches", icon: Building2, href: "/branches" },
+    { label: "Master Data", icon: Settings, href: "/admin/master-data" },
     { label: "Reports", icon: FileBarChart, href: "/reports" },
   ],
   manager: [
@@ -39,27 +39,26 @@ const NAV_CONFIG = {
   receptionist: [
     { label: "Front Desk", icon: LayoutDashboard, href: "/dashboard/receptionist" },
     { label: "Students", icon: Users, href: "/students" },
-    { label: "Attendance", icon: CalendarCheck, href: "/attendance" },
     { label: "Fees", icon: CreditCard, href: "/fees" },
   ],
   trainer: [
     { label: "My Schedule", icon: LayoutDashboard, href: "/dashboard/trainer" },
+    { label: "Attendance", icon: CalendarCheck, href: "/attendance" },
     { label: "My Students", icon: Users, href: "/students" },
   ],
 };
 
 export function Sidebar() {
   const [location] = useLocation();
-  const [role, setRole] = useState("admin");
+  const { user, logout } = useAuth();
 
-  useEffect(() => {
-    // In a real app, this comes from context/auth
-    const storedRole = localStorage.getItem("userRole") || "admin";
-    setRole(storedRole);
-  }, []);
+  const navItems = NAV_CONFIG[user?.role as keyof typeof NAV_CONFIG] || NAV_CONFIG.admin;
 
-  // @ts-ignore
-  const navItems = NAV_CONFIG[role] || NAV_CONFIG.admin;
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to logout?')) {
+      logout();
+    }
+  };
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -74,7 +73,7 @@ export function Sidebar() {
       <div className="flex-1 overflow-y-auto py-6 px-3">
         <div className="mb-4 px-3">
           <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-            {role.replace('_', ' ')} Portal
+            {user?.role?.replace('_', ' ')} Portal
           </p>
         </div>
         <nav className="space-y-1">
@@ -99,12 +98,14 @@ export function Sidebar() {
         </nav>
       </div>
       <div className="border-t border-sidebar-border/50 p-4">
-        <Link href="/">
-          <Button variant="ghost" className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50">
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
-        </Link>
+        <Button 
+          onClick={handleLogout}
+          variant="ghost" 
+          className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </div>
   );
@@ -113,15 +114,15 @@ export function Sidebar() {
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const [location] = useLocation();
-  const [role, setRole] = useState("admin");
+  const { user, logout } = useAuth();
 
-  useEffect(() => {
-    const storedRole = localStorage.getItem("userRole") || "admin";
-    setRole(storedRole);
-  }, []);
+  const navItems = NAV_CONFIG[user?.role as keyof typeof NAV_CONFIG] || NAV_CONFIG.admin;
 
-  // @ts-ignore
-  const navItems = NAV_CONFIG[role] || NAV_CONFIG.admin;
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to logout?')) {
+      logout();
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -143,7 +144,7 @@ export function MobileSidebar() {
           <div className="flex-1 overflow-y-auto py-6 px-3">
             <div className="mb-4 px-3">
               <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-                {role} Portal
+                {user?.role} Portal
               </p>
             </div>
             <nav className="space-y-1">
@@ -168,12 +169,14 @@ export function MobileSidebar() {
             </nav>
           </div>
           <div className="border-t border-sidebar-border/50 p-4">
-            <Link href="/" onClick={() => setOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50">
-                <LogOut className="h-4 w-4" />
-                Logout
-              </Button>
-            </Link>
+            <Button 
+              onClick={() => { handleLogout(); setOpen(false); }}
+              variant="ghost" 
+              className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
           </div>
         </div>
       </SheetContent>
