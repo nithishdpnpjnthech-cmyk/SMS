@@ -8,11 +8,119 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Bell, Shield, Palette, Globe, Database, Download } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const [notifications, setNotifications] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const { toast } = useToast();
+
+  // Fix: Add proper handlers for settings buttons
+  const handleSaveSettings = () => {
+    try {
+      // TODO: Implement settings save API call
+      localStorage.setItem('settings', JSON.stringify({
+        notifications,
+        emailAlerts,
+        darkMode,
+        savedAt: new Date().toISOString()
+      }));
+      
+      toast({
+        title: "Success",
+        description: "Settings saved successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleExportData = () => {
+    try {
+      const settingsData = {
+        notifications,
+        emailAlerts,
+        darkMode,
+        exportDate: new Date().toISOString()
+      };
+      
+      const dataStr = JSON.stringify(settingsData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `settings-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Success",
+        description: "Settings exported successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export settings",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBackupSettings = () => {
+    try {
+      const backup = {
+        settings: { notifications, emailAlerts, darkMode },
+        timestamp: new Date().toISOString(),
+        version: '1.0'
+      };
+      
+      localStorage.setItem('settingsBackup', JSON.stringify(backup));
+      
+      toast({
+        title: "Success",
+        description: "Settings backed up successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to backup settings",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleClearCache = () => {
+    try {
+      // Clear relevant cache items
+      const keysToKeep = ['user', 'userRole', 'settings', 'settingsBackup'];
+      const allKeys = Object.keys(localStorage);
+      
+      allKeys.forEach(key => {
+        if (!keysToKeep.includes(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Cache cleared successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear cache",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -115,8 +223,12 @@ export default function Settings() {
                 </Select>
               </div>
               <div className="flex gap-4">
-                <Button variant="outline">Change Password</Button>
-                <Button variant="outline">Enable 2FA</Button>
+                <Button variant="outline" onClick={() => toast({ title: "Info", description: "Password change feature coming soon" })}>
+                  Change Password
+                </Button>
+                <Button variant="outline" onClick={() => toast({ title: "Info", description: "2FA feature coming soon" })}>
+                  Enable 2FA
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -171,16 +283,22 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <div className="flex gap-4">
-                <Button variant="outline">Export Data</Button>
-                <Button variant="outline">Backup Settings</Button>
-                <Button variant="outline">Clear Cache</Button>
+                <Button variant="outline" onClick={handleExportData}>
+                  Export Data
+                </Button>
+                <Button variant="outline" onClick={handleBackupSettings}>
+                  Backup Settings
+                </Button>
+                <Button variant="outline" onClick={handleClearCache}>
+                  Clear Cache
+                </Button>
               </div>
             </CardContent>
           </Card>
 
           {/* Save Settings */}
           <div className="flex justify-end">
-            <Button>Save Settings</Button>
+            <Button onClick={handleSaveSettings}>Save Settings</Button>
           </div>
         </div>
       </div>

@@ -6,33 +6,86 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, BookOpen, Clock, FileText, Download, Edit } from "lucide-react";
 import { Link, useRoute } from "wouter";
-import { useAppStore } from "@/lib/store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 export default function StudentProfile() {
-  const { students, fees, attendance, updateStudent } = useAppStore();
   const { toast } = useToast();
   const [, params] = useRoute("/students/:id");
-  const studentId = params?.id; 
-  const student = students.find(s => s.id === studentId);
+  const studentId = params?.id;
+  
+  // Fix: Fetch student data directly instead of depending on store
+  const [student, setStudent] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [fees, setFees] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<any[]>([]);
 
+  // Fix: Load student data on component mount and when studentId changes
+  useEffect(() => {
+    if (studentId) {
+      loadStudentData();
+    }
+  }, [studentId]);
+
+  const loadStudentData = async () => {
+    if (!studentId) return;
+    
+    setIsLoading(true);
+    try {
+      const [studentData, feesData, attendanceData] = await Promise.all([
+        api.getStudent(studentId),
+        api.getFees(undefined, studentId).catch(() => []),
+        api.getAttendance(studentId).catch(() => [])
+      ]);
+      
+      setStudent(studentData);
+      setFees(Array.isArray(feesData) ? feesData : []);
+      setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
+    } catch (error) {
+      console.error("Failed to load student data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load student profile",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fix: Show loading state
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading student profile...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Fix: Show "Student not found" if no data
   if (!student) {
     return (
-        <DashboardLayout>
-            <div className="flex flex-col items-center justify-center h-full">
-                <h2 className="text-xl font-bold">Student Not Found</h2>
-                <Link href="/students">
-                    <Button variant="link">Return to list</Button>
-                </Link>
-            </div>
-        </DashboardLayout>
-    )
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-64">
+          <h2 className="text-xl font-bold mb-2">Student Not Found</h2>
+          <p className="text-muted-foreground mb-4">The student profile you're looking for doesn't exist.</p>
+          <Link href="/students">
+            <Button variant="outline">Return to Student List</Button>
+          </Link>
+        </div>
+      </DashboardLayout>
+    );
   }
 
   const studentFees = fees.filter(f => f.studentId === student.id || f.studentName === student.name);
@@ -40,23 +93,32 @@ export default function StudentProfile() {
   const presentCount = studentAttendance.filter(a => a.status === 'present').length;
   const attendanceRate = studentAttendance.length > 0 ? Math.round((presentCount / studentAttendance.length) * 100) : 0;
 
-  const handleUpdate = (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     
-    updateStudent(student.id, {
+    try {
+      await api.updateStudent(student.id, {
         name: formData.get("name") as string,
         parentName: formData.get("parentName") as string,
         phone: formData.get("phone") as string,
-        // Add more fields as needed
-    });
+      });
 
-    setIsEditOpen(false);
-    toast({
+      setIsEditOpen(false);
+      toast({
         title: "Profile Updated",
         description: "Student details have been saved.",
-        className: "bg-green-600 text-white border-none"
-    });
+      });
+      
+      // Reload student data
+      loadStudentData();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update student profile",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
