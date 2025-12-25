@@ -1058,13 +1058,24 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ================= TRAINER SPECIFIC =================
   app.get("/api/trainers/:id/dashboard", requireAuth(), async (req, res) => {
     try {
-      const trainerId = req.params.id;
+      const userId = req.params.id;
       
-      if (req.user.role !== 'admin' && req.user.id !== trainerId) {
+      if (req.user.role !== 'admin' && req.user.id !== userId) {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      const user = await storage.getUser(trainerId);
+      // Get trainer record by user_id
+      const trainer = await storage.query("SELECT * FROM trainers WHERE user_id = ?", [userId]);
+      if (!trainer || trainer.length === 0) {
+        return res.json({
+          totalStudents: 0,
+          todayClasses: 0,
+          batches: []
+        });
+      }
+      
+      const trainerId = trainer[0].id;
+      const user = await storage.getUser(userId);
       if (!user || !user.branch_id) {
         return res.json({
           totalStudents: 0,
@@ -1138,13 +1149,20 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Get students for trainer's assigned batches
   app.get("/api/trainers/:id/students", requireAuth(), async (req, res) => {
     try {
-      const trainerId = req.params.id;
+      const userId = req.params.id;
       
-      if (req.user.role !== 'admin' && req.user.id !== trainerId) {
+      if (req.user.role !== 'admin' && req.user.id !== userId) {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      const user = await storage.getUser(trainerId);
+      // Get trainer record by user_id
+      const trainer = await storage.query("SELECT * FROM trainers WHERE user_id = ?", [userId]);
+      if (!trainer || trainer.length === 0) {
+        return res.json([]);
+      }
+      
+      const trainerId = trainer[0].id;
+      const user = await storage.getUser(userId);
       if (!user || !user.branch_id) {
         return res.json([]);
       }
