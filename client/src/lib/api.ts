@@ -218,8 +218,11 @@ class ApiClient {
   }
 
   // ================= FEES =================
-  async getFees(studentId?: string) {
-    const query = studentId ? `?studentId=${studentId}` : "";
+  async getFees(branchId?: string, studentId?: string) {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branchId', branchId);
+    if (studentId) params.append('studentId', studentId);
+    const query = params.toString() ? `?${params}` : "";
     return this.request(`/fees${query}`);
   }
 

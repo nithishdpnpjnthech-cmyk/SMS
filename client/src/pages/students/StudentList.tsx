@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -19,15 +19,20 @@ export default function StudentList() {
   const [programFilter, setProgramFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [location] = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
     loadStudents();
-  }, []);
+  }, [location]);
 
   const loadStudents = async () => {
     try {
-      const studentsData = await api.getStudents();
+      // Read branchId from URL query parameters
+      const params = new URLSearchParams(location.split('?')[1] || '');
+      const branchId = params.get("branchId");
+      
+      const studentsData = await api.getStudents(branchId || undefined);
       setStudents(studentsData);
       console.log("Students loaded:", studentsData);
     } catch (error) {

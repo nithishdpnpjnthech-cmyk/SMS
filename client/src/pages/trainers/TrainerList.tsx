@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -23,13 +24,14 @@ export default function TrainerList() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined);
+  const [location] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
     loadTrainers();
     loadBranches();
-  }, []);
+  }, [location]);
 
   const loadBranches = async () => {
     try {
@@ -122,7 +124,11 @@ export default function TrainerList() {
 
   const loadTrainers = async () => {
     try {
-      const trainersData = await api.getTrainers();
+      // Read branchId from URL query parameters
+      const params = new URLSearchParams(location.split('?')[1] || '');
+      const branchId = params.get("branchId");
+      
+      const trainersData = await api.getTrainers(branchId || undefined);
       setTrainers(trainersData);
       console.log("Trainers loaded:", trainersData);
     } catch (error) {

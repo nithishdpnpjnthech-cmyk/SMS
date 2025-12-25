@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IndianRupee, TrendingUp, AlertCircle, Search, Plus, Download, Users } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { api } from "@/lib/api";
 import { formatAmount } from "@/lib/currency";
 
@@ -17,6 +17,7 @@ export default function FeesDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [location] = useLocation();
   const [stats, setStats] = useState({
     totalCollected: 0,
     pendingAmount: 0,
@@ -26,13 +27,17 @@ export default function FeesDashboard() {
 
   useEffect(() => {
     loadFeesData();
-  }, []);
+  }, [location]);
 
   const loadFeesData = async () => {
     try {
+      // Read branchId from URL query parameters
+      const params = new URLSearchParams(location.split('?')[1] || '');
+      const branchId = params.get("branchId");
+      
       const [feesData, studentsData, dashboardStats] = await Promise.all([
-        api.getFees(),
-        api.getStudents(),
+        api.getFees(branchId || undefined),
+        api.getStudents(branchId || undefined),
         api.getDashboardStats()
       ]);
       
