@@ -1,32 +1,39 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { randomUUID } from "crypto";
 
 // Enhanced RBAC Middleware with Branch Isolation
 function requireAuth() {
-  return async (req: any, res: any, next: any) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-    const userRole = req.headers['x-user-role'];
-    const userId = req.headers['x-user-id'];
-    const userBranchId = req.headers['x-user-branch'];
+    const userRole = Array.isArray(req.headers['x-user-role'])
+      ? req.headers['x-user-role'][0]
+      : req.headers['x-user-role'];
+    const userId = Array.isArray(req.headers['x-user-id'])
+      ? req.headers['x-user-id'][0]
+      : req.headers['x-user-id'];
+    const userBranchId = Array.isArray(req.headers['x-user-branch'])
+      ? req.headers['x-user-branch'][0]
+      : req.headers['x-user-branch'] ?? null;
     
     if (!userRole || !userId) {
       return res.status(401).json({ error: "Authentication required" });
     }
     
     req.user = {
-      id: userId,
-      role: userRole,
-      branchId: userBranchId
+      id: userId as string,
+      role: userRole as string,
+      branchId: userBranchId  // ✅ Use header value directly
     };
     
+    console.log(`Auth: User ${userId} (${userRole}) branchId: ${userBranchId}`);
     next();
   };
 }
 
 function requireRole(allowedRoles: string[]) {
-  return async (req: any, res: any, next: any) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ error: "Access denied" });
     }
     next();
@@ -34,41 +41,36 @@ function requireRole(allowedRoles: string[]) {
 }
 
 function enforceBranchAccess() {
-  return async (req: any, res: any, next: any) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
 
-    // ✅ If branchId is explicitly provided (Manage Branch context),
-    // respect it even for admin
-    if (req.query.branchId) {
+    // ✅ Admin should NEVER be branch-restricted
+    if (user.role === "admin") {
       return next();
     }
 
-    // ✅ For non-admin users, enforce their branch
-    if (user.role !== 'admin') {
-      if (!user.branchId) {
-        return res.status(403).json({ error: "User not assigned to any branch" });
-      }
-      req.query.branchId = user.branchId;
-      req.body.branchId = user.branchId;
+    // ❌ Non-admin without branch = block with detailed error
+    if (!user.branchId) {
+      console.error(`User ${user.id} (${user.role}) has no branchId assigned`);
+      return res.status(403).json({
+        error: "User not assigned to any branch. Contact administrator.",
+        debug: { userId: user.id, role: user.role, branchId: user.branchId }
+      });
     }
 
-    // ✅ Admin without branch context → no restriction
+    // ✅ Enforce branch for non-admin users
+    req.query.branchId = user.branchId;
+    req.body.branchId = user.branchId;
+
+    console.log(`Branch access enforced: ${user.role} restricted to branch ${user.branchId}`);
     next();
   };
 }
 
-export async function registerRoutes(app: Express): Promise<void> {
 
-  // ================= CORS =================
-  app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-user-role, x-user-id, x-user-branch");
-    if (req.method === "OPTIONS") {
-      return res.sendStatus(200);
-    }
-    next();
-  });
+    
+
+export async function registerRoutes(app: Express): Promise<void> {
 
   // ================= AUTH =================
   app.post("/api/auth/login", async (req, res) => {
@@ -83,21 +85,29 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
 
       const user = await storage.getUserByUsername(identifier);
-      console.log("User found:", user ? { id: user.id, username: user.username, role: user.role } : "No user found");
+      console.log("User found:", user ? { id: user.id, username: user.username, role: user.role, branch_id: (user as any).branch_id } : "No user found");
 
       if (!user || user.password !== password) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
+      // ✅ CRITICAL: Map database branch_id to camelCase branchId for frontend
       const userResponse = {
         id: user.id,
         username: user.username,
-        email: user.email,
+        email: user.email || null,
+        name: user.name || null,
         role: user.role,
-        branch_id: user.branch_id
+        branchId: (user as any).branch_id || null  // ✅ Map snake_case to camelCase
       };
 
       console.log("Login successful, returning user:", userResponse);
+      
+      // ✅ Log branch assignment status for debugging
+      if (user.role !== 'admin' && !(user as any).branch_id) {
+        console.warn(`⚠️  User ${user.username} (${user.role}) has no branch_id assigned!`);
+      }
+      
       res.json({ user: userResponse });
     } catch (error) {
       console.error("Login error:", error);
@@ -958,7 +968,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         name: student.name,
         program: student.program,
         batch: student.batch,
-        joiningDate: student.joining_date,
+        joiningDate: student.joiningDate,
         cardUrl: `/api/students/${student.id}/id-card/download`,
         generated: true
       };
@@ -1022,7 +1032,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const today = new Date();
       const processedFees = fees.map((fee: any) => ({
         ...fee,
-        status: fee.status === 'pending' && new Date(fee.due_date) < today ? 'overdue' : fee.status
+        status: fee.status === 'pending' && new Date(fee.dueDate) < today ? 'overdue' : fee.status
       }));
       
       res.json(processedFees);
@@ -1054,7 +1064,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Check for overdue
       const overdueFees = fees.filter(f => 
-        f.status === 'pending' && new Date(f.due_date) < today
+        f.status === 'pending' && new Date(f.dueDate) < today
       );
       const overdueAmount = overdueFees.reduce((sum, f) => sum + Number(f.amount), 0);
       
@@ -1120,7 +1130,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       const user = await storage.getUser(userId);
-      if (!user || !user.branch_id) {
+      if (!user || !user.branchId) {
         return res.json({
           totalStudents: 0,
           todayClasses: 0,
@@ -1129,7 +1139,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       const batches = await storage.getTrainerBatches(userId);
-      const students = await storage.getStudentsByTrainerBatches(userId, user.branch_id);
+      const students = await storage.getStudentsByTrainerBatches(userId, user.branchId);
       
       res.json({
         totalStudents: students.length,
@@ -1159,7 +1169,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       // Check if manager is trying to assign batch to trainer in different branch
-      if (req.user.role === 'manager' && user.branch_id !== req.user.branchId) {
+      if (req.user.role === 'manager' && user.branchId !== req.user.branchId) {
         return res.status(403).json({ error: "Access denied" });
       }
       
@@ -1200,11 +1210,11 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       const user = await storage.getUser(userId);
-      if (!user || !user.branch_id) {
+      if (!user || !user.branchId) {
         return res.json([]);
       }
       
-      const students = await storage.getStudentsByTrainerBatches(userId, user.branch_id);
+      const students = await storage.getStudentsByTrainerBatches(userId, user.branchId);
       res.json(students);
     } catch (error) {
       console.error("Get trainer students error:", error);

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarCheck, Users, Clock, TrendingUp, Search, Plus, Edit2, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -14,14 +14,34 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
+interface AttendanceRecord {
+  id: string;
+  student_id: string;
+  student_name: string;
+  program: string;
+  batch: string;
+  status: string;
+  check_in?: string;
+  check_out?: string;
+  date: string;
+}
+
+interface Student {
+  id: string;
+  name: string;
+  program: string;
+  batch: string;
+}
+
 export default function AttendanceDashboard() {
-  const [attendance, setAttendance] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [programFilter, setProgramFilter] = useState("all");
-  const [batchFilter, setBatchFilter] = useState("all");
+  const [selectedProgram, setSelectedProgram] = useState("all");
+  const [selectedBatch, setSelectedBatch] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
-  const [editingRecord, setEditingRecord] = useState<any>(null);
+  const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const { hasPermission } = useAuth();
   const { toast } = useToast();
@@ -32,7 +52,17 @@ export default function AttendanceDashboard() {
     totalStudents: 0
   });
 
-  const handleEditAttendance = (record: any) => {
+  const getStudentProgram = (studentId: string): string => {
+    const student = students.find(s => s.id === studentId);
+    return student?.program || '';
+  };
+
+  const getStudentBatch = (studentId: string): string => {
+    const student = students.find(s => s.id === studentId);
+    return student?.batch || '';
+  };
+
+  const handleEditAttendance = (record: AttendanceRecord) => {
     setEditingRecord(record);
   };
 
@@ -49,34 +79,14 @@ export default function AttendanceDashboard() {
       
       await api.updateAttendance(editingRecord.id, updates);
       
-      // Update local state
       setAttendance(prev => prev.map(record => 
         record.id === editingRecord.id 
           ? { ...record, ...updates }
           : record
       ));
       
-      // Recalculate stats
-      const updatedAttendance = attendance.map(record => 
-        record.id === editingRecord.id 
-          ? { ...record, ...updates }
-          : record
-      );
-      
-      const totalPresent = updatedAttendance.filter(a => a.status === 'present').length;
-      const totalAbsent = updatedAttendance.filter(a => a.status === 'absent').length;
-      const totalRecords = updatedAttendance.length;
-      const attendanceRate = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
-
-      setStats({
-        totalPresent,
-        totalAbsent,
-        attendanceRate,
-        totalStudents: students.length
-      });
-      
       setEditingRecord(null);
-      await loadAttendanceData(); // Refresh data to ensure consistency
+      await loadAttendanceData();
       toast({
         title: "Success",
         description: "Attendance updated successfully"
@@ -100,15 +110,25 @@ export default function AttendanceDashboard() {
   const loadAttendanceData = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const [attendanceData, studentsData] = await Promise.all([
-        api.getAttendance(undefined, today),
-        api.getStudents()
-      ]);
+      
+      let attendanceData, studentsData;
+      
+      if (user?.role === "admin") {
+        const branchId = new URLSearchParams(window.location.search).get("branchId");
+        [attendanceData, studentsData] = await Promise.all([
+          api.getAttendance(undefined, today),
+          api.getStudents(branchId || undefined)
+        ]);
+      } else {
+        [attendanceData, studentsData] = await Promise.all([
+          api.getAttendance(undefined, today),
+          api.getStudents()
+        ]);
+      }
       
       setAttendance(attendanceData);
       setStudents(studentsData);
       
-      // Calculate attendance stats
       const totalPresent = attendanceData.filter(a => a.status === 'present').length;
       const totalAbsent = attendanceData.filter(a => a.status === 'absent').length;
       const totalRecords = attendanceData.length;
@@ -118,10 +138,10 @@ export default function AttendanceDashboard() {
         totalPresent,
         totalAbsent,
         attendanceRate,
-        totalStudents: studentsData.length
+        totalStudents: totalRecords
       });
 
-      console.log("Attendance data loaded:", { attendance: attendanceData, students: studentsData, stats });
+      console.log("Attendance data loaded:", attendanceData);
     } catch (error) {
       console.error("Failed to load attendance data:", error);
     } finally {
@@ -129,30 +149,23 @@ export default function AttendanceDashboard() {
     }
   };
 
-  const getStudentName = (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    return student?.name || 'Inactive Student';
-  };
-
-  const getStudentProgram = (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    return student?.program || 'N/A';
-  };
-
-  const filteredAttendance = attendance.filter(record => {
-    // Only show attendance records for active students
-    const student = students.find(s => s.id === record.student_id);
-    if (!student) return false; // Skip records for inactive/deleted students
-    
-    const studentName = student.name;
-    const studentProgram = student.program;
-    
-    const matchesSearch = studentName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesProgram = programFilter === "all" || studentProgram === programFilter;
-    const matchesBatch = batchFilter === "all" || record.batch === batchFilter;
-    
-    return matchesSearch && matchesProgram && matchesBatch;
-  });
+  const filteredAttendance = useMemo(() => {
+    return attendance.filter(record => {
+      const studentName = record.student_name || '';
+      const recordProgram = record.program || getStudentProgram(record.student_id);
+      const recordBatch = record.batch || getStudentBatch(record.student_id);
+      const recordStatus = record.status || '';
+      
+      const matchesSearch = studentName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesProgram = selectedProgram === "all" || 
+        recordProgram.toLowerCase() === selectedProgram.toLowerCase();
+      const matchesBatch = selectedBatch === "all" || 
+        recordBatch.toLowerCase() === selectedBatch.toLowerCase();
+      const matchesStatus = statusFilter === "all" || recordStatus.toLowerCase() === statusFilter.toLowerCase();
+      
+      return matchesSearch && matchesProgram && matchesBatch && matchesStatus;
+    });
+  }, [attendance, students, searchTerm, selectedProgram, selectedBatch, statusFilter]);
 
   if (isLoading) {
     return (
@@ -187,7 +200,6 @@ export default function AttendanceDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -231,7 +243,6 @@ export default function AttendanceDashboard() {
           </Card>
         </div>
 
-        {/* Attendance Table */}
         <Card>
           <CardHeader>
             <CardTitle>Today's Attendance</CardTitle>
@@ -249,28 +260,41 @@ export default function AttendanceDashboard() {
                 />
               </div>
               <div className="w-full sm:w-[150px]">
-                <Select value={programFilter} onValueChange={setProgramFilter}>
+                <Select value={selectedProgram} onValueChange={setSelectedProgram}>
                   <SelectTrigger>
                     <SelectValue placeholder="Program" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Programs</SelectItem>
-                    <SelectItem value="Karate">Karate</SelectItem>
+                    <SelectItem value="karate">Karate</SelectItem>
                     <SelectItem value="Yoga">Yoga</SelectItem>
                     <SelectItem value="Bharatnatyam">Bharatnatyam</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="w-full sm:w-[150px]">
-                <Select value={batchFilter} onValueChange={setBatchFilter}>
+                <Select value={selectedBatch} onValueChange={setSelectedBatch}>
                   <SelectTrigger>
                     <SelectValue placeholder="Batch" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
-                    <SelectItem value="Morning Batch">Morning</SelectItem>
-                    <SelectItem value="Evening Batch">Evening</SelectItem>
-                    <SelectItem value="Weekend Batch">Weekend</SelectItem>
+                    <SelectItem value="morning">Morning</SelectItem>
+                    <SelectItem value="evening">Evening</SelectItem>
+                    <SelectItem value="weekends">Weekends</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full sm:w-[150px]">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="absent">Absent</SelectItem>
+                    <SelectItem value="late">Late</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -293,9 +317,9 @@ export default function AttendanceDashboard() {
                   {filteredAttendance.length > 0 ? (
                     filteredAttendance.map((record) => (
                       <TableRow key={record.id}>
-                        <TableCell className="font-medium">{getStudentName(record.student_id)}</TableCell>
-                        <TableCell>{getStudentProgram(record.student_id)}</TableCell>
-                        <TableCell>{record.batch || 'N/A'}</TableCell>
+                        <TableCell className="font-medium">{record.student_name || 'N/A'}</TableCell>
+                        <TableCell>{record.program || getStudentProgram(record.student_id) || 'N/A'}</TableCell>
+                        <TableCell>{record.batch || getStudentBatch(record.student_id) || 'N/A'}</TableCell>
                         <TableCell>{record.check_in ? new Date(record.check_in).toLocaleTimeString() : 'N/A'}</TableCell>
                         <TableCell>{record.check_out ? new Date(record.check_out).toLocaleTimeString() : 'N/A'}</TableCell>
                         <TableCell>
@@ -343,13 +367,12 @@ export default function AttendanceDashboard() {
           </CardContent>
         </Card>
 
-        {/* Edit Attendance Modal */}
         <Dialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Edit Attendance</DialogTitle>
               <DialogDescription>
-                Update attendance status for {editingRecord && getStudentName(editingRecord.student_id)}
+                Update attendance status for {editingRecord?.student_name || 'Student'}
               </DialogDescription>
             </DialogHeader>
             {editingRecord && (

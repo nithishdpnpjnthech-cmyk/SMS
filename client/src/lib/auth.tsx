@@ -6,7 +6,7 @@ interface User {
   username: string;
   email: string;
   role: 'admin' | 'manager' | 'receptionist' | 'trainer';
-  branch_id?: string;
+  branchId?: string;  // ✅ Use camelCase
   name?: string;
 }
 
@@ -38,7 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        setUser(userData);
+        // ✅ Ensure consistent user object shape
+        if (userData && userData.id && userData.role) {
+          setUser(userData);
+        } else {
+          console.warn('Invalid user data structure, clearing session');
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+        }
       } catch (error) {
         console.error('Invalid stored user data:', error);
         localStorage.removeItem('user');
@@ -49,10 +56,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (credentials: { username: string; password: string }) => {
-    const { user: userData } = await api.login(credentials);
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('userRole', userData.role);
+    console.log("Auth: Starting login process for:", credentials.username);
+    try {
+      const { user: userData } = await api.login(credentials);
+      console.log("Auth: Login API response:", userData);
+      
+      // ✅ Validate user data structure before setting
+      if (!userData || !userData.id || !userData.role) {
+        throw new Error('Invalid user data received from server');
+      }
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('userRole', userData.role);
+      console.log("Auth: Login completed successfully", { userId: userData.id, role: userData.role, branchId: userData.branchId });
+    } catch (error) {
+      console.error("Auth: Login failed:", error);
+      throw error;
+    }
   };
 
   const logout = () => {

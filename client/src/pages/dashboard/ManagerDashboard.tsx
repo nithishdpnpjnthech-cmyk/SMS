@@ -30,7 +30,7 @@ export default function ManagerDashboard() {
 
   const loadManagerData = async () => {
     try {
-      if (!user?.branch_id) {
+      if (!user?.branchId) {
         console.warn('Manager not assigned to any branch');
         // Set empty stats instead of throwing error
         setStats({
@@ -46,11 +46,11 @@ export default function ManagerDashboard() {
       }
 
       const [dashboardStats, branches] = await Promise.all([
-        api.getDashboardStats(user.branch_id),
+        api.getDashboardStats(user.branchId),
         api.getBranches()
       ]);
       
-      const userBranch = branches.find(b => b.id === user.branch_id);
+      const userBranch = branches.find(b => b.id === user.branchId);
       
       setStats(dashboardStats || {
         totalStudents: 0,

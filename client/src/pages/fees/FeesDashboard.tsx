@@ -10,14 +10,32 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { api } from "@/lib/api";
 import { formatAmount } from "@/lib/currency";
+import { useToast } from "@/hooks/use-toast";
+
+interface Fee {
+  id: string;
+  student_id: string;
+  amount: number;
+  due_date: string;
+  paid_date?: string;
+  status: string;
+  payment_method?: string;
+  notes?: string;
+}
+
+interface Student {
+  id: string;
+  name: string;
+}
 
 export default function FeesDashboard() {
-  const [fees, setFees] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+  const [fees, setFees] = useState<Fee[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [location] = useLocation();
+  const { toast } = useToast();
   const [stats, setStats] = useState({
     totalCollected: 0,
     pendingAmount: 0,
@@ -31,20 +49,28 @@ export default function FeesDashboard() {
 
   const loadFeesData = async () => {
     try {
-      // Read branchId from URL query parameters
-      const params = new URLSearchParams(location.split('?')[1] || '');
-      const branchId = params.get("branchId");
+      let feesData, studentsData;
       
-      const [feesData, studentsData, dashboardStats] = await Promise.all([
-        api.getFees(branchId || undefined),
-        api.getStudents(branchId || undefined),
+      if (user?.role === "admin") {
+        const branchId = new URLSearchParams(window.location.search).get("branchId");
+        [feesData, studentsData] = await Promise.all([
+          api.getFees(branchId || undefined),
+          api.getStudents(branchId || undefined)
+        ]);
+      } else {
+        [feesData, studentsData] = await Promise.all([
+          api.getFees(),
+          api.getStudents()
+        ]);
+      }
+      
+      const [dashboardStats] = await Promise.all([
         api.getDashboardStats()
       ]);
       
       setFees(feesData);
       setStudents(studentsData);
       
-      // Calculate fee stats
       const totalCollected = feesData
         .filter(f => f.status === 'paid')
         .reduce((sum, f) => sum + Number(f.amount), 0);
@@ -97,7 +123,7 @@ export default function FeesDashboard() {
     }
   };
 
-  const convertFeesToCSV = (feesData: any[], studentsData: any[]) => {
+  const convertFeesToCSV = (feesData: Fee[], studentsData: Student[]) => {
     const headers = ["Fee ID", "Student Name", "Amount (₹)", "Due Date", "Paid Date", "Status", "Payment Method", "Notes"];
     
     const rows = feesData.map(fee => [
@@ -171,7 +197,6 @@ export default function FeesDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           <Card className="col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -215,7 +240,6 @@ export default function FeesDashboard() {
           </Card>
         </div>
 
-        {/* Fees Table */}
         <Card>
           <CardHeader>
             <CardTitle>Fee Records</CardTitle>

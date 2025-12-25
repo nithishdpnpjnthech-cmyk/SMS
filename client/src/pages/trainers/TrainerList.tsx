@@ -124,11 +124,14 @@ export default function TrainerList() {
 
   const loadTrainers = async () => {
     try {
-      // Read branchId from URL query parameters
-      const params = new URLSearchParams(location.split('?')[1] || '');
-      const branchId = params.get("branchId");
+      let trainersData;
+      if (user?.role === "admin") {
+        const branchId = new URLSearchParams(window.location.search).get("branchId");
+        trainersData = await api.getTrainers(branchId || undefined);
+      } else {
+        trainersData = await api.getTrainers();
+      }
       
-      const trainersData = await api.getTrainers(branchId || undefined);
       setTrainers(trainersData);
       console.log("Trainers loaded:", trainersData);
     } catch (error) {

@@ -1,42 +1,75 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
+
+interface Student {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  program?: string;
+  batch?: string;
+  status?: string;
+  branch_name?: string;
+}
 
 export default function StudentList() {
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [programFilter, setProgramFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [location] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const branchId = new URLSearchParams(window.location.search).get("branchId");
 
   useEffect(() => {
+    setIsLoading(true);
+    setStudents([]);
     loadStudents();
-  }, [location]);
+  }, [branchId]);
 
   const loadStudents = async () => {
     try {
-      // Read branchId from URL query parameters
-      const params = new URLSearchParams(location.split('?')[1] || '');
-      const branchId = params.get("branchId");
+      console.log("Loading students with user role:", user?.role);
       
-      const studentsData = await api.getStudents(branchId || undefined);
-      setStudents(studentsData);
-      console.log("Students loaded:", studentsData);
+      let data;
+      if (user?.role === "admin") {
+        data = await api.getStudents(branchId || undefined);
+      } else {
+        data = await api.getStudents();
+      }
+      
+      const studentsArray: Student[] = Array.isArray(data) ? data : [];
+      setStudents(studentsArray);
+      console.log("Students loaded:", studentsArray.length, "students");
     } catch (error) {
       console.error("Failed to load students:", error);
+      setStudents([]);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load students",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -63,19 +96,23 @@ export default function StudentList() {
     }
   };
 
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          student.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          student.phone?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesProgram = programFilter === "all" || student.program === programFilter;
+  const filteredStudents = students.filter((student) => {
+    const matchesSearch =
+      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesProgram =
+      programFilter === "all" || 
+      student.program?.toLowerCase().includes(programFilter.toLowerCase());
+
     return matchesSearch && matchesProgram;
   });
 
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p>Loading students...</p>
@@ -88,13 +125,13 @@ export default function StudentList() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading">Students</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Students</h1>
             <p className="text-muted-foreground">Manage student enrollments and profiles.</p>
           </div>
           <Link href="/students/add">
-            <Button className="gap-2 shadow-md">
+            <Button className="gap-2 shadow-md min-h-[44px] w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Add New Student
             </Button>
@@ -103,14 +140,17 @@ export default function StudentList() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-medium">Student Directory ({students.length} students)</CardTitle>
+            <CardTitle className="text-lg font-medium">
+              Student Directory ({students.length} students)
+              {branchId && <span className="text-sm text-muted-foreground ml-2">(Branch View)</span>}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search by name, email, phone, or ID..." 
+                  placeholder="Search by name, email, phone..." 
                   className="pl-9"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -131,120 +171,123 @@ export default function StudentList() {
               </div>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Program</TableHead>
-                    <TableHead>Batch</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.length > 0 ? (
-                    filteredStudents.map((student) => (
-                      <TableRow key={student.id} className="hover:bg-muted/50">
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{student.name}</span>
-                            <span className="text-xs text-muted-foreground font-mono">{student.id?.slice(0, 8)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{student.email || 'N/A'}</TableCell>
-                        <TableCell className="text-sm">{student.phone || 'N/A'}</TableCell>
-                        <TableCell>{student.program || 'N/A'}</TableCell>
-                        <TableCell>{student.batch || 'N/A'}</TableCell>
-                        <TableCell>
-                          <Badge variant={student.status === 'active' ? 'default' : 'secondary'} 
-                            className={
-                              student.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-100 border-green-200' : 
-                              student.status === 'inactive' ? 'bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200' : 
-                              'bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200'
-                            }
-                          >
-                            {student.status || 'active'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/students/${student.id}`} className="cursor-pointer">
-                                  <Eye className="mr-2 h-4 w-4" /> View Profile
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/students/${student.id}/edit`} className="cursor-pointer">
-                                  <Edit className="mr-2 h-4 w-4" /> Edit Details
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem 
-                                    className="text-red-600 cursor-pointer" 
-                                    onSelect={(e) => e.preventDefault()}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" /> Deactivate Student
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Deactivate Student</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to deactivate <strong>{student.name}</strong>? 
-                                      This will hide the student from daily operations but preserve their attendance and fee history.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      onClick={() => handleDeleteStudent(student.id, student.name)}
-                                      className="bg-red-600 hover:bg-red-700"
-                                      disabled={deleteLoading === student.id}
+            <div className="rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[150px]">Student Name</TableHead>
+                      <TableHead className="min-w-[120px] hidden sm:table-cell">Email</TableHead>
+                      <TableHead className="min-w-[100px]">Phone</TableHead>
+                      <TableHead className="min-w-[100px] hidden md:table-cell">Program</TableHead>
+                      <TableHead className="min-w-[80px] hidden lg:table-cell">Batch</TableHead>
+                      <TableHead className="min-w-[80px]">Status</TableHead>
+                      <TableHead className="text-right min-w-[80px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStudents.length > 0 ? (
+                      filteredStudents.map((student) => (
+                        <TableRow key={student.id} className="hover:bg-muted/50">
+                          <TableCell className="min-w-[150px]">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{student.name}</span>
+                              <span className="text-xs text-muted-foreground font-mono">{student.id?.slice(0, 8)}</span>
+                              <span className="text-xs text-muted-foreground sm:hidden">{student.email || 'N/A'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm hidden sm:table-cell">{student.email || 'N/A'}</TableCell>
+                          <TableCell className="text-sm">{student.phone || 'N/A'}</TableCell>
+                          <TableCell className="hidden md:table-cell">{student.program || 'N/A'}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{student.batch || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant={student.status === 'active' ? 'default' : 'secondary'} 
+                              className={
+                                student.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-100 border-green-200' : 
+                                student.status === 'inactive' ? 'bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200' : 
+                                'bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200'
+                              }
+                            >
+                              {student.status || 'active'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0 min-h-[44px] min-w-[44px]">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/students/${student.id}`} className="cursor-pointer">
+                                    <Eye className="mr-2 h-4 w-4" /> View Profile
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/students/${student.id}/edit`} className="cursor-pointer">
+                                    <Edit className="mr-2 h-4 w-4" /> Edit Details
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem 
+                                      className="text-red-600 cursor-pointer" 
+                                      onSelect={(e) => e.preventDefault()}
                                     >
-                                      {deleteLoading === student.id ? "Deactivating..." : "Deactivate"}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                      <Trash2 className="mr-2 h-4 w-4" /> Deactivate Student
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="mx-4 max-w-md">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Deactivate Student</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to deactivate <strong>{student.name}</strong>? 
+                                        This will hide the student from daily operations but preserve their attendance and fee history.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                      <AlertDialogCancel className="min-h-[44px]">Cancel</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        onClick={() => handleDeleteStudent(student.id, student.name)}
+                                        className="bg-red-600 hover:bg-red-700 min-h-[44px]"
+                                        disabled={deleteLoading === student.id}
+                                      >
+                                        {deleteLoading === student.id ? "Deactivating..." : "Deactivate"}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          {students.length === 0 ? (
+                            <div className="text-center py-8">
+                              <p className="text-muted-foreground mb-4">No students found. Add your first student!</p>
+                              <Link href="/students/add">
+                                <Button className="min-h-[44px]">
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add First Student
+                                </Button>
+                              </Link>
+                            </div>
+                          ) : (
+                            "No students match your search criteria."
+                          )}
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
-                        {students.length === 0 ? (
-                          <div className="text-center py-8">
-                            <p className="text-muted-foreground mb-4">No students found. Add your first student!</p>
-                            <Link href="/students/add">
-                              <Button>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add First Student
-                              </Button>
-                            </Link>
-                          </div>
-                        ) : (
-                          "No students match your search criteria."
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </CardContent>
         </Card>

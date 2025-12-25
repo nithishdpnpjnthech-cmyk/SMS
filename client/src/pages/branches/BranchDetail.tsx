@@ -108,7 +108,6 @@ export default function BranchDetail() {
           </div>
         </div>
 
-        {/* Branch Info Card */}
         <Card>
           <CardHeader>
             <CardTitle>Branch Information</CardTitle>
@@ -147,7 +146,6 @@ export default function BranchDetail() {
           </CardContent>
         </Card>
 
-        {/* Financial Overview */}
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -178,7 +176,6 @@ export default function BranchDetail() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
         <Card>
           <CardHeader>
             <CardTitle>Branch Management Actions</CardTitle>

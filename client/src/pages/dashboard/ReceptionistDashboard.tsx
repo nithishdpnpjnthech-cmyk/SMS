@@ -30,18 +30,18 @@ export default function ReceptionistDashboard() {
 
   const loadReceptionistData = async () => {
     try {
-      if (!user?.branch_id) {
+      if (!user?.branchId) {
         setStats({ totalStudents: 0, pendingDues: 0, feesCollectedToday: 0, presentToday: 0 });
         setBranch({ name: 'No Branch Assigned', address: '' });
         return;
       }
 
       const [dashboardStats, branches] = await Promise.all([
-        api.getDashboardStats(user.branch_id),
+        api.getDashboardStats(user.branchId),
         api.getBranches()
       ]);
       
-      const userBranch = branches.find(b => b.id === user.branch_id);
+      const userBranch = branches.find(b => b.id === user.branchId);
       
       setStats(dashboardStats || {
         totalStudents: 0,

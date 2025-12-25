@@ -94,7 +94,7 @@ export default function Profile() {
                 <MapPin className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Branch</p>
-                  <p className="text-sm text-muted-foreground">{user?.branch_id || 'Main Branch'}</p>
+                  <p className="text-sm text-muted-foreground">{user?.branchId || 'Main Branch'}</p>
                 </div>
               </div>
             </CardContent>

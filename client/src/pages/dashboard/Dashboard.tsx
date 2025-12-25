@@ -40,16 +40,50 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
+      // ✅ Check if non-admin user has branch assigned
+      if (user?.role !== 'admin' && !user?.branchId) {
+        console.warn('Non-admin user has no branch assigned:', user);
+        setStats({
+          totalStudents: 0,
+          presentToday: 0,
+          absentToday: 0,
+          feesCollectedToday: 0,
+          pendingDues: 0
+        });
+        setStudents([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      // ✅ For admin: no branchId, for others: use their branchId
+      const branchId = user?.role === 'admin' ? undefined : user?.branchId;
+      
       const [dashboardStats, studentsData] = await Promise.all([
-        api.getDashboardStats(),
-        api.getStudents()
+        api.getDashboardStats(branchId),
+        api.getStudents(branchId)
       ]);
       
-      setStats(dashboardStats);
-      setStudents(studentsData);
+      // ✅ Defensive: Ensure data is valid before setting
+      setStats(dashboardStats || {
+        totalStudents: 0,
+        presentToday: 0,
+        absentToday: 0,
+        feesCollectedToday: 0,
+        pendingDues: 0
+      });
+      setStudents(Array.isArray(studentsData) ? studentsData : []);
       console.log("Dashboard loaded:", { stats: dashboardStats, students: studentsData });
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
+      // ✅ Set empty data on error instead of crashing
+      setStats({
+        totalStudents: 0,
+        presentToday: 0,
+        absentToday: 0,
+        feesCollectedToday: 0,
+        pendingDues: 0
+      });
+      setStudents([]);
       toast({
         title: "Error",
         description: "Failed to load dashboard data",
@@ -108,6 +142,26 @@ export default function Dashboard() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p>Loading dashboard...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // ✅ Show branch assignment error for non-admin users
+  if (user?.role !== 'admin' && !user?.branchId) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center max-w-md">
+            <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Branch Not Assigned</h2>
+            <p className="text-muted-foreground mb-4">
+              Your account is not assigned to any branch. Please contact the administrator to assign you to a branch.
+            </p>
+            <Badge variant="outline" className="text-sm">
+              Role: {user?.role} | User: {user?.username}
+            </Badge>
           </div>
         </div>
       </DashboardLayout>
