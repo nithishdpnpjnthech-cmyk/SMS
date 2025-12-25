@@ -172,9 +172,11 @@ export async function registerRoutes(app: Express): Promise<void> {
       const userRole = req.user.role;
       
       let query = `
-        SELECT s.*, b.name as branch_name 
+        SELECT DISTINCT s.*, b.name as branch_name 
         FROM students s 
         LEFT JOIN branches b ON s.branch_id = b.id 
+        LEFT JOIN student_programs sp ON s.id = sp.student_id
+        LEFT JOIN programs p ON sp.program_id = p.id
         WHERE s.status = 'active'
       `;
       const params: any[] = [];
@@ -190,16 +192,12 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Apply program filtering if specified
       if (programFilter && programFilter !== 'All Programs') {
-        // Check both legacy program column and student_programs table
+        // Check both legacy program column and student_programs table with case-insensitive matching
         query += ` AND (
-          LOWER(s.program) LIKE LOWER(?) OR 
-          s.id IN (
-            SELECT sp.student_id FROM student_programs sp 
-            JOIN programs p ON sp.program_id = p.id 
-            WHERE LOWER(p.name) = LOWER(?)
-          )
+          LOWER(TRIM(s.program)) = LOWER(TRIM(?)) OR 
+          LOWER(TRIM(p.name)) = LOWER(TRIM(?))
         )`;
-        params.push(`%${programFilter}%`, programFilter);
+        params.push(programFilter, programFilter);
       }
       
       query += " ORDER BY s.created_at DESC";
@@ -292,20 +290,20 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Map database errors to user-friendly messages
       let errorMessage = "Failed to create student";
       
-      if (error.message && error.message.includes('foreign key constraint')) {
-        errorMessage = "Please select valid options from the dropdown lists";
-      } else if (error.message && error.message.includes('Duplicate entry')) {
-        errorMessage = "A student with this information already exists";
-      } else if (error.message && error.message.includes('student_programs')) {
-        errorMessage = "Error saving student programs. Please try again.";
-      } else if (error.message && error.message.includes('batch_id')) {
-        errorMessage = "Error saving batch information. Please select a valid batch.";
-      } else if (error.message) {
-        // Only show safe error messages
-        const safeErrors = ['required', 'invalid', 'exists', 'not found', 'select'];
-        if (safeErrors.some(safe => error.message.toLowerCase().includes(safe))) {
-          errorMessage = error.message;
+      if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.message?.includes('foreign key constraint')) {
+        if (error.message?.includes('branch_id')) {
+          errorMessage = "Please select a valid branch for the student";
+        } else if (error.message?.includes('batch_id')) {
+          errorMessage = "Please select a valid batch for the student";
+        } else {
+          errorMessage = "Please ensure all selections are valid and try again";
         }
+      } else if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
+        errorMessage = "A student with this information already exists";
+      } else if (error.message?.includes('student_programs')) {
+        errorMessage = "Error saving student programs. Please ensure programs are selected correctly.";
+      } else if (error.message?.includes('required')) {
+        errorMessage = error.message;
       }
       
       res.status(500).json({ error: errorMessage });
@@ -522,16 +520,20 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Map database errors to user-friendly messages
       let errorMessage = "Failed to create trainer";
       
-      if (error.message && error.message.includes('foreign key constraint')) {
-        errorMessage = "Please select a valid branch before adding trainer";
-      } else if (error.message && error.message.includes('Duplicate entry')) {
-        errorMessage = "A trainer with this email already exists";
-      } else if (error.message) {
-        // Only show safe error messages
-        const safeErrors = ['required', 'invalid', 'exists', 'not found'];
-        if (safeErrors.some(safe => error.message.toLowerCase().includes(safe))) {
-          errorMessage = error.message;
+      if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.message?.includes('foreign key constraint')) {
+        if (error.message?.includes('branch_id')) {
+          errorMessage = "Please select a valid branch for the trainer";
+        } else {
+          errorMessage = "Please ensure branch selection is valid";
         }
+      } else if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
+        if (error.message?.includes('email') || error.message?.includes('username')) {
+          errorMessage = "A trainer with this email already exists";
+        } else {
+          errorMessage = "A trainer with this information already exists";
+        }
+      } else if (error.message?.includes('required')) {
+        errorMessage = error.message;
       }
       
       res.status(500).json({ error: errorMessage });
@@ -735,46 +737,53 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.post("/api/admin/programs", requireAuth(), requireRole(['admin']), async (req, res) => {
     try {
-      // First check what columns exist in programs table
-      const tableInfo = await storage.query("DESCRIBE programs");
-      console.log("Programs table schema:", tableInfo);
-      
       const { name, description } = req.body;
       if (!name || !name.trim()) {
         return res.status(400).json({ error: "Program name is required" });
       }
       
-      const id = randomUUID();
-      
-      // Check if table exists, if not create it
-      try {
-        await storage.query("SELECT 1 FROM programs LIMIT 1");
-      } catch (error) {
-        // Table doesn't exist, create it
-        await storage.query(`
-          CREATE TABLE programs (
-            id VARCHAR(36) PRIMARY KEY,
-            name VARCHAR(255) NOT NULL UNIQUE,
-            description TEXT,
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-      }
-      
-      // Insert with only existing columns
-      await storage.query(
-        "INSERT INTO programs (id, name, description) VALUES (?, ?, ?)",
-        [id, name.trim(), description || null]
+      // Check if program already exists
+      const existing = await storage.query(
+        "SELECT id FROM programs WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))",
+        [name.trim()]
       );
       
-      res.status(201).json({ id, name: name.trim(), description });
+      if (existing && existing.length > 0) {
+        return res.status(400).json({ error: "A program with this name already exists" });
+      }
+      
+      const id = randomUUID();
+      
+      // Ensure programs table exists
+      await storage.query(`
+        CREATE TABLE IF NOT EXISTS programs (
+          id VARCHAR(36) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL UNIQUE,
+          description TEXT,
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      await storage.query(
+        "INSERT INTO programs (id, name, description, is_active) VALUES (?, ?, ?, true)",
+        [id, name.trim(), description?.trim() || null]
+      );
+      
+      res.status(201).json({ 
+        id, 
+        name: name.trim(), 
+        description: description?.trim() || null,
+        is_active: true
+      });
     } catch (error: any) {
       console.error("Create program error:", error);
-      if (error.message && error.message.includes('Duplicate entry')) {
-        return res.status(400).json({ error: "Program name already exists" });
+      
+      if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
+        return res.status(400).json({ error: "A program with this name already exists" });
       }
-      res.status(500).json({ error: "Failed to create program: " + error.message });
+      
+      res.status(500).json({ error: "Failed to create program. Please try again." });
     }
   });
 
@@ -820,45 +829,51 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.post("/api/admin/batches", requireAuth(), requireRole(['admin']), async (req, res) => {
     try {
-      // First check what columns exist in batches table
-      const tableInfo = await storage.query("DESCRIBE batches");
-      console.log("Batches table schema:", tableInfo);
-      
       const { name, description } = req.body;
       if (!name || !name.trim()) {
         return res.status(400).json({ error: "Batch name is required" });
       }
       
-      const id = randomUUID();
+      // Check if batch already exists
+      const existing = await storage.query(
+        "SELECT id FROM batches WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))",
+        [name.trim()]
+      );
       
-      // Check if table exists, if not create it
-      try {
-        await storage.query("SELECT 1 FROM batches LIMIT 1");
-      } catch (error) {
-        // Table doesn't exist, create it
-        await storage.query(`
-          CREATE TABLE batches (
-            id VARCHAR(36) PRIMARY KEY,
-            name VARCHAR(255) NOT NULL UNIQUE,
-            is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
+      if (existing && existing.length > 0) {
+        return res.status(400).json({ error: "A batch with this name already exists" });
       }
       
-      // Insert with only existing columns
+      const id = randomUUID();
+      
+      // Ensure batches table exists
+      await storage.query(`
+        CREATE TABLE IF NOT EXISTS batches (
+          id VARCHAR(36) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL UNIQUE,
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
       await storage.query(
-        "INSERT INTO batches (id, name) VALUES (?, ?)",
+        "INSERT INTO batches (id, name, is_active) VALUES (?, ?, true)",
         [id, name.trim()]
       );
       
-      res.status(201).json({ id, name: name.trim() });
+      res.status(201).json({ 
+        id, 
+        name: name.trim(),
+        is_active: true
+      });
     } catch (error: any) {
       console.error("Create batch error:", error);
-      if (error.message && error.message.includes('Duplicate entry')) {
-        return res.status(400).json({ error: "Batch name already exists" });
+      
+      if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
+        return res.status(400).json({ error: "A batch with this name already exists" });
       }
-      res.status(500).json({ error: "Failed to create batch: " + error.message });
+      
+      res.status(500).json({ error: "Failed to create batch. Please try again." });
     }
   });
 

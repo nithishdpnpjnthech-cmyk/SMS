@@ -473,28 +473,38 @@ export class MySQLStorage implements IStorage {
   }
 
   // ============= TRAINER BATCHES =============
-  async getTrainerBatches(trainerId: string): Promise<any[]> {
+  async getTrainerBatches(userId: string): Promise<any[]> {
     return await db.query(
       "SELECT * FROM trainer_batches WHERE trainer_id = ?",
-      [trainerId]
+      [userId]
     );
   }
 
-  async assignTrainerToBatch(trainerId: string, batchName: string, program: string): Promise<void> {
+  async assignTrainerToBatch(userId: string, batchName: string, program: string): Promise<void> {
+    // Get batch_id from batch name
+    const batch = await db.queryOne("SELECT id FROM batches WHERE LOWER(name) = LOWER(?)", [batchName]);
+    if (!batch) {
+      throw new Error(`Batch '${batchName}' not found`);
+    }
+    
     await db.query(
       `INSERT IGNORE INTO trainer_batches (trainer_id, batch_name, program)
        VALUES (?, ?, ?)`,
-      [trainerId, batchName, program]
+      [userId, batchName, program]
     );
   }
 
-  async getStudentsByTrainerBatches(trainerId: string, branchId: string): Promise<Student[]> {
+  async getStudentsByTrainerBatches(userId: string, branchId: string): Promise<Student[]> {
     return await db.query<Student>(
       `SELECT DISTINCT s.* FROM students s
-       JOIN trainer_batches tb ON s.batch = tb.batch_name AND s.program = tb.program
+       JOIN trainer_batches tb ON (
+         (LOWER(TRIM(s.batch)) = LOWER(TRIM(tb.batch_name)) OR 
+          EXISTS(SELECT 1 FROM batches b WHERE b.id = s.batch_id AND LOWER(TRIM(b.name)) = LOWER(TRIM(tb.batch_name))))
+         AND LOWER(TRIM(s.program)) = LOWER(TRIM(tb.program))
+       )
        WHERE tb.trainer_id = ? AND s.branch_id = ? AND s.status = 'active'
        ORDER BY s.name`,
-      [trainerId, branchId]
+      [userId, branchId]
     );
   }
 }
