@@ -35,20 +35,24 @@ function requireRole(allowedRoles: string[]) {
 
 function enforceBranchAccess() {
   return async (req: any, res: any, next: any) => {
-    // Admin can access all branches
-    if (req.user.role === 'admin') {
+    const user = req.user;
+
+    // ✅ If branchId is explicitly provided (Manage Branch context),
+    // respect it even for admin
+    if (req.query.branchId) {
       return next();
     }
-    
-    // Non-admin users MUST be restricted to their branch
-    if (!req.user.branchId) {
-      return res.status(403).json({ error: "User not assigned to any branch" });
+
+    // ✅ For non-admin users, enforce their branch
+    if (user.role !== 'admin') {
+      if (!user.branchId) {
+        return res.status(403).json({ error: "User not assigned to any branch" });
+      }
+      req.query.branchId = user.branchId;
+      req.body.branchId = user.branchId;
     }
-    
-    // Force branch filtering for non-admin users
-    req.query.branchId = req.user.branchId;
-    req.body.branchId = req.user.branchId;
-    
+
+    // ✅ Admin without branch context → no restriction
     next();
   };
 }
