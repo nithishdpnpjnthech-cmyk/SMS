@@ -181,18 +181,18 @@ export async function registerRoutes(app: Express): Promise<void> {
       `;
       const params: any[] = [];
       
-      // Apply branch filtering based on user role
-      if (userRole !== 'admin' && branchId) {
+      // Apply branch filtering - CRITICAL: Admin WITH branchId must be filtered
+      if (branchId) {
         query += " AND s.branch_id = ?";
         params.push(branchId);
-      } else if (userRole === 'admin' && branchId) {
+      } else if (userRole !== 'admin') {
+        // Non-admin users must be restricted to their branch
         query += " AND s.branch_id = ?";
-        params.push(branchId);
+        params.push(req.user.branchId);
       }
       
       // Apply program filtering if specified
       if (programFilter && programFilter !== 'All Programs') {
-        // Check both legacy program column and student_programs table with case-insensitive matching
         query += ` AND (
           LOWER(TRIM(s.program)) = LOWER(TRIM(?)) OR 
           LOWER(TRIM(p.name)) = LOWER(TRIM(?))
@@ -427,13 +427,13 @@ export async function registerRoutes(app: Express): Promise<void> {
       `;
       const params: any[] = [];
       
-      // Apply branch filtering based on user role
-      if (userRole === 'manager') {
-        query += " AND t.branch_id = ?";
-        params.push(req.user.branchId);
-      } else if (userRole === 'admin' && branchId) {
+      // Apply branch filtering - CRITICAL: Admin WITH branchId must be filtered
+      if (branchId) {
         query += " AND t.branch_id = ?";
         params.push(branchId);
+      } else if (userRole === 'manager') {
+        query += " AND t.branch_id = ?";
+        params.push(req.user.branchId);
       } else if (userRole !== 'admin') {
         return res.status(403).json({ error: "Access denied" });
       }
@@ -959,6 +959,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const studentId = req.query.studentId as string | undefined;
       const branchId = req.query.branchId as string | undefined;
+      const userRole = req.user.role;
       
       let query = `
         SELECT 
@@ -984,9 +985,14 @@ export async function registerRoutes(app: Express): Promise<void> {
         params.push(studentId);
       }
       
+      // Apply branch filtering - CRITICAL: Admin WITH branchId must be filtered
       if (branchId) {
         query += " AND s.branch_id = ?";
         params.push(branchId);
+      } else if (userRole !== 'admin') {
+        // Non-admin users must be restricted to their branch
+        query += " AND s.branch_id = ?";
+        params.push(req.user.branchId);
       }
 
       query += " ORDER BY f.due_date DESC";
