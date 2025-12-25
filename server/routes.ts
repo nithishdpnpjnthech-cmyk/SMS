@@ -168,6 +168,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/students", requireAuth(), enforceBranchAccess(), async (req, res) => {
     try {
       const branchId = req.query.branchId as string | undefined;
+      const programFilter = req.query.program as string | undefined;
       const userRole = req.user.role;
       
       let query = `
@@ -185,6 +186,20 @@ export async function registerRoutes(app: Express): Promise<void> {
       } else if (userRole === 'admin' && branchId) {
         query += " AND s.branch_id = ?";
         params.push(branchId);
+      }
+      
+      // Apply program filtering if specified
+      if (programFilter && programFilter !== 'All Programs') {
+        // Check both legacy program column and student_programs table
+        query += ` AND (
+          LOWER(s.program) LIKE LOWER(?) OR 
+          s.id IN (
+            SELECT sp.student_id FROM student_programs sp 
+            JOIN programs p ON sp.program_id = p.id 
+            WHERE LOWER(p.name) = LOWER(?)
+          )
+        )`;
+        params.push(`%${programFilter}%`, programFilter);
       }
       
       query += " ORDER BY s.created_at DESC";
@@ -1064,17 +1079,6 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      // Get trainer record by user_id
-      const trainer = await storage.query("SELECT * FROM trainers WHERE user_id = ?", [userId]);
-      if (!trainer || trainer.length === 0) {
-        return res.json({
-          totalStudents: 0,
-          todayClasses: 0,
-          batches: []
-        });
-      }
-      
-      const trainerId = trainer[0].id;
       const user = await storage.getUser(userId);
       if (!user || !user.branch_id) {
         return res.json({
@@ -1084,8 +1088,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         });
       }
       
-      const batches = await storage.getTrainerBatches(trainerId);
-      const students = await storage.getStudentsByTrainerBatches(trainerId, user.branch_id);
+      const batches = await storage.getTrainerBatches(userId);
+      const students = await storage.getStudentsByTrainerBatches(userId, user.branch_id);
       
       res.json({
         totalStudents: students.length,
@@ -1101,25 +1105,25 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Assign batch to trainer
   app.post("/api/trainers/:id/batches", requireAuth(), requireRole(['admin', 'manager']), async (req, res) => {
     try {
-      const trainerId = req.params.id;
+      const userId = req.params.id;
       const { batchName, program } = req.body;
       
       if (!batchName || !program) {
         return res.status(400).json({ error: "Batch name and program are required" });
       }
       
-      // Verify trainer exists and user has access
-      const trainer = await storage.query("SELECT * FROM trainers WHERE id = ?", [trainerId]);
-      if (!trainer || trainer.length === 0) {
+      // Verify user is a trainer
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'trainer') {
         return res.status(404).json({ error: "Trainer not found" });
       }
       
       // Check if manager is trying to assign batch to trainer in different branch
-      if (req.user.role === 'manager' && trainer[0].branch_id !== req.user.branchId) {
+      if (req.user.role === 'manager' && user.branch_id !== req.user.branchId) {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      await storage.assignTrainerToBatch(trainerId, batchName, program);
+      await storage.assignTrainerToBatch(userId, batchName, program);
       
       res.json({ message: "Batch assigned successfully" });
     } catch (error) {
@@ -1131,14 +1135,14 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Get trainer's assigned batches
   app.get("/api/trainers/:id/batches", requireAuth(), async (req, res) => {
     try {
-      const trainerId = req.params.id;
+      const userId = req.params.id;
       
       // Check access
-      if (req.user.role !== 'admin' && req.user.role !== 'manager' && req.user.id !== trainerId) {
+      if (req.user.role !== 'admin' && req.user.role !== 'manager' && req.user.id !== userId) {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      const batches = await storage.getTrainerBatches(trainerId);
+      const batches = await storage.getTrainerBatches(userId);
       res.json(batches);
     } catch (error) {
       console.error("Get trainer batches error:", error);
@@ -1155,19 +1159,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      // Get trainer record by user_id
-      const trainer = await storage.query("SELECT * FROM trainers WHERE user_id = ?", [userId]);
-      if (!trainer || trainer.length === 0) {
-        return res.json([]);
-      }
-      
-      const trainerId = trainer[0].id;
       const user = await storage.getUser(userId);
       if (!user || !user.branch_id) {
         return res.json([]);
       }
       
-      const students = await storage.getStudentsByTrainerBatches(trainerId, user.branch_id);
+      const students = await storage.getStudentsByTrainerBatches(userId, user.branch_id);
       res.json(students);
     } catch (error) {
       console.error("Get trainer students error:", error);
