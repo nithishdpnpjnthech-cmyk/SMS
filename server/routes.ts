@@ -183,14 +183,18 @@ export async function registerRoutes(app: Express): Promise<void> {
       `;
       const params: any[] = [];
       
-      // Apply branch filtering - Admin sees all unless specific branchId requested
+      // CRITICAL: Apply branch filtering in mandatory order
+      // 1. If branchId provided → ALWAYS filter by it (regardless of role)
       if (branchId) {
         query += " AND s.branch_id = ?";
         params.push(branchId);
-      } else if (userRole !== 'admin') {
+      } 
+      // 2. Else if non-admin → filter by user's branch
+      else if (userRole !== 'admin') {
         query += " AND s.branch_id = ?";
         params.push(req.user.branchId);
       }
+      // 3. Else (admin without branch context) → no filter
       
       // Apply program filtering if specified
       if (programFilter && programFilter !== 'All Programs') {
@@ -428,14 +432,18 @@ export async function registerRoutes(app: Express): Promise<void> {
       `;
       const params: any[] = [];
       
-      // Apply branch filtering - Admin sees all unless specific branchId requested
+      // CRITICAL: Apply branch filtering in mandatory order
+      // 1. If branchId provided → ALWAYS filter by it (regardless of role)
       if (branchId) {
         query += " AND t.branch_id = ?";
         params.push(branchId);
-      } else if (userRole !== 'admin') {
+      } 
+      // 2. Else if non-admin → filter by user's branch
+      else if (userRole !== 'admin') {
         query += " AND t.branch_id = ?";
         params.push(req.user.branchId);
       }
+      // 3. Else (admin without branch context) → no filter
       
       query += " ORDER BY t.created_at DESC";
       
@@ -989,14 +997,18 @@ export async function registerRoutes(app: Express): Promise<void> {
         params.push(studentId);
       }
       
-      // Apply branch filtering - Admin sees all unless specific branchId requested
+      // CRITICAL: Apply branch filtering in mandatory order
+      // 1. If branchId provided → ALWAYS filter by it (regardless of role)
       if (branchId) {
         query += " AND s.branch_id = ?";
         params.push(branchId);
-      } else if (userRole !== 'admin') {
+      } 
+      // 2. Else if non-admin → filter by user's branch
+      else if (userRole !== 'admin') {
         query += " AND s.branch_id = ?";
         params.push(req.user.branchId);
       }
+      // 3. Else (admin without branch context) → no filter
 
       query += " ORDER BY f.due_date DESC";
 
