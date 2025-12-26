@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 
 export default function CollectFees() {
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState("");
@@ -57,7 +57,7 @@ export default function CollectFees() {
 
   useEffect(() => {
     if (!hasPermission('fees.write')) {
-      setLocation('/dashboard');
+      navigate('/dashboard');
       return;
     }
     loadStudents();
@@ -106,6 +106,10 @@ export default function CollectFees() {
         title: "Success!",
         description: "Fee collected successfully"
       });
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 300);
 
       // Reset form
       setSelectedStudent("");
@@ -274,7 +278,7 @@ export default function CollectFees() {
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => setLocation("/fees")}
+                  onClick={() => navigate("/fees")}
                 >
                   Cancel
                 </Button>

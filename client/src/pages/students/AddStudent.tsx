@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Loader2, CreditCard, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import html2canvas from "html2canvas";
 
 export default function AddStudent() {
   const [, setLocation] = useLocation();
@@ -26,6 +27,7 @@ export default function AddStudent() {
   const [showIdCard, setShowIdCard] = useState(false);
   const [idCardData, setIdCardData] = useState<any>(null);
   const { toast } = useToast();
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadFormData();
@@ -165,6 +167,36 @@ export default function AddStudent() {
   const handleCloseIdCard = () => {
     setShowIdCard(false);
     setLocation("/students");
+  };
+
+  const handleDownload = async () => {
+    if (!cardRef.current) return;
+
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        backgroundColor: null,
+        useCORS: true,
+        allowTaint: true,
+        ignoreElements: (element) => {
+          // Skip elements that might cause CSS parsing issues
+          return element.tagName === 'STYLE' || element.tagName === 'SCRIPT';
+        }
+      });
+
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = image;
+      link.download = `student-id-${idCardData?.studentId || 'unknown'}.png`;
+      link.click();
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({
+        title: "Download Failed",
+        description: "Unable to download ID card. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -327,7 +359,7 @@ export default function AddStudent() {
           {idCardData && (
             <div className="space-y-4">
               {/* ID Card Preview */}
-              <div className="bg-gradient-to-br from-blue-600 to-purple-700 text-white p-6 rounded-lg shadow-lg">
+              <div ref={cardRef} className="bg-gradient-to-br from-blue-600 to-purple-700 text-white p-6 rounded-lg shadow-lg">
                 <div className="text-center space-y-2">
                   <h3 className="font-bold text-lg">ACADEMY MASTER</h3>
                   <div className="bg-white/20 rounded-full w-16 h-16 mx-auto flex items-center justify-center text-2xl font-bold">
@@ -347,7 +379,7 @@ export default function AddStudent() {
                 <Button onClick={handleCloseIdCard} className="flex-1">
                   Continue
                 </Button>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button variant="outline" onClick={handleDownload} className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   Download
                 </Button>

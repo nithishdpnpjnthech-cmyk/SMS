@@ -43,7 +43,7 @@ export default function AttendanceDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const { toast } = useToast();
   const [stats, setStats] = useState({
     totalPresent: 0,
