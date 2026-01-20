@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:5050/api";
+const API_BASE = "/api";
 
 /**
  * Generic API client
@@ -8,6 +8,7 @@ class ApiClient {
     endpoint: string,
     options?: RequestInit
   ): Promise<T> {
+    
     // 🚨 CRITICAL: Allow login without auth headers
     const isLoginRequest = endpoint === "/auth/login";
     
@@ -81,8 +82,11 @@ class ApiClient {
   }
 
   // ================= STUDENTS =================
-  async getStudents(branchId?: string): Promise<any[]> {
-    const query = branchId ? `?branchId=${branchId}` : "";
+  async getStudents(branchId?: string, status?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (branchId) params.append("branchId", branchId);
+    if (status) params.append("status", status);
+    const query = params.toString() ? `?${params}` : "";
     return this.request<any[]>(`/students${query}`);
   }
 
@@ -289,6 +293,31 @@ class ApiClient {
     return this.request<any>(`/trainers/${trainerId}/batches`, {
       method: "POST",
       body: JSON.stringify({ batchName, program }),
+    });
+  }
+
+  // ================= ADMIN STUDENT CREDENTIALS =================
+  async get(endpoint: string): Promise<any> {
+    return this.request<any>(endpoint);
+  }
+
+  async post(endpoint: string, data: any): Promise<any> {
+    return this.request<any>(endpoint, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async patch(endpoint: string, data: any): Promise<any> {
+    return this.request<any>(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete(endpoint: string): Promise<any> {
+    return this.request<any>(endpoint, {
+      method: "DELETE",
     });
   }
 }

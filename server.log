@@ -1,0 +1,1093 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[dotenv@17.2.3] injecting env (6) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+DB CONFIG CHECK → root PASSWORD_LOADED
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+✅ App running on http://localhost:5050
+Student login attempt for: meenakshi89@gmail.com
+Student login successful: meenakshi89@gmail.com ID: 00e271f8-5c39-4859-bc06-82c9798b207e
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Student login attempt for: meenakshi89@gmail.com
+Student login successful: meenakshi89@gmail.com ID: 00e271f8-5c39-4859-bc06-82c9798b207e
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Creating credentials for student: d364c011-dcd6-403d-9e2a-93bab24a2ef1 username: urmila27@gmail.com
+Credentials created successfully for student: d364c011-dcd6-403d-9e2a-93bab24a2ef1
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Student login attempt for: urmila27@gmail.com
+Student login successful: urmila27@gmail.com ID: d364c011-dcd6-403d-9e2a-93bab24a2ef1
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+1:43:27 PM [vite] (client) hmr update /src/pages/students/AddStudent.tsx, /src/index.css
+1:43:42 PM [vite] (client) hmr update /src/pages/students/AddStudent.tsx, /src/index.css
+1:43:56 PM [vite] (client) hmr update /src/pages/students/AddStudent.tsx, /src/index.css
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+1:44:33 PM [vite] (client) hmr update /src/pages/students/AddStudent.tsx, /src/index.css
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+1:44:52 PM [vite] (client) hmr update /src/pages/students/AddStudent.tsx, /src/index.css
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Database query error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+Student profile error: Error: Table 'sms.student_uniforms' doesn't exist
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:306:37)
+    at Layer.handle [as handle_request] (/Users/kamakshivalli/SMS/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/kamakshivalli/SMS/node_modules/express/lib/router/route.js:149:13)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:292:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sql: 'SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?',
+  sqlState: '42S02',
+  sqlMessage: "Table 'sms.student_uniforms' doesn't exist"
+}
+1:45:32 PM [vite] (client) hmr update /src/pages/students/StudentProfile.tsx, /src/index.css
+1:45:48 PM [vite] (client) hmr update /src/pages/students/StudentProfile.tsx, /src/index.css
+1:46:00 PM [vite] (client) hmr update /src/pages/students/StudentProfile.tsx, /src/index.css
+1:46:56 PM [vite] (client) hmr update /src/pages/students/EditStudent.tsx, /src/index.css
+1:47:10 PM [vite] (client) hmr update /src/pages/students/EditStudent.tsx, /src/index.css
+1:47:26 PM [vite] (client) hmr update /src/pages/students/EditStudent.tsx, /src/index.css
+1:47:39 PM [vite] (client) hmr update /src/pages/students/EditStudent.tsx, /src/index.css
+1:47:56 PM [vite] (client) hmr update /src/pages/students/EditStudent.tsx, /src/index.css
+1:48:22 PM [vite] (client) hmr update /src/pages/students/EditStudent.tsx, /src/index.css
+1:48:46 PM [vite] (client) hmr update /src/pages/students/EditStudent.tsx, /src/index.css
+1:49:14 PM [vite] (client) hmr update /src/pages/students/EditStudent.tsx, /src/index.css
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Auth: User user-admin (admin) branchId: 
+Creating student with data: {
+  name: 'Dhana',
+  email: 'dhanaloveherkids@gmail.com',
+  phone: '9010330354',
+  parentPhone: '9010330352',
+  guardianName: 'Ramarao',
+  address: 'jaynagar',
+  branchId: 'branch-kalyan',
+  programs: [ 'c503169e-a030-4982-8a57-94f306998539' ],
+  batchId: '3ccb7336-8242-443c-8788-09fb151c72a4',
+  uniformIssued: true,
+  uniformSize: 'L',
+  status: 'active'
+}
+Database query error: Error: Duplicate column name 'batch_id'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.createStudent (/Users/kamakshivalli/SMS/server/mysql-storage.ts:104:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1027:23) {
+  code: 'ER_DUP_FIELDNAME',
+  errno: 1060,
+  sql: 'ALTER TABLE students ADD COLUMN batch_id VARCHAR(36)',
+  sqlState: '42S21',
+  sqlMessage: "Duplicate column name 'batch_id'"
+}
+Database query error: Error: Duplicate entry '90a0a96b-68ed-441c-81fc-36565391356f-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1049:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_DUP_ENTRY',
+  errno: 1062,
+  sql: 'INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)',
+  sqlState: '23000',
+  sqlMessage: "Duplicate entry '90a0a96b-68ed-441c-81fc-36565391356f-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'"
+}
+Create student error: Error: Duplicate entry '90a0a96b-68ed-441c-81fc-36565391356f-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1049:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_DUP_ENTRY',
+  errno: 1062,
+  sql: 'INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)',
+  sqlState: '23000',
+  sqlMessage: "Duplicate entry '90a0a96b-68ed-441c-81fc-36565391356f-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'"
+}
+Auth: User user-admin (admin) branchId: 
+Creating student with data: {
+  name: 'preethika',
+  email: 'dhanaloveherkids@gmail.com',
+  phone: '9010330354',
+  parentPhone: '9010330352',
+  guardianName: 'Ramarao',
+  address: 'jaynagar',
+  branchId: 'branch-kalyan',
+  programs: [ 'c503169e-a030-4982-8a57-94f306998539' ],
+  batchId: '3ccb7336-8242-443c-8788-09fb151c72a4',
+  uniformIssued: true,
+  uniformSize: 'L',
+  status: 'active'
+}
+Database query error: Error: Duplicate column name 'batch_id'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.createStudent (/Users/kamakshivalli/SMS/server/mysql-storage.ts:104:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1027:23) {
+  code: 'ER_DUP_FIELDNAME',
+  errno: 1060,
+  sql: 'ALTER TABLE students ADD COLUMN batch_id VARCHAR(36)',
+  sqlState: '42S21',
+  sqlMessage: "Duplicate column name 'batch_id'"
+}
+Database query error: Error: Duplicate entry '3f07cf4f-5b8f-4151-8d0d-488c043d44bc-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1049:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_DUP_ENTRY',
+  errno: 1062,
+  sql: 'INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)',
+  sqlState: '23000',
+  sqlMessage: "Duplicate entry '3f07cf4f-5b8f-4151-8d0d-488c043d44bc-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'"
+}
+Create student error: Error: Duplicate entry '3f07cf4f-5b8f-4151-8d0d-488c043d44bc-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1049:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_DUP_ENTRY',
+  errno: 1062,
+  sql: 'INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)',
+  sqlState: '23000',
+  sqlMessage: "Duplicate entry '3f07cf4f-5b8f-4151-8d0d-488c043d44bc-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'"
+}
+Auth: User user-admin (admin) branchId: 
+Creating student with data: {
+  name: 'preethika',
+  email: 'dhanaloveherkids@gmail.com',
+  phone: '9010330354',
+  parentPhone: '9010330352',
+  guardianName: 'Ramarao',
+  address: 'jaynagar',
+  branchId: 'branch-kalyan',
+  programs: [ 'c503169e-a030-4982-8a57-94f306998539' ],
+  batchId: '3ccb7336-8242-443c-8788-09fb151c72a4',
+  uniformIssued: true,
+  uniformSize: 'M',
+  status: 'active'
+}
+Database query error: Error: Duplicate column name 'batch_id'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.createStudent (/Users/kamakshivalli/SMS/server/mysql-storage.ts:104:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1027:23) {
+  code: 'ER_DUP_FIELDNAME',
+  errno: 1060,
+  sql: 'ALTER TABLE students ADD COLUMN batch_id VARCHAR(36)',
+  sqlState: '42S21',
+  sqlMessage: "Duplicate column name 'batch_id'"
+}
+Database query error: Error: Duplicate entry 'faf9883f-585d-47d4-a891-95f6ce02542e-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1049:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_DUP_ENTRY',
+  errno: 1062,
+  sql: 'INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)',
+  sqlState: '23000',
+  sqlMessage: "Duplicate entry 'faf9883f-585d-47d4-a891-95f6ce02542e-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'"
+}
+Create student error: Error: Duplicate entry 'faf9883f-585d-47d4-a891-95f6ce02542e-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1049:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_DUP_ENTRY',
+  errno: 1062,
+  sql: 'INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)',
+  sqlState: '23000',
+  sqlMessage: "Duplicate entry 'faf9883f-585d-47d4-a891-95f6ce02542e-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'"
+}
+Auth: User user-admin (admin) branchId: 
+Creating student with data: {
+  name: 'preethika',
+  email: 'dhanaloveherkids@gmail.com',
+  phone: '9010330354',
+  parentPhone: '9010330352',
+  guardianName: 'Ramarao',
+  address: 'jaynagar',
+  branchId: 'branch-kalyan',
+  programs: [ 'c503169e-a030-4982-8a57-94f306998539' ],
+  batchId: '3ccb7336-8242-443c-8788-09fb151c72a4',
+  uniformIssued: true,
+  uniformSize: 'M',
+  status: 'active'
+}
+Database query error: Error: Duplicate column name 'batch_id'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.createStudent (/Users/kamakshivalli/SMS/server/mysql-storage.ts:104:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1027:23) {
+  code: 'ER_DUP_FIELDNAME',
+  errno: 1060,
+  sql: 'ALTER TABLE students ADD COLUMN batch_id VARCHAR(36)',
+  sqlState: '42S21',
+  sqlMessage: "Duplicate column name 'batch_id'"
+}
+Database query error: Error: Duplicate entry '87a244d2-bce9-480d-a53d-b911ef68b744-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1049:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_DUP_ENTRY',
+  errno: 1062,
+  sql: 'INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)',
+  sqlState: '23000',
+  sqlMessage: "Duplicate entry '87a244d2-bce9-480d-a53d-b911ef68b744-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'"
+}
+Create student error: Error: Duplicate entry '87a244d2-bce9-480d-a53d-b911ef68b744-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'
+    at PromisePool.execute (/Users/kamakshivalli/SMS/node_modules/mysql2/lib/promise/pool.js:54:22)
+    at Database.query (/Users/kamakshivalli/SMS/server/db.ts:44:38)
+    at MySQLStorage.query (/Users/kamakshivalli/SMS/server/mysql-storage.ts:16:21)
+    at <anonymous> (/Users/kamakshivalli/SMS/server/routes.ts:1049:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_DUP_ENTRY',
+  errno: 1062,
+  sql: 'INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)',
+  sqlState: '23000',
+  sqlMessage: "Duplicate entry '87a244d2-bce9-480d-a53d-b911ef68b744-c503169e-a030-4982-8a57-94f' for key 'student_programs.PRIMARY'"
+}

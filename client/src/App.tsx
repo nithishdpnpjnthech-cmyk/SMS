@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/auth";
+import { StudentAuthProvider } from "@/lib/student-auth";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/auth/Login";
 import Dashboard from "@/pages/dashboard/Dashboard";
@@ -27,11 +28,24 @@ import ReportsDashboard from "@/pages/reports/ReportsDashboard";
 import Profile from "@/pages/profile/Profile";
 import Settings from "@/pages/settings/Settings";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import StudentLoginPage from "@/pages/student/StudentLoginPage";
+import StudentLayout from "@/pages/student/StudentLayout";
+import StudentDashboard from "@/pages/student/Dashboard";
+import StudentProfilePage from "@/pages/student/Profile";
+import StudentAttendance from "@/pages/student/Attendance";
+import StudentFees from "@/pages/student/Fees";
+import StudentUniform from "@/pages/student/Uniform";
+import StudentNotes from "@/pages/student/Notes";
+import StudentProtectedRoute from "@/components/StudentProtectedRoute";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Login} />
+      
+      {/* Student Portal Routes */}
+      <Route path="/student/login" component={StudentLoginPage} />
+      <StudentProtectedRoute path="/student/:page?" component={StudentLayout} />
       
       {/* Protected Routes */}
       <ProtectedRoute path="/dashboard" component={Dashboard} requiredRole="admin" />
@@ -68,12 +82,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </AppProvider>
+        <StudentAuthProvider>
+          <AppProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </AppProvider>
+        </StudentAuthProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

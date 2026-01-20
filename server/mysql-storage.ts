@@ -88,93 +88,108 @@ export class MySQLStorage implements IStorage {
     const id = randomUUID();
     const now = new Date();
 
-    // Create student_programs table if it doesn't exist
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS student_programs (
-        student_id VARCHAR(36) NOT NULL,
-        program_id VARCHAR(36) NOT NULL,
-        PRIMARY KEY (student_id, program_id),
-        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-        FOREIGN KEY (program_id) REFERENCES programs(id)
-      )
-    `);
-
-    // Add batch_id column to students table if it doesn't exist
     try {
-      await db.query("ALTER TABLE students ADD COLUMN batch_id VARCHAR(36)");
-    } catch (error) {
-      // Column already exists, ignore error
-    }
+      // Create student_programs table if it doesn't exist
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS student_programs (
+          student_id VARCHAR(36) NOT NULL,
+          program_id VARCHAR(36) NOT NULL,
+          PRIMARY KEY (student_id, program_id),
+          FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+          FOREIGN KEY (program_id) REFERENCES programs(id)
+        )
+      `);
 
-    // Get batch name for legacy program/batch columns
-    let batchName = null;
-    if (insertStudent.batchId) {
-      const batch = await db.queryOne("SELECT name FROM batches WHERE id = ?", [insertStudent.batchId]);
-      batchName = batch?.name || null;
-    }
-
-    // Get program names for legacy program column (comma-separated)
-    let programNames = null;
-    if (insertStudent.programs && insertStudent.programs.length > 0) {
-      const programs = await db.query(
-        `SELECT name FROM programs WHERE id IN (${insertStudent.programs.map(() => '?').join(',')})`,
-        insertStudent.programs
-      );
-      programNames = programs.map((p: any) => p.name).join(', ');
-    }
-
-    await db.query(
-      `INSERT INTO students
-       (id, name, email, phone, parent_phone, address, branch_id, batch_id, program, batch, joining_date, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        insertStudent.name,
-        insertStudent.email || null,
-        insertStudent.phone || null,
-        insertStudent.parentPhone || null,
-        insertStudent.address || null,
-        insertStudent.branchId,
-        insertStudent.batchId || null,
-        programNames,
-        batchName,
-        insertStudent.joiningDate || now,
-        insertStudent.status || "active",
-        now
-      ]
-    );
-    
-    // Insert student-program relationships
-    if (insertStudent.programs && insertStudent.programs.length > 0) {
-      for (const programId of insertStudent.programs) {
-        await db.query(
-          "INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)",
-          [id, programId]
-        );
+      // Add batch_id column to students table if it doesn't exist
+      try {
+        await db.query("ALTER TABLE students ADD COLUMN batch_id VARCHAR(36)");
+      } catch (error) {
+        // Column already exists, ignore error
       }
-    }
 
-    return {
-      id,
-      name: insertStudent.name,
-      email: insertStudent.email || null,
-      phone: insertStudent.phone || null,
-      parent_phone: insertStudent.parentPhone || null,
-      address: insertStudent.address || null,
-      branch_id: insertStudent.branchId,
-      batch_id: insertStudent.batchId || null,
-      program: programNames,
-      batch: batchName,
-      joining_date: insertStudent.joiningDate || now,
-      status: insertStudent.status || "active",
-      created_at: now
-    } as any;
+      // Get batch name for legacy program/batch columns
+      let batchName = null;
+      if (insertStudent.batchId) {
+        const batch = await db.queryOne("SELECT name FROM batches WHERE id = ?", [insertStudent.batchId]);
+        batchName = batch?.name || null;
+      }
+
+      // Get program names for legacy program column (comma-separated)
+      let programNames = null;
+      if (insertStudent.programs && insertStudent.programs.length > 0) {
+        const programs = await db.query(
+          `SELECT name FROM programs WHERE id IN (${insertStudent.programs.map(() => '?').join(',')})`,
+          insertStudent.programs
+        );
+        programNames = programs.map((p: any) => p.name).join(', ');
+      }
+
+      // Insert student record
+      await db.query(
+        `INSERT INTO students
+         (id, name, email, phone, parent_phone, guardian_name, address, branch_id, batch_id, program, batch, uniform_issued, uniform_size, joining_date, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          insertStudent.name,
+          insertStudent.email || null,
+          insertStudent.phone || null,
+          insertStudent.parentPhone || null,
+          insertStudent.guardianName || null,
+          insertStudent.address || null,
+          insertStudent.branchId,
+          insertStudent.batchId || null,
+          programNames,
+          batchName,
+          insertStudent.uniformIssued || false,
+          insertStudent.uniformSize || null,
+          insertStudent.joiningDate || now,
+          insertStudent.status || "active",
+          now
+        ]
+      );
+      
+      // Insert student-program relationships
+      if (insertStudent.programs && insertStudent.programs.length > 0) {
+        for (const programId of insertStudent.programs) {
+          await db.query(
+            "INSERT INTO student_programs (student_id, program_id) VALUES (?, ?)",
+            [id, programId]
+          );
+        }
+      }
+
+      return {
+        id,
+        name: insertStudent.name,
+        email: insertStudent.email || null,
+        phone: insertStudent.phone || null,
+        parent_phone: insertStudent.parentPhone || null,
+        guardian_name: insertStudent.guardianName || null,
+        address: insertStudent.address || null,
+        branch_id: insertStudent.branchId,
+        batch_id: insertStudent.batchId || null,
+        program: programNames,
+        batch: batchName,
+        uniform_issued: insertStudent.uniformIssued || false,
+        uniform_size: insertStudent.uniformSize || null,
+        joining_date: insertStudent.joiningDate || now,
+        status: insertStudent.status || "active",
+        created_at: now
+      } as any;
+    } catch (error) {
+      console.error('Student creation error:', error);
+      throw error;
+    }
   }
 
   async updateStudent(id: string, updates: Partial<Student>): Promise<Student | undefined> {
     const columnMap: Record<string, string> = {
       branchId: "branch_id",
       parentPhone: "parent_phone",
+      guardianName: "guardian_name",
+      uniformIssued: "uniform_issued",
+      uniformSize: "uniform_size",
       joiningDate: "joining_date",
       createdAt: "created_at"
     };
@@ -372,6 +387,7 @@ export class MySQLStorage implements IStorage {
       studentId: "student_id",
       checkIn: "check_in",
       checkOut: "check_out",
+      check_out: "check_out",  // Handle both camelCase and snake_case
       createdAt: "created_at"
     };
 

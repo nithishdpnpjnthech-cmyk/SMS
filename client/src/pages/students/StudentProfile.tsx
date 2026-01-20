@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import StudentCredentialsSection from "@/components/StudentCredentialsSection";
 
 export default function StudentProfile() {
   const { toast } = useToast();
@@ -95,29 +96,37 @@ export default function StudentProfile() {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    
     const formData = new FormData(e.target as HTMLFormElement);
     
     try {
       await api.updateStudent(student.id, {
         name: formData.get("name") as string,
-        parentName: formData.get("parentName") as string,
+        email: formData.get("email") as string,
         phone: formData.get("phone") as string,
+        parentPhone: formData.get("parentPhone") as string,
+        guardianName: formData.get("guardianName") as string,
+        address: formData.get("address") as string,
       });
 
       setIsEditOpen(false);
       toast({
-        title: "Profile Updated",
-        description: "Student details have been saved.",
+        title: "Success",
+        description: "Student profile updated successfully",
       });
       
       // Reload student data
       loadStudentData();
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Update error:", error);
       toast({
         title: "Error",
-        description: "Failed to update student profile",
+        description: error.message || "Failed to update student profile",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -149,15 +158,15 @@ export default function StudentProfile() {
               <div className="w-full space-y-4 text-left">
                 <div className="flex items-center gap-3 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">student@example.com</span>
+                  <span className="truncate">{student.email || 'No email provided'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{student.phone}</span>
+                  <span>{student.phone || 'No phone provided'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>123 Main St, Cityville</span>
+                  <span>{student.address || 'No address provided'}</span>
                 </div>
               </div>
               
@@ -218,13 +227,37 @@ export default function StudentProfile() {
                       <p className="text-sm font-medium text-muted-foreground">Enrollment Date</p>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-primary" />
-                        <span className="font-semibold">{student.joinDate}</span>
+                        <span className="font-semibold">{student.joining_date ? new Date(student.joining_date).toLocaleDateString() : 'Not available'}</span>
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Parent/Guardian</p>
-                      <span className="font-semibold">{student.parentName}</span>
+                      <p className="text-sm font-medium text-muted-foreground">Parent/Guardian Phone</p>
+                      <span className="font-semibold">{student.parent_phone || 'Not provided'}</span>
                     </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Guardian Name</p>
+                      <span className="font-semibold">{student.guardian_name || 'Not provided'}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Uniform Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Uniform Issued</p>
+                      <Badge variant={student.uniform_issued ? 'default' : 'secondary'}>
+                        {student.uniform_issued ? 'YES' : 'NO'}
+                      </Badge>
+                    </div>
+                    {student.uniform_issued && (
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Uniform Size</p>
+                        <span className="font-semibold">{student.uniform_size || 'Not specified'}</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -233,20 +266,14 @@ export default function StudentProfile() {
                     <CardTitle>Recent Notes</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="border-l-2 border-primary pl-4 py-1">
-                        <p className="text-sm font-medium">Belt Exam Passed</p>
-                        <p className="text-xs text-muted-foreground mb-1">May 15, 2025</p>
-                        <p className="text-sm">Successfully passed the yellow belt examination with distinction.</p>
-                      </div>
-                      <div className="border-l-2 border-muted pl-4 py-1">
-                        <p className="text-sm font-medium">Uniform Issued</p>
-                        <p className="text-xs text-muted-foreground mb-1">Jan 20, 2025</p>
-                        <p className="text-sm">Standard size M uniform kit issued.</p>
-                      </div>
-                    </div>
+                    <p className="text-center text-muted-foreground py-8">
+                      No notes available
+                    </p>
                   </CardContent>
                 </Card>
+
+                {/* Student Login Credentials Section */}
+                <StudentCredentialsSection studentId={student.id} studentData={student} onUpdate={loadStudentData} />
               </TabsContent>
 
               <TabsContent value="attendance" className="mt-6">
@@ -310,20 +337,35 @@ export default function StudentProfile() {
                 <form onSubmit={handleUpdate} className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Full Name</Label>
-                        <Input id="name" name="name" defaultValue={student.name} />
+                        <Input id="name" name="name" defaultValue={student.name} required />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="parentName">Guardian Name</Label>
-                        <Input id="parentName" name="parentName" defaultValue={student.parentName} />
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" name="email" type="email" defaultValue={student.email || ''} />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
-                        <Input id="phone" name="phone" defaultValue={student.phone} />
+                        <Input id="phone" name="phone" defaultValue={student.phone || ''} />
                     </div>
-                    {/* Add more fields as necessary */}
+                    <div className="space-y-2">
+                        <Label htmlFor="parentPhone">Parent/Guardian Phone</Label>
+                        <Input id="parentPhone" name="parentPhone" defaultValue={student.parent_phone || ''} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="guardianName">Guardian Name</Label>
+                        <Input id="guardianName" name="guardianName" defaultValue={student.guardian_name || ''} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="address">Address</Label>
+                        <Input id="address" name="address" defaultValue={student.address || ''} />
+                    </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} disabled={isLoading}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={isLoading}>
+                          {isLoading ? 'Saving...' : 'Save Changes'}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

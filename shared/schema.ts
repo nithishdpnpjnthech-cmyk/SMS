@@ -29,11 +29,14 @@ export const students = pgTable("students", {
   email: text("email"),
   phone: text("phone"),
   parentPhone: text("parent_phone"),
+  guardianName: varchar("guardian_name", { length: 100 }), // New field
   address: text("address"),
   branchId: varchar("branch_id").notNull(),
   program: text("program"), // Legacy field - kept for compatibility
   batch: text("batch"), // Legacy field - kept for compatibility
   batchId: varchar("batch_id"), // New field for proper batch relationship
+  uniformIssued: boolean("uniform_issued").default(false), // New field
+  uniformSize: text("uniform_size"), // New field - ENUM('XS','S','M','L','XL','XXL','XXXL')
   joiningDate: timestamp("joining_date").defaultNow(),
   status: text("status").default("active"), // active, inactive, suspended
   createdAt: timestamp("created_at").defaultNow(),

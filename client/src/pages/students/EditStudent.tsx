@@ -11,6 +11,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function EditStudent() {
   const [, setLocation] = useLocation();
@@ -20,6 +21,8 @@ export default function EditStudent() {
   const [branches, setBranches] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [programs, setPrograms] = useState<any[]>([]);
+  const [uniformIssued, setUniformIssued] = useState(false);
+  const [uniformSize, setUniformSize] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const { hasPermission } = useAuth();
 
@@ -38,6 +41,10 @@ export default function EditStudent() {
     try {
       const studentData = await api.getStudent(studentId);
       setStudent(studentData);
+      
+      // Set uniform state from student data
+      setUniformIssued(studentData.uniform_issued || false);
+      setUniformSize(studentData.uniform_size || undefined);
     } catch (error) {
       console.error("Failed to load student:", error);
       toast({
@@ -76,15 +83,29 @@ export default function EditStudent() {
     try {
       const formData = new FormData(e.target as HTMLFormElement);
       
+      // Validate uniform fields
+      if (uniformIssued && !uniformSize) {
+        toast({
+          title: "Validation Error",
+          description: "Please select uniform size when uniform is issued",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       const updateData = {
         name: formData.get("name") as string,
         email: formData.get("email") as string,
         phone: formData.get("phone") as string,
         parentPhone: formData.get("parentPhone") as string,
+        guardianName: formData.get("guardianName") as string,
         address: formData.get("address") as string,
         branchId: formData.get("branchId") as string,
         program: formData.get("program") as string,
         batch: formData.get("batch") as string,
+        uniformIssued: uniformIssued,
+        uniformSize: uniformIssued ? uniformSize : null,
         status: formData.get("status") as string
       };
 
@@ -162,6 +183,11 @@ export default function EditStudent() {
               </div>
 
               <div>
+                <Label>Guardian Name</Label>
+                <Input name="guardianName" defaultValue={student.guardian_name || ""} />
+              </div>
+
+              <div>
                 <Label>Address</Label>
                 <Textarea name="address" defaultValue={student.address || ""} rows={3} />
               </div>
@@ -226,6 +252,47 @@ export default function EditStudent() {
                     <SelectItem value="suspended">Suspended</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Uniform Section */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-lg font-medium">Uniform Information</h3>
+                
+                {/* Uniform Issued */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="uniformIssued"
+                    checked={uniformIssued}
+                    onCheckedChange={(checked) => {
+                      setUniformIssued(checked as boolean);
+                      if (!checked) {
+                        setUniformSize(undefined);
+                      }
+                    }}
+                  />
+                  <Label htmlFor="uniformIssued">Uniform Issued</Label>
+                </div>
+                
+                {/* Uniform Size - Only show when uniform is issued */}
+                {uniformIssued && (
+                  <div>
+                    <Label>Uniform Size *</Label>
+                    <Select value={uniformSize} onValueChange={setUniformSize}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select uniform size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="XS">XS</SelectItem>
+                        <SelectItem value="S">S</SelectItem>
+                        <SelectItem value="M">M</SelectItem>
+                        <SelectItem value="L">L</SelectItem>
+                        <SelectItem value="XL">XL</SelectItem>
+                        <SelectItem value="XXL">XXL</SelectItem>
+                        <SelectItem value="XXXL">XXXL</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-4 pt-4">

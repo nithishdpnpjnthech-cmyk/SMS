@@ -66,24 +66,50 @@ export default function AttendanceDashboard() {
     setEditingRecord(record);
   };
 
+  const handleCheckOut = async (record: AttendanceRecord) => {
+    try {
+      const now = new Date();
+      
+      const updates = {
+        checkOut: now.toISOString()  // Use camelCase to match backend expectation
+      };
+      
+      console.log('Checking out with datetime:', now.toISOString());
+      
+      await api.updateAttendance(record.id, updates);
+      await loadAttendanceData();
+      
+      toast({
+        title: "Success",
+        description: `Check-out recorded at ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+      });
+    } catch (error: any) {
+      console.error('Check-out error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record check-out",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleUpdateAttendance = async (newStatus: string) => {
     if (!editingRecord) return;
     
     setIsUpdating(true);
     try {
+      // Map frontend status to backend status
+      const backendStatus = newStatus === 'present' ? 'PRESENT' : 
+                           newStatus === 'absent' ? 'ABSENT' : 
+                           newStatus.toUpperCase();
+      
       const updates = {
-        status: newStatus,
-        checkIn: newStatus === 'present' || newStatus === 'late' ? new Date() : null,
+        status: backendStatus,
+        checkIn: backendStatus === 'PRESENT' ? new Date().toISOString() : null,
         checkOut: null
       };
       
       await api.updateAttendance(editingRecord.id, updates);
-      
-      setAttendance(prev => prev.map(record => 
-        record.id === editingRecord.id 
-          ? { ...record, ...updates }
-          : record
-      ));
       
       setEditingRecord(null);
       await loadAttendanceData();
@@ -129,8 +155,8 @@ export default function AttendanceDashboard() {
       setAttendance(attendanceData);
       setStudents(studentsData);
       
-      const totalPresent = attendanceData.filter(a => a.status === 'present').length;
-      const totalAbsent = attendanceData.filter(a => a.status === 'absent').length;
+      const totalPresent = attendanceData.filter(a => a.status === 'PRESENT' || a.status === 'present').length;
+      const totalAbsent = attendanceData.filter(a => a.status === 'ABSENT' || a.status === 'absent').length;
       const totalRecords = attendanceData.length;
       const attendanceRate = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
 
@@ -320,25 +346,90 @@ export default function AttendanceDashboard() {
                         <TableCell className="font-medium">{record.student_name || 'N/A'}</TableCell>
                         <TableCell>{record.program || getStudentProgram(record.student_id) || 'N/A'}</TableCell>
                         <TableCell>{record.batch || getStudentBatch(record.student_id) || 'N/A'}</TableCell>
-                        <TableCell>{record.check_in ? new Date(record.check_in).toLocaleTimeString() : 'N/A'}</TableCell>
-                        <TableCell>{record.check_out ? new Date(record.check_out).toLocaleTimeString() : 'N/A'}</TableCell>
+                        <TableCell>{record.check_in ? (
+                          (() => {
+                            try {
+                              const checkInValue = record.check_in;
+                              if (!checkInValue || checkInValue === 'N/A') return 'N/A';
+                              
+                              // Handle full datetime or time-only formats
+                              let dateTime;
+                              if (checkInValue.includes('T') || checkInValue.includes(' ')) {
+                                // Full datetime format
+                                dateTime = new Date(checkInValue);
+                              } else {
+                                // Time-only format - combine with today's date
+                                const today = new Date().toISOString().split('T')[0];
+                                dateTime = new Date(`${today}T${checkInValue}`);
+                              }
+                              
+                              if (isNaN(dateTime.getTime())) return 'N/A';
+                              
+                              return dateTime.toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              });
+                            } catch {
+                              return 'N/A';
+                            }
+                          })()
+                        ) : 'N/A'}</TableCell>
+                        <TableCell>{record.check_out ? (
+                          (() => {
+                            try {
+                              const checkOutValue = record.check_out;
+                              if (!checkOutValue || checkOutValue === 'N/A') return 'N/A';
+                              
+                              // Handle full datetime or time-only formats
+                              let dateTime;
+                              if (checkOutValue.includes('T') || checkOutValue.includes(' ')) {
+                                // Full datetime format
+                                dateTime = new Date(checkOutValue);
+                              } else {
+                                // Time-only format - combine with today's date
+                                const today = new Date().toISOString().split('T')[0];
+                                dateTime = new Date(`${today}T${checkOutValue}`);
+                              }
+                              
+                              if (isNaN(dateTime.getTime())) return 'N/A';
+                              
+                              return dateTime.toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              });
+                            } catch {
+                              return 'N/A';
+                            }
+                          })()
+                        ) : 'N/A'}</TableCell>
                         <TableCell>
                           <Badge 
-                            variant={record.status === 'present' ? 'default' : record.status === 'late' ? 'secondary' : 'destructive'}
+                            variant={record.status === 'PRESENT' || record.status === 'present' ? 'default' : 'destructive'}
                             className={
-                              record.status === 'present' ? 'bg-green-100 text-green-700 hover:bg-green-100' :
+                              record.status === 'PRESENT' || record.status === 'present' ? 'bg-green-100 text-green-700 hover:bg-green-100' :
                               record.status === 'late' ? 'bg-orange-100 text-orange-700 hover:bg-orange-100' :
                               'bg-red-100 text-red-700 hover:bg-red-100'
                             }
                           >
-                            {record.status}
+                            {record.status === 'PRESENT' ? 'Present' : 
+                             record.status === 'ABSENT' ? 'Absent' : 
+                             record.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" onClick={() => handleEditAttendance(record)}>
-                            <Edit2 className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            {record.check_in && !record.check_out && (record.status === 'PRESENT' || record.status === 'present') ? (
+                              <Button size="sm" variant="outline" onClick={() => handleCheckOut(record)}>
+                                Check Out
+                              </Button>
+                            ) : null}
+                            <Button size="sm" variant="outline" onClick={() => handleEditAttendance(record)}>
+                              <Edit2 className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -384,7 +475,7 @@ export default function AttendanceDashboard() {
                   <Label>Select New Status:</Label>
                   <div className="flex gap-2">
                     <Button
-                      variant={editingRecord.status === 'present' ? 'default' : 'outline'}
+                      variant={editingRecord.status === 'PRESENT' || editingRecord.status === 'present' ? 'default' : 'outline'}
                       onClick={() => handleUpdateAttendance('present')}
                       disabled={isUpdating}
                       className="flex-1"
@@ -392,15 +483,7 @@ export default function AttendanceDashboard() {
                       Present
                     </Button>
                     <Button
-                      variant={editingRecord.status === 'late' ? 'default' : 'outline'}
-                      onClick={() => handleUpdateAttendance('late')}
-                      disabled={isUpdating}
-                      className="flex-1"
-                    >
-                      Late
-                    </Button>
-                    <Button
-                      variant={editingRecord.status === 'absent' ? 'destructive' : 'outline'}
+                      variant={editingRecord.status === 'ABSENT' || editingRecord.status === 'absent' ? 'destructive' : 'outline'}
                       onClick={() => handleUpdateAttendance('absent')}
                       disabled={isUpdating}
                       className="flex-1"

@@ -6,15 +6,77 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Shield, Palette, Globe, Database, Download } from "lucide-react";
-import { useState } from "react";
+import { Bell, Shield, Palette, Globe, Database, Download, Building } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const [notifications, setNotifications] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [academyName, setAcademyName] = useState('');
+  const [isLoadingAcademy, setIsLoadingAcademy] = useState(false);
   const { toast } = useToast();
+
+  // Load academy settings on component mount
+  useEffect(() => {
+    loadAcademySettings();
+  }, []);
+
+  const loadAcademySettings = async () => {
+    try {
+      const response = await fetch('/api/settings/academy');
+      if (response.ok) {
+        const data = await response.json();
+        setAcademyName(data.academyName || '');
+      }
+    } catch (error) {
+      console.error('Failed to load academy settings:', error);
+    }
+  };
+
+  const handleSaveAcademyName = async () => {
+    if (!academyName.trim()) {
+      toast({
+        title: "Error",
+        description: "Academy name cannot be empty",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoadingAcademy(true);
+    try {
+      const response = await fetch('/api/settings/academy', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token') || '',
+          'x-user-role': localStorage.getItem('userRole') || '',
+          'x-user-id': localStorage.getItem('userId') || ''
+        },
+        body: JSON.stringify({ academyName: academyName.trim() })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Academy name updated successfully"
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update academy name');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update academy name",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingAcademy(false);
+    }
+  };
 
   // Fix: Add proper handlers for settings buttons
   const handleSaveSettings = () => {
@@ -131,6 +193,40 @@ export default function Settings() {
         </div>
 
         <div className="grid gap-6">
+          {/* Academy Branding */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Academy Branding
+              </CardTitle>
+              <CardDescription>Configure academy name and branding for student portal.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="academyName">Academy Name</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="academyName"
+                    placeholder="Enter academy name (e.g., Excellence Academy)"
+                    value={academyName}
+                    onChange={(e) => setAcademyName(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={handleSaveAcademyName}
+                    disabled={isLoadingAcademy}
+                  >
+                    {isLoadingAcademy ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This name will appear in the student portal instead of "Student Portal". Leave empty to use default.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Notifications */}
           <Card>
             <CardHeader>

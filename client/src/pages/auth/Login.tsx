@@ -108,6 +108,16 @@ export default function Login() {
               Sign In
             </Button>
           </form>
+          
+          <div className="mt-6 text-center">
+            <Button 
+              variant="link" 
+              onClick={() => setLocation('/student/login')}
+              className="text-sm text-muted-foreground"
+            >
+              Student Portal →
+            </Button>
+          </div>
         </CardContent>
 
         <CardFooter className="text-xs text-center">

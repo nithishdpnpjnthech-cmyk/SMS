@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { randomUUID } from "crypto";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 // Enhanced RBAC Middleware with Branch Isolation
 function requireAuth() {
@@ -72,13 +74,717 @@ function enforceBranchAccess() {
 
 export async function registerRoutes(app: Express): Promise<void> {
 
+  // ================= SYSTEM SETTINGS =================
+  // CSRF Protection Note: These endpoints use JWT tokens in Authorization headers
+  // which are not automatically sent by browsers in cross-site requests,
+  // providing inherent CSRF protection. No additional CSRF tokens needed.
+  app.get("/api/settings/academy", async (req, res) => {
+    try {
+      // Create settings table if it doesn't exist
+      await storage.query(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+          id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+          setting_key VARCHAR(100) NOT NULL UNIQUE,
+          setting_value TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      
+      // Get academy name setting
+      const academyName = await storage.query(
+        "SELECT setting_value FROM system_settings WHERE setting_key = 'academy_name'"
+      );
+      
+      res.json({
+        academyName: academyName.length ? academyName[0].setting_value : null
+      });
+    } catch (error) {
+      console.error("Get academy settings error:", error);
+      res.status(500).json({ error: "Failed to fetch academy settings" });
+    }
+  });
+
+  app.put("/api/settings/academy", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      const { academyName } = req.body;
+      
+      if (!academyName || !academyName.trim()) {
+        return res.status(400).json({ error: "Academy name is required" });
+      }
+      
+      // Upsert academy name setting
+      await storage.query(`
+        INSERT INTO system_settings (setting_key, setting_value) 
+        VALUES ('academy_name', ?) 
+        ON DUPLICATE KEY UPDATE 
+        setting_value = VALUES(setting_value),
+        updated_at = CURRENT_TIMESTAMP
+      `, [academyName.trim()]);
+      
+      res.json({ message: "Academy name updated successfully" });
+    } catch (error) {
+      console.error("Update academy settings error:", error);
+      res.status(500).json({ error: "Failed to update academy name" });
+    }
+  });
+
+  // ================= STUDENT PORTAL AUTH =================
+  // CSRF Protection Note: Student portal uses JWT tokens in Authorization headers
+  // which provides inherent CSRF protection as browsers don't automatically
+  // send Authorization headers in cross-site requests.
+  app.post("/api/student/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // Sanitize username for logging to prevent log injection
+      const sanitizedUsername = username.replace(/[\r\n]/g, "");
+      console.log("Student login attempt for:", sanitizedUsername);
+
+      // Find student by ID, email, or phone (flexible username)
+      const students = await storage.query(`
+        SELECT 
+          s.id,
+          s.name,
+          s.email,
+          s.phone,
+          s.branch_id,
+          s.password_hash,
+          s.status,
+          s.login_attempts,
+          s.locked_until,
+          b.name as branch_name
+        FROM students s
+        LEFT JOIN branches b ON s.branch_id = b.id
+        WHERE (s.id = ? OR s.email = ? OR s.phone = ?) 
+        AND s.status = 'active'
+        LIMIT 1
+      `, [username, username, username]);
+
+      if (!students.length) {
+        console.log("Student not found for username:", sanitizedUsername, "reason: student_not_found");
+        return res.status(401).json({ error: "Student not found. Please login using email, phone number, or full student ID." });
+      }
+
+      const student = students[0];
+      
+      // Check if account is locked
+      if (student.locked_until && new Date() < new Date(student.locked_until)) {
+        return res.status(423).json({ error: "Account is temporarily locked. Please try again later." });
+      }
+      
+      // Verify password
+      let isPasswordValid = false;
+      
+      if (student.password_hash) {
+        // Use bcrypt for hashed passwords
+        isPasswordValid = await bcrypt.compare(password, student.password_hash);
+      } else {
+        // Fallback for legacy students without hashed passwords
+        const expectedPassword = student.name.replace(/[^a-zA-Z]/g, '').substring(0, 5).toLowerCase();
+        isPasswordValid = password.toLowerCase() === expectedPassword;
+        
+        // If login successful with legacy password, hash it for future use
+        if (isPasswordValid) {
+          const hashedPassword = await bcrypt.hash(expectedPassword, 10);
+          await storage.query(
+            'UPDATE students SET password_hash = ? WHERE id = ?',
+            [hashedPassword, student.id]
+          );
+        }
+      }
+      
+      if (!isPasswordValid) {
+        // Increment login attempts
+        const newAttempts = (student.login_attempts || 0) + 1;
+        let lockUntil = null;
+        
+        // Lock account after 5 failed attempts for 15 minutes
+        if (newAttempts >= 5) {
+          lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        }
+        
+        await storage.query(
+          'UPDATE students SET login_attempts = ?, locked_until = ? WHERE id = ?',
+          [newAttempts, lockUntil, student.id]
+        );
+        
+        console.log("Invalid password for student:", sanitizedUsername, "reason: password_mismatch");
+        return res.status(401).json({ error: "Invalid password. Please check your password and try again." });
+      }
+      
+      // Reset login attempts on successful login
+      await storage.query(
+        'UPDATE students SET login_attempts = 0, locked_until = NULL, last_login = NOW() WHERE id = ?',
+        [student.id]
+      );
+
+      // Generate JWT token with studentId
+      const jwtSecret = process.env.JWT_SECRET || 'dev-only-secret';
+      const token = jwt.sign(
+        { 
+          studentId: student.id,
+          type: 'student',
+          branchId: student.branch_id
+        },
+        jwtSecret,
+        { expiresIn: '24h' }
+      );
+
+      // Log successful login (without sensitive data)
+      console.log("Student login successful:", sanitizedUsername, "ID:", student.id);
+
+      // Return student info with token
+      res.json({
+        student: {
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          phone: student.phone,
+          branchId: student.branch_id,
+          branchName: student.branch_name,
+          role: 'student'
+        },
+        token
+      });
+    } catch (error: any) {
+      console.error("Student login error:", error.message || error);
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+  });
+
+  // Student middleware for authentication with JWT
+  function requireStudentAuth() {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const authHeader = req.headers.authorization;
+        const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+        
+        if (!token) {
+          return res.status(401).json({ error: "Student authentication token required" });
+        }
+        
+        const jwtSecret = process.env.JWT_SECRET || 'dev-only-secret';
+        const decoded = jwt.verify(token, jwtSecret);
+        
+        if (decoded.type !== 'student' || !decoded.studentId) {
+          return res.status(403).json({ error: "Invalid student token" });
+        }
+        
+        // Verify student exists and is active
+        const student = await storage.query(`
+          SELECT s.*, b.name as branch_name
+          FROM students s
+          LEFT JOIN branches b ON s.branch_id = b.id
+          WHERE s.id = ? AND s.status = 'active'
+        `, [decoded.studentId]);
+        
+        if (!student.length) {
+          return res.status(403).json({ error: "Student access denied" });
+        }
+        
+        req.student = student[0];
+        req.studentId = decoded.studentId; // Ensure studentId is available
+        next();
+      } catch (error) {
+        console.error('Student auth error:', error);
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
+    };
+  }
+
+  // ================= STUDENT PORTAL READ-ONLY APIs =================
+  app.get("/api/student/profile", requireStudentAuth(), async (req, res) => {
+    try {
+      const student = req.student!;
+      
+      // Get uniform status
+      const uniform = await storage.query(
+        "SELECT issued, issue_date FROM student_uniforms WHERE student_id = ?",
+        [student.id]
+      );
+      
+      // Get academy/branch information
+      const branch = await storage.query(
+        "SELECT name, address, phone FROM branches WHERE id = ?",
+        [student.branch_id]
+      );
+      
+      const branchInfo = branch.length ? branch[0] : null;
+      
+      res.json({
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        phone: student.phone,
+        parentPhone: student.parent_phone,
+        address: student.address,
+        branchName: student.branch_name,
+        program: student.program,
+        batch: student.batch,
+        joiningDate: student.joining_date,
+        uniform: uniform.length ? {
+          issued: uniform[0].issued,
+          issueDate: uniform[0].issue_date
+        } : { issued: false, issueDate: null },
+        academy: {
+          name: branchInfo?.name || 'Academy',
+          phone: branchInfo?.phone || null,
+          email: null, // Add email field to branches table if needed
+          address: branchInfo?.address || null
+        }
+      });
+    } catch (error) {
+      console.error("Student profile error:", error);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  app.get("/api/student/attendance", requireStudentAuth(), async (req, res) => {
+    try {
+      const studentId = req.studentId!; // Use JWT-verified studentId
+      const { month, year } = req.query;
+      
+      let dateFilter = "";
+      const params = [studentId];
+      
+      if (month && year) {
+        dateFilter = "AND MONTH(a.date) = ? AND YEAR(a.date) = ?";
+        params.push(month as string, year as string);
+      }
+      
+      const attendance = await storage.query(`
+        SELECT 
+          DATE(a.date) as date,
+          a.status,
+          a.check_in,
+          a.check_out
+        FROM attendance a
+        WHERE a.student_id = ? ${dateFilter}
+        ORDER BY a.date DESC
+      `, params);
+      
+      // Calculate summary
+      const totalDays = attendance.length;
+      const presentDays = attendance.filter(a => a.status === 'present').length;
+      const absentDays = attendance.filter(a => a.status === 'absent').length;
+      const lateDays = attendance.filter(a => a.status === 'late').length;
+      
+      res.json({
+        attendance,
+        summary: {
+          totalDays,
+          presentDays,
+          absentDays,
+          lateDays,
+          attendancePercentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0
+        }
+      });
+    } catch (error) {
+      console.error("Student attendance error:", error);
+      res.status(500).json({ error: "Failed to fetch attendance" });
+    }
+  });
+
+  app.get("/api/student/fees", requireStudentAuth(), async (req, res) => {
+    try {
+      const studentId = req.studentId!; // Use JWT-verified studentId
+      
+      const fees = await storage.query(`
+        SELECT 
+          f.id,
+          f.amount,
+          f.due_date,
+          f.paid_date,
+          f.status,
+          f.payment_method,
+          f.notes
+        FROM fees f
+        WHERE f.student_id = ?
+        ORDER BY f.due_date DESC
+      `, [studentId]);
+      
+      // Calculate totals
+      const totalFee = fees.reduce((sum, fee) => sum + parseFloat(fee.amount), 0);
+      const paidAmount = fees
+        .filter(fee => fee.status === 'paid')
+        .reduce((sum, fee) => sum + parseFloat(fee.amount), 0);
+      const pendingAmount = totalFee - paidAmount;
+      
+      res.json({
+        fees,
+        summary: {
+          totalFee,
+          paidAmount,
+          pendingAmount
+        }
+      });
+    } catch (error) {
+      console.error("Student fees error:", error);
+      res.status(500).json({ error: "Failed to fetch fees" });
+    }
+  });
+
+  app.get("/api/student/reports/attendance", requireStudentAuth(), async (req, res) => {
+    try {
+      const studentId = req.studentId!; // Use JWT-verified studentId
+      const { month, year, format } = req.query;
+      
+      if (!month || !year) {
+        return res.status(400).json({ error: "Month and year required" });
+      }
+      
+      const attendance = await storage.query(`
+        SELECT 
+          DATE(a.date) as date,
+          a.status,
+          a.check_in,
+          a.check_out
+        FROM attendance a
+        WHERE a.student_id = ? AND MONTH(a.date) = ? AND YEAR(a.date) = ?
+        ORDER BY a.date ASC
+      `, [studentId, month, year]);
+      
+      if (format === 'csv') {
+        const csvData = [
+          'Date,Status,Check In,Check Out',
+          ...attendance.map(a => 
+            `${a.date},${a.status},${a.check_in || ''},${a.check_out || ''}`
+          )
+        ].join('\n');
+        
+        res.setHeader('Content-Type', 'text/csv');
+        // Sanitize filename parameters to prevent header injection
+        const safeMonth = String(month).replace(/[^0-9]/g, '');
+        const safeYear = String(year).replace(/[^0-9]/g, '');
+        res.setHeader('Content-Disposition', `attachment; filename="attendance-${safeMonth}-${safeYear}.csv"`);
+        res.send(csvData);
+      } else {
+        res.json({ attendance });
+      }
+    } catch (error) {
+      console.error("Student attendance report error:", error);
+      res.status(500).json({ error: "Failed to generate report" });
+    }
+  });
+
+  app.get("/api/student/notes", requireStudentAuth(), async (req, res) => {
+    try {
+      const studentId = req.studentId!; // Use JWT-verified studentId
+      
+      // Get notes from various sources (attendance notes, fee notes, general notes)
+      const notes = await storage.query(`
+        SELECT 
+          'attendance' as type,
+          a.notes as content,
+          a.date as created_at,
+          CONCAT('Attendance: ', a.status) as title
+        FROM attendance a
+        WHERE a.student_id = ? AND a.notes IS NOT NULL AND a.notes != ''
+        
+        UNION ALL
+        
+        SELECT 
+          'fee' as type,
+          f.notes as content,
+          f.created_at,
+          CONCAT('Fee Payment: ₹', f.amount) as title
+        FROM fees f
+        WHERE f.student_id = ? AND f.notes IS NOT NULL AND f.notes != ''
+        
+        ORDER BY created_at DESC
+        LIMIT 10
+      `, [studentId, studentId]);
+      
+      res.json(notes);
+    } catch (error) {
+      console.error("Student notes error:", error);
+      res.status(500).json({ error: "Failed to fetch notes" });
+    }
+  });
+
+  // ================= STUDENT PAYMENT PROCESSING =================
+  // CSRF Protection Note: Payment endpoints use JWT authentication which provides
+  // inherent CSRF protection. Additional CSRF tokens are not required.
+  app.post("/api/student/payment", requireStudentAuth(), async (req, res) => {
+    try {
+      const studentId = req.studentId!; // Use JWT-verified studentId
+      const { feeId, paymentMethod } = req.body;
+      
+      if (!feeId || !paymentMethod) {
+        return res.status(400).json({ error: "Fee ID and payment method required" });
+      }
+      
+      // Verify fee belongs to student and is pending
+      const fee = await storage.query(
+        "SELECT * FROM fees WHERE id = ? AND student_id = ? AND status = 'pending'",
+        [feeId, studentId]
+      );
+      
+      if (!fee.length) {
+        return res.status(404).json({ error: "Fee not found or already paid" });
+      }
+      
+      // In a real implementation, integrate with payment gateway here
+      // For now, we'll simulate payment processing
+      
+      // Simulate payment gateway processing
+      const paymentSuccess = await simulatePaymentGateway(fee[0].amount, paymentMethod);
+      
+      if (!paymentSuccess.success) {
+        return res.status(400).json({ error: paymentSuccess.error });
+      }
+      
+      // Update fee status to paid
+      await storage.query(
+        "UPDATE fees SET status = 'paid', paid_date = NOW(), payment_method = ?, notes = CONCAT(COALESCE(notes, ''), ' Payment processed via ', ?) WHERE id = ?",
+        [paymentMethod, paymentMethod, feeId]
+      );
+      
+      res.json({ 
+        message: "Payment processed successfully",
+        transactionId: paymentSuccess.transactionId,
+        paymentMethod
+      });
+    } catch (error) {
+      console.error("Student payment error:", error);
+      res.status(500).json({ error: "Payment processing failed" });
+    }
+  });
+
+  // Simulate payment gateway (replace with real integration)
+  async function simulatePaymentGateway(amount: number, method: string) {
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Simulate 95% success rate
+    const success = Math.random() > 0.05;
+    
+    if (success) {
+      return {
+        success: true,
+        transactionId: `TXN${Date.now()}${Math.random().toString(36).substring(2, 9).toUpperCase()}`
+      };
+    } else {
+      return {
+        success: false,
+        error: "Payment gateway error. Please try again."
+      };
+    }
+  }
+
+  // ================= ADMIN STUDENT CREDENTIAL MANAGEMENT =================
+  app.get("/api/admin/student-credentials/:studentId", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      const { studentId } = req.params;
+      
+      const credentials = await storage.query(`
+        SELECT 
+          spc.id,
+          spc.username,
+          spc.is_active,
+          spc.last_login
+        FROM student_portal_credentials spc
+        WHERE spc.student_id = ?
+      `, [studentId]);
+      
+      if (!credentials.length) {
+        return res.status(404).json({ error: "No credentials found" });
+      }
+      
+      res.json({
+        id: credentials[0].id,
+        username: credentials[0].username,
+        isActive: credentials[0].is_active,
+        lastLogin: credentials[0].last_login
+      });
+    } catch (error) {
+      console.error("Get student credential error:", error);
+      res.status(500).json({ error: "Failed to fetch credential" });
+    }
+  });
+
+  app.post("/api/admin/student-credentials", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      const { studentId, username, password } = req.body;
+      
+      // Sanitize inputs for logging to prevent log injection
+      const sanitizedStudentId = String(studentId || '').replace(/[\r\n]/g, "");
+      const sanitizedUsername = String(username || '').replace(/[\r\n]/g, "");
+      
+      console.log("Creating credentials for student:", sanitizedStudentId, "username:", sanitizedUsername);
+      
+      if (!studentId || !username || !password) {
+        return res.status(400).json({ error: "Student ID, username, and password required" });
+      }
+      
+      // Ensure table exists first
+      await storage.query(`
+        CREATE TABLE IF NOT EXISTS student_portal_credentials (
+          id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+          student_id VARCHAR(36) NOT NULL UNIQUE,
+          username VARCHAR(50) NOT NULL UNIQUE,
+          password VARCHAR(255) NOT NULL,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_by VARCHAR(36) NOT NULL,
+          last_login TIMESTAMP NULL,
+          FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+          FOREIGN KEY (created_by) REFERENCES users(id),
+          INDEX idx_student_portal_username (username),
+          INDEX idx_student_portal_student_id (student_id)
+        )
+      `);
+      
+      // Check if student exists
+      const student = await storage.query(
+        "SELECT id FROM students WHERE id = ? AND status = 'active'",
+        [studentId]
+      );
+      
+      if (!student.length) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      // Check if credentials already exist
+      const existing = await storage.query(
+        "SELECT id FROM student_portal_credentials WHERE student_id = ?",
+        [studentId]
+      );
+      
+      if (existing.length) {
+        return res.status(400).json({ error: "Credentials already exist for this student" });
+      }
+      
+      // Check username uniqueness
+      const usernameExists = await storage.query(
+        "SELECT id FROM student_portal_credentials WHERE username = ?",
+        [username]
+      );
+      
+      if (usernameExists.length) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+      
+      // Generate UUID for credentials
+      const credentialId = randomUUID();
+      
+      // Create credentials with explicit ID
+      await storage.query(`
+        INSERT INTO student_portal_credentials 
+        (id, student_id, username, password, created_by, is_active)
+        VALUES (?, ?, ?, ?, ?, TRUE)
+      `, [credentialId, studentId, username, password, req.user.id]);
+      
+      console.log("Credentials created successfully for student:", sanitizedStudentId);
+      res.json({ message: "Credentials created successfully" });
+    } catch (error: any) {
+      console.error("Create student credentials error:", error);
+      res.status(500).json({ error: error.message || "Failed to create credentials" });
+    }
+  });
+
+  app.patch("/api/admin/student-credentials/:id", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      if (typeof isActive === 'boolean') {
+        await storage.query(
+          "UPDATE student_portal_credentials SET is_active = ? WHERE id = ?",
+          [isActive, id]
+        );
+      }
+      
+      res.json({ message: "Credential updated successfully" });
+    } catch (error) {
+      console.error("Update student credential error:", error);
+      res.status(500).json({ error: "Failed to update credential" });
+    }
+  });
+
+  app.patch("/api/admin/student-credentials/:id/reset-password", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+      
+      if (!password) {
+        return res.status(400).json({ error: "Password required" });
+      }
+      
+      await storage.query(
+        "UPDATE student_portal_credentials SET password = ? WHERE id = ?",
+        [password, id]
+      );
+      
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
+
+  app.get("/api/admin/student-credentials", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      const credentials = await storage.query(`
+        SELECT 
+          spc.id,
+          spc.student_id,
+          spc.username,
+          spc.is_active,
+          spc.last_login,
+          s.name as student_name,
+          b.name as branch_name
+        FROM student_portal_credentials spc
+        JOIN students s ON spc.student_id = s.id
+        LEFT JOIN branches b ON s.branch_id = b.id
+        ORDER BY spc.created_at DESC
+      `);
+      
+      res.json(credentials.map(cred => ({
+        id: cred.id,
+        studentId: cred.student_id,
+        username: cred.username,
+        isActive: cred.is_active,
+        lastLogin: cred.last_login,
+        studentName: cred.student_name,
+        branchName: cred.branch_name
+      })));
+    } catch (error) {
+      console.error("Get student credentials error:", error);
+      res.status(500).json({ error: "Failed to fetch credentials" });
+    }
+  });
+
+  app.delete("/api/admin/student-credentials/:id", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      await storage.query(
+        "DELETE FROM student_portal_credentials WHERE id = ?",
+        [id]
+      );
+      
+      res.json({ message: "Credentials deleted successfully" });
+    } catch (error) {
+      console.error("Delete student credentials error:", error);
+      res.status(500).json({ error: "Failed to delete credentials" });
+    }
+  });
+
   // ================= AUTH =================
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, email, password } = req.body;
       const identifier = username || email;
 
-      console.log("Login attempt for:", identifier);
+      // Sanitize identifier for logging to prevent log injection
+      const sanitizedIdentifier = String(identifier || '').replace(/[\r\n]/g, "");
+      console.log("Login attempt for:", sanitizedIdentifier);
 
       if (!identifier || !password) {
         return res.status(400).json({ error: "Username/email and password required" });
@@ -101,7 +807,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         branchId: (user as any).branch_id || null  // ✅ Map snake_case to camelCase
       };
 
-      console.log("Login successful, returning user:", userResponse);
+      console.log("Login successful, returning user:", {
+        id: userResponse.id,
+        username: userResponse.username,
+        role: userResponse.role,
+        branchId: userResponse.branchId
+      });
       
       // ✅ Log branch assignment status for debugging
       if (user.role !== 'admin' && !(user as any).branch_id) {
@@ -180,11 +891,48 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // ================= TESTING CLEANUP ENDPOINT =================
+  app.delete("/api/admin/cleanup-students", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      console.log("Starting student data cleanup for testing...");
+      
+      // Disable foreign key checks temporarily
+      await storage.query("SET FOREIGN_KEY_CHECKS = 0");
+      
+      // Delete dependent data first (child tables)
+      await storage.query("DELETE FROM student_programs");
+      await storage.query("DELETE FROM attendance");
+      await storage.query("DELETE FROM fees");
+      await storage.query("DELETE FROM student_portal_credentials");
+      
+      // Delete students table data
+      await storage.query("DELETE FROM students");
+      
+      // Re-enable foreign key checks
+      await storage.query("SET FOREIGN_KEY_CHECKS = 1");
+      
+      console.log("Student data cleanup completed successfully");
+      res.json({ message: "All student test data cleared successfully" });
+    } catch (error) {
+      console.error("Student cleanup error:", error);
+      
+      // Ensure foreign key checks are re-enabled even on error
+      try {
+        await storage.query("SET FOREIGN_KEY_CHECKS = 1");
+      } catch (fkError) {
+        console.error("Failed to re-enable foreign key checks:", fkError);
+      }
+      
+      res.status(500).json({ error: "Failed to cleanup student data" });
+    }
+  });
+
   // ================= STUDENTS =================
   app.get("/api/students", requireAuth(), enforceBranchAccess(), async (req, res) => {
     try {
       const branchId = req.query.branchId as string | undefined;
       const programFilter = req.query.program as string | undefined;
+      const statusFilter = req.query.status as string | undefined; // NEW: Status filter
       const userRole = req.user.role;
       
       let query = `
@@ -193,24 +941,28 @@ export async function registerRoutes(app: Express): Promise<void> {
         LEFT JOIN branches b ON s.branch_id = b.id 
         LEFT JOIN student_programs sp ON s.id = sp.student_id
         LEFT JOIN programs p ON sp.program_id = p.id
-        WHERE s.status = 'active'
+        WHERE 1=1
       `;
       const params: any[] = [];
       
-      // CRITICAL: Apply branch filtering in mandatory order
-      // 1. If branchId provided → ALWAYS filter by it (regardless of role)
+      // Status filtering - default to 'active' if no filter specified
+      if (statusFilter) {
+        query += " AND s.status = ?";
+        params.push(statusFilter);
+      } else {
+        query += " AND s.status = 'active'";
+      }
+      
+      // Branch filtering
       if (branchId) {
         query += " AND s.branch_id = ?";
         params.push(branchId);
-      } 
-      // 2. Else if non-admin → filter by user's branch
-      else if (userRole !== 'admin') {
+      } else if (userRole !== 'admin') {
         query += " AND s.branch_id = ?";
         params.push(req.user.branchId);
       }
-      // 3. Else (admin without branch context) → no filter
       
-      // Apply program filtering if specified
+      // Program filtering
       if (programFilter && programFilter !== 'All Programs') {
         query += ` AND (
           LOWER(TRIM(s.program)) = LOWER(TRIM(?)) OR 
@@ -253,11 +1005,68 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Check for potential duplicates (warning only)
+  app.post("/api/students/check-duplicates", requireAuth(), async (req, res) => {
+    try {
+      const { name, phone, guardianName, parentPhone, address } = req.body;
+      
+      if (!name || !name.trim()) {
+        return res.status(400).json({ error: "Student name is required" });
+      }
+      
+      // Find potential duplicates by name
+      const potentialDuplicates = await storage.query(`
+        SELECT id, name, phone, guardian_name, parent_phone, address, program, batch, branch_id FROM students 
+        WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+          AND status = 'active'
+        ORDER BY created_at DESC
+        LIMIT 5
+      `, [name.trim()]);
+      
+      if (potentialDuplicates.length === 0) {
+        return res.json({ duplicates: [], warning: null });
+      }
+      
+      // Check for exact matches
+      const exactMatch = potentialDuplicates.find(existing => 
+        (existing.phone || '') === (phone || '') &&
+        (existing.guardian_name || '') === (guardianName || '') &&
+        (existing.parent_phone || '') === (parentPhone || '') &&
+        (existing.address || '') === (address || '')
+      );
+      
+      let warning = null;
+      if (exactMatch) {
+        warning = `EXACT MATCH: Student "${name}" with identical contact details already exists. This may be a duplicate.`;
+      } else {
+        warning = `SIMILAR NAME: ${potentialDuplicates.length} student(s) with similar name found. Please verify this is not a duplicate.`;
+      }
+      
+      res.json({
+        duplicates: potentialDuplicates.map(d => ({
+          id: d.id,
+          name: d.name,
+          phone: d.phone,
+          guardianName: d.guardian_name,
+          parentPhone: d.parent_phone,
+          address: d.address,
+          program: d.program,
+          batch: d.batch
+        })),
+        warning,
+        canProceed: true // Always allow admin to proceed
+      });
+    } catch (error) {
+      console.error("Check duplicates error:", error);
+      res.status(500).json({ error: "Failed to check for duplicates" });
+    }
+  });
+
   app.post("/api/students", requireAuth(), async (req, res) => {
     try {
       console.log("Creating student with data:", req.body);
       
-      // Validate required fields
+      // EARLY VALIDATION - Fail fast before any DB operations
       if (!req.body.name || !req.body.name.trim()) {
         return res.status(400).json({ error: "Student name is required" });
       }
@@ -274,13 +1083,40 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "Please select a batch" });
       }
       
-      // Validate branch exists
+      // Validate uniform fields
+      if (req.body.uniformIssued && !req.body.uniformSize) {
+        return res.status(400).json({ error: "Uniform size is required when uniform is issued" });
+      }
+      
+      if (req.body.uniformSize && !req.body.uniformIssued) {
+        return res.status(400).json({ error: "Cannot set uniform size without issuing uniform" });
+      }
+      
+      // Validate uniform size enum
+      if (req.body.uniformSize && !['XS','S','M','L','XL','XXL','XXXL'].includes(req.body.uniformSize)) {
+        return res.status(400).json({ error: "Invalid uniform size. Must be XS, S, M, L, XL, XXL, or XXXL" });
+      }
+      
+      // CRITICAL: Check for exact duplicates before creation
+      const existingStudent = await storage.query(`
+        SELECT id FROM students 
+        WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+          AND COALESCE(phone, '') = COALESCE(?, '')
+          AND COALESCE(email, '') = COALESCE(?, '')
+          AND status = 'active'
+        LIMIT 1
+      `, [req.body.name.trim(), req.body.phone || '', req.body.email || '']);
+      
+      if (existingStudent && existingStudent.length > 0) {
+        return res.status(409).json({ 
+          error: "A student with the same name and contact details already exists" 
+        });
+      }
       const branch = await storage.query("SELECT id FROM branches WHERE id = ?", [req.body.branchId]);
       if (!branch || branch.length === 0) {
         return res.status(400).json({ error: "Please select a valid branch" });
       }
       
-      // Validate programs exist
       for (const programId of req.body.programs) {
         const program = await storage.query("SELECT id FROM programs WHERE id = ?", [programId]);
         if (!program || program.length === 0) {
@@ -288,70 +1124,165 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       }
       
-      // Validate batch exists
       const batch = await storage.query("SELECT id FROM batches WHERE id = ?", [req.body.batchId]);
       if (!batch || batch.length === 0) {
         return res.status(400).json({ error: "Please select a valid batch from the list" });
       }
 
-      const student = await storage.createStudent({
-        ...req.body,
-        joiningDate: req.body.joiningDate
-          ? new Date(req.body.joiningDate)
-          : new Date()
-      });
-
-      console.log("Student created successfully:", student);
-      res.status(201).json(student);
+      // Generate default password (first 5 letters of name)
+      const defaultPassword = req.body.name.replace(/[^a-zA-Z]/g, '').substring(0, 5).toLowerCase();
+      if (!defaultPassword) {
+        return res.status(400).json({ error: "Cannot generate password from student name" });
+      }
+      
+      // Hash the password
+      const passwordHash = await bcrypt.hash(defaultPassword, 10);
+      
+      // Create explicit student data object
+      const studentData = {
+        name: req.body.name.trim(),
+        email: req.body.email || null,
+        phone: req.body.phone || null,
+        parentPhone: req.body.parentPhone || null,
+        guardianName: req.body.guardianName || null,
+        address: req.body.address || null,
+        branchId: req.body.branchId,
+        programs: req.body.programs,
+        batchId: req.body.batchId,
+        uniformIssued: req.body.uniformIssued || false,
+        uniformSize: req.body.uniformIssued ? req.body.uniformSize : null,
+        status: req.body.status || 'active',
+        joiningDate: req.body.joiningDate ? new Date(req.body.joiningDate) : new Date()
+      };
+      
+      // ATOMIC TRANSACTION: Create student (all operations succeed or all fail)
+      const student = await storage.createStudent(studentData);
+      
+      // Update the student with password hash (separate operation after main creation)
+      await storage.query(
+        'UPDATE students SET password_hash = ?, role = ? WHERE id = ?',
+        [passwordHash, 'STUDENT', student.id]
+      );
+      
+      console.log("Student created successfully:", student.name);
+      
+      // CRITICAL: Return success immediately after student creation
+      // Do NOT let secondary operations (like duplicate warnings) affect the response
+      const response = {
+        ...student,
+        message: `Student created successfully. Default password: ${defaultPassword}`
+      };
+      
+      // Return 201 Created with student data
+      res.status(201).json(response);
+      
     } catch (error: any) {
       console.error("Create student error:", error);
       
-      // Map database errors to user-friendly messages
-      let errorMessage = "Failed to create student";
-      
+      // Handle specific database errors
       if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.message?.includes('foreign key constraint')) {
-        if (error.message?.includes('branch_id')) {
-          errorMessage = "Please select a valid branch for the student";
-        } else if (error.message?.includes('batch_id')) {
-          errorMessage = "Please select a valid batch for the student";
-        } else {
-          errorMessage = "Please ensure all selections are valid and try again";
-        }
-      } else if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
-        errorMessage = "A student with this information already exists";
-      } else if (error.message?.includes('student_programs')) {
-        errorMessage = "Error saving student programs. Please ensure programs are selected correctly.";
-      } else if (error.message?.includes('required')) {
-        errorMessage = error.message;
+        return res.status(400).json({ error: "Invalid reference data. Please refresh and try again." });
       }
       
-      res.status(500).json({ error: errorMessage });
+      // Handle validation errors
+      if (error.message?.includes('required') || error.message?.includes('Uniform size')) {
+        return res.status(400).json({ error: error.message });
+      }
+      
+      // Generic fallback
+      return res.status(500).json({ error: "Failed to create student. Please try again." });
     }
   });
 
-  app.put("/api/students/:id", async (req, res) => {
+  app.put("/api/students/:id", requireAuth(), async (req, res) => {
     try {
+      console.log("Updating student:", req.params.id, "with data:", req.body);
+      
+      // Validate required fields
+      if (!req.body.name || !req.body.name.trim()) {
+        return res.status(400).json({ error: "Student name is required" });
+      }
+      
+      // Validate uniform fields
+      if (req.body.uniformIssued && !req.body.uniformSize) {
+        return res.status(400).json({ error: "Uniform size is required when uniform is issued" });
+      }
+      
+      if (req.body.uniformSize && !req.body.uniformIssued) {
+        return res.status(400).json({ error: "Cannot set uniform size without issuing uniform" });
+      }
+      
       const student = await storage.updateStudent(req.params.id, req.body);
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
       }
+      
+      console.log("Student updated successfully:", student);
       res.json(student);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update student error:", error);
-      res.status(500).json({ error: "Failed to update student" });
+      res.status(500).json({ error: error.message || "Failed to update student" });
     }
   });
 
-  app.delete("/api/students/:id", async (req, res) => {
+  // Student status management endpoints
+  app.patch("/api/students/:id/deactivate", requireAuth(), async (req, res) => {
     try {
-      const deleted = await storage.deleteStudent(req.params.id);
-      if (!deleted) {
+      const studentId = req.params.id;
+      
+      const student = await storage.query(
+        "UPDATE students SET status = 'inactive' WHERE id = ?",
+        [studentId]
+      );
+      
+      if (!student) {
         return res.status(404).json({ error: "Student not found" });
       }
-      res.json({ message: "Student deleted successfully" });
+      
+      res.json({ message: "Student deactivated successfully" });
     } catch (error) {
-      console.error("Delete student error:", error);
-      res.status(500).json({ error: "Failed to delete student" });
+      console.error("Deactivate student error:", error);
+      res.status(500).json({ error: "Failed to deactivate student" });
+    }
+  });
+
+  app.patch("/api/students/:id/activate", requireAuth(), async (req, res) => {
+    try {
+      const studentId = req.params.id;
+      
+      const student = await storage.query(
+        "UPDATE students SET status = 'active' WHERE id = ?",
+        [studentId]
+      );
+      
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      res.json({ message: "Student activated successfully" });
+    } catch (error) {
+      console.error("Activate student error:", error);
+      res.status(500).json({ error: "Failed to activate student" });
+    }
+  });
+
+  app.patch("/api/students/:id/suspend", requireAuth(), async (req, res) => {
+    try {
+      const studentId = req.params.id;
+      
+      const student = await storage.query(
+        "UPDATE students SET status = 'suspended' WHERE id = ?",
+        [studentId]
+      );
+      
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      res.json({ message: "Student suspended successfully" });
+    } catch (error) {
+      console.error("Suspend student error:", error);
+      res.status(500).json({ error: "Failed to suspend student" });
     }
   });
 
@@ -647,7 +1578,6 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Bulk attendance creation with UPSERT logic - FIXED
   app.post("/api/attendance/bulk", requireAuth(), async (req, res) => {
     try {
-      console.log("Bulk attendance request:", req.body);
       const { attendanceRecords } = req.body;
       
       if (!attendanceRecords || !Array.isArray(attendanceRecords)) {
@@ -658,11 +1588,18 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "No attendance records provided" });
       }
 
+      // Sanitize record count for logging
+      const recordCount = Math.max(0, Math.min(1000, attendanceRecords.length));
+      console.log(`Bulk attendance request: ${recordCount} records`);
+
       const results = [];
+      const skipped = [];
       
       // Process each record with proper validation
       for (const record of attendanceRecords) {
-        console.log("Processing attendance record:", record);
+        // Sanitize studentId for logging
+        const sanitizedStudentId = String(record.studentId || '').replace(/[\r\n]/g, "");
+        console.log("Processing attendance record for student:", sanitizedStudentId);
         
         // Validate required fields
         if (!record.studentId || !record.date || !record.status) {
@@ -684,10 +1621,23 @@ export async function registerRoutes(app: Express): Promise<void> {
         
         const student = await storage.query(studentQuery, studentParams);
         if (!student || student.length === 0) {
-          console.error("Student not found or access denied:", record.studentId);
+          const sanitizedStudentId = String(record.studentId || '').replace(/[\r\n]/g, "");
+          console.error("Student not found or access denied:", sanitizedStudentId);
           return res.status(400).json({ 
-            error: `Student not found or access denied: ${record.studentId}` 
+            error: `Student not found or access denied: ${sanitizedStudentId}` 
           });
+        }
+
+        // CHECK: Skip if attendance already exists for this student + date
+        const existingAttendance = await storage.query(
+          "SELECT id FROM attendance WHERE student_id = ? AND DATE(date) = DATE(?)",
+          [record.studentId, record.date]
+        );
+        
+        if (existingAttendance && existingAttendance.length > 0) {
+          console.log(`Skipping student ${sanitizedStudentId} - attendance already exists for ${record.date}`);
+          skipped.push({ studentId: record.studentId, reason: 'already_exists' });
+          continue;
         }
 
         // Prepare attendance data - ONLY valid attendance table columns
@@ -700,15 +1650,16 @@ export async function registerRoutes(app: Express): Promise<void> {
           notes: record.notes || null
         };
         
-        console.log("Upserting attendance data:", attendanceData);
-        const attendance = await storage.upsertAttendance(attendanceData);
+        console.log("Creating new attendance data:", attendanceData);
+        const attendance = await storage.createAttendance(attendanceData);
         results.push(attendance);
       }
       
-      console.log(`Bulk attendance completed: ${results.length} records processed`);
+      console.log(`Bulk attendance completed: ${results.length} created, ${skipped.length} skipped`);
       res.status(201).json({ 
-        message: `Successfully processed ${results.length} attendance records`,
-        results 
+        message: `Successfully created ${results.length} attendance records, skipped ${skipped.length} existing records`,
+        results,
+        skipped
       });
     } catch (error) {
       console.error("Bulk create attendance error:", error);
@@ -719,11 +1670,12 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Update attendance
-  app.put("/api/attendance/:id", async (req, res) => {
+  app.put("/api/attendance/:id", requireAuth(), async (req, res) => {
     try {
       const updates = { ...req.body };
       if (updates.checkIn) updates.checkIn = new Date(updates.checkIn);
       if (updates.checkOut) updates.checkOut = new Date(updates.checkOut);
+      if (updates.check_out) updates.check_out = new Date(updates.check_out);
       if (updates.date) updates.date = new Date(updates.date);
       
       const attendance = await storage.updateAttendance(req.params.id, updates);

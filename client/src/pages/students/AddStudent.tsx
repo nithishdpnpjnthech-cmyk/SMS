@@ -16,7 +16,7 @@ import html2canvas from "html2canvas";
 
 export default function AddStudent() {
   const [, setLocation] = useLocation();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [branches, setBranches] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [programs, setPrograms] = useState<any[]>([]);
@@ -24,6 +24,8 @@ export default function AddStudent() {
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<string | undefined>(undefined);
   const [selectedStatus, setSelectedStatus] = useState("active");
+  const [uniformIssued, setUniformIssued] = useState(false);
+  const [uniformSize, setUniformSize] = useState<string | undefined>(undefined);
   const [showIdCard, setShowIdCard] = useState(false);
   const [idCardData, setIdCardData] = useState<any>(null);
   const { toast } = useToast();
@@ -66,7 +68,10 @@ export default function AddStudent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    // IMMEDIATE: Prevent any double submission
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
     try {
       const formData = new FormData(e.target as HTMLFormElement);
@@ -78,7 +83,6 @@ export default function AddStudent() {
           description: "Please select a branch",
           variant: "destructive"
         });
-        setIsLoading(false);
         return;
       }
       
@@ -88,7 +92,6 @@ export default function AddStudent() {
           description: "Please select at least one program",
           variant: "destructive"
         });
-        setIsLoading(false);
         return;
       }
       
@@ -98,7 +101,16 @@ export default function AddStudent() {
           description: "Please select a batch",
           variant: "destructive"
         });
-        setIsLoading(false);
+        return;
+      }
+      
+      // Validate uniform fields
+      if (uniformIssued && !uniformSize) {
+        toast({
+          title: "Validation Error",
+          description: "Please select uniform size when uniform is issued",
+          variant: "destructive"
+        });
         return;
       }
       
@@ -107,19 +119,29 @@ export default function AddStudent() {
         email: formData.get("email") as string,
         phone: formData.get("phone") as string,
         parentPhone: formData.get("parentPhone") as string,
+        guardianName: formData.get("guardianName") as string,
         address: formData.get("address") as string,
         branchId: selectedBranch,
         programs: selectedPrograms,
         batchId: selectedBatch,
+        uniformIssued: uniformIssued,
+        uniformSize: uniformIssued ? uniformSize : null,
         status: selectedStatus
       };
 
       console.log("Creating student with data:", studentData);
 
+      // CRITICAL: Single API call for student creation
       const student = await api.createStudent(studentData);
-      console.log("Student created:", student);
+      console.log("Student created successfully:", student);
 
-      // Auto-generate and show ID card
+      // Show success message
+      toast({
+        title: "Success!",
+        description: student.message || "Student added successfully"
+      });
+
+      // Optional: Try to generate ID card (non-blocking)
       if (student && student.id) {
         try {
           console.log("Generating ID card for student:", student.id);
@@ -133,25 +155,16 @@ export default function AddStudent() {
             joiningDate: new Date().toLocaleDateString()
           });
           setShowIdCard(true);
-          
-          toast({
-            title: "Success!",
-            description: "Student added and ID card generated successfully"
-          });
         } catch (idError) {
-          console.error("ID card generation failed:", idError);
-          toast({
-            title: "Partial Success",
-            description: "Student added but ID card generation failed",
-            variant: "destructive"
-          });
+          console.error("ID card generation failed (non-critical):", idError);
+          // Don't show error for ID card failure - student creation was successful
+          setLocation("/students");
         }
       } else {
-        toast({
-          title: "Success!",
-          description: "Student added successfully"
-        });
+        // Navigate to students list if no ID card needed
+        setLocation("/students");
       }
+      
     } catch (error: any) {
       console.error("Failed to add student:", error);
       toast({
@@ -160,7 +173,7 @@ export default function AddStudent() {
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -229,6 +242,12 @@ export default function AddStudent() {
                   <Label>Parent Phone</Label>
                   <Input name="parentPhone" placeholder="Parent/Guardian phone" />
                 </div>
+              </div>
+
+              {/* Guardian Name */}
+              <div>
+                <Label>Guardian Name</Label>
+                <Input name="guardianName" placeholder="Guardian/Parent name" />
               </div>
 
               {/* Address */}
@@ -329,16 +348,58 @@ export default function AddStudent() {
                 </Select>
               </div>
 
+              {/* Uniform Section */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-lg font-medium">Uniform Information</h3>
+                
+                {/* Uniform Issued */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="uniformIssued"
+                    checked={uniformIssued}
+                    onCheckedChange={(checked) => {
+                      setUniformIssued(checked as boolean);
+                      if (!checked) {
+                        setUniformSize(undefined);
+                      }
+                    }}
+                  />
+                  <Label htmlFor="uniformIssued">Uniform Issued</Label>
+                </div>
+                
+                {/* Uniform Size - Only show when uniform is issued */}
+                {uniformIssued && (
+                  <div>
+                    <Label>Uniform Size *</Label>
+                    <Select value={uniformSize} onValueChange={setUniformSize}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select uniform size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="XS">XS</SelectItem>
+                        <SelectItem value="S">S</SelectItem>
+                        <SelectItem value="M">M</SelectItem>
+                        <SelectItem value="L">L</SelectItem>
+                        <SelectItem value="XL">XL</SelectItem>
+                        <SelectItem value="XXL">XXL</SelectItem>
+                        <SelectItem value="XXXL">XXXL</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-4 pt-4">
                 <Button type="button" variant="outline" onClick={() => setLocation("/students")}>
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={isLoading || branches.length === 0 || programs.length === 0 || batches.length === 0 || selectedPrograms.length === 0 || !selectedBatch}
+                  disabled={isSubmitting || branches.length === 0 || programs.length === 0 || batches.length === 0 || selectedPrograms.length === 0 || !selectedBatch}
+                  className={isSubmitting ? "opacity-50 cursor-not-allowed" : ""}
                 >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Add Student
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSubmitting ? "Creating Student..." : "Add Student"}
                 </Button>
               </div>
             </form>

@@ -1,0 +1,1 @@
+const bcrypt = require('bcrypt');\n\nconst hash = '$2b$10$Ppbp9mk2hjvIa1Qc62SoCuRs19yynaSJobBp/U3s22v0VUR/iOrZe';\n\nbcrypt.compare('meena', hash).then(result => {\n  console.log('meena result:', result);\n}).catch(err => {\n  console.error('Error:', err);\n});
