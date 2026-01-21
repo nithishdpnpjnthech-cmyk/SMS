@@ -57,7 +57,8 @@ export const attendance = pgTable("attendance", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   studentId: varchar("student_id").notNull(),
   date: timestamp("date").notNull(),
-  status: text("status").notNull(), // present, absent, late
+  status: text("status").notNull(), // present, absent (late is handled by is_late flag)
+  isLate: boolean("is_late").default(false), // New field for late attendance
   checkIn: timestamp("check_in"),
   checkOut: timestamp("check_out"),
   notes: text("notes"),

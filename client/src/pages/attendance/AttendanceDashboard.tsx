@@ -47,7 +47,9 @@ export default function AttendanceDashboard() {
   const { toast } = useToast();
   const [stats, setStats] = useState({
     totalPresent: 0,
+    totalLate: 0,
     totalAbsent: 0,
+    notMarked: 0,
     attendanceRate: 0,
     totalStudents: 0
   });
@@ -98,13 +100,23 @@ export default function AttendanceDashboard() {
     
     setIsUpdating(true);
     try {
-      // Map frontend status to backend status
-      const backendStatus = newStatus === 'present' ? 'PRESENT' : 
-                           newStatus === 'absent' ? 'ABSENT' : 
-                           newStatus.toUpperCase();
+      // Map frontend status to backend format
+      let backendStatus, isLate;
+      
+      if (newStatus === 'present') {
+        backendStatus = 'PRESENT';
+        isLate = false;
+      } else if (newStatus === 'late') {
+        backendStatus = 'PRESENT';
+        isLate = true;
+      } else if (newStatus === 'absent') {
+        backendStatus = 'ABSENT';
+        isLate = false;
+      }
       
       const updates = {
         status: backendStatus,
+        isLate: isLate,
         checkIn: backendStatus === 'PRESENT' ? new Date().toISOString() : null,
         checkOut: null
       };
@@ -152,22 +164,63 @@ export default function AttendanceDashboard() {
         ]);
       }
       
-      setAttendance(attendanceData);
+      // Create a complete list showing all students with their attendance status
+      const allStudentsWithStatus = studentsData.map(student => {
+        const attendanceRecord = attendanceData.find(record => record.student_id === student.id);
+        
+        if (attendanceRecord) {
+          // Student has an attendance record
+          return {
+            ...attendanceRecord,
+            student_name: student.name,
+            program: student.program,
+            batch: student.batch
+          };
+        } else {
+          // Student has no attendance record - show as NOT_MARKED
+          return {
+            id: `not-marked-${student.id}`,
+            student_id: student.id,
+            student_name: student.name,
+            program: student.program,
+            batch: student.batch,
+            status: 'NOT_MARKED',
+            check_in: null,
+            check_out: null,
+            date: today,
+            hasRecord: false
+          };
+        }
+      });
+      
+      setAttendance(allStudentsWithStatus);
       setStudents(studentsData);
       
+      // Calculate correct stats
       const totalPresent = attendanceData.filter(a => a.status === 'PRESENT' || a.status === 'present').length;
+      const totalLate = attendanceData.filter(a => a.is_late === true || a.is_late === 1).length;
       const totalAbsent = attendanceData.filter(a => a.status === 'ABSENT' || a.status === 'absent').length;
       const totalRecords = attendanceData.length;
+      const totalStudents = studentsData.length;
+      const notMarked = totalStudents - totalRecords;
       const attendanceRate = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
 
       setStats({
         totalPresent,
+        totalLate,
         totalAbsent,
+        notMarked,
         attendanceRate,
         totalStudents: totalRecords
       });
 
-      console.log("Attendance data loaded:", attendanceData);
+      console.log("Dashboard stats:", {
+        totalPresent,
+        totalAbsent, 
+        notMarked,
+        totalStudents: studentsData.length,
+        recordsFound: totalRecords
+      });
     } catch (error) {
       console.error("Failed to load attendance data:", error);
     } finally {
@@ -216,12 +269,30 @@ export default function AttendanceDashboard() {
           </div>
           <div className="flex items-center gap-2">
             {hasPermission('attendance.write') && (
-              <Link href="/attendance/mark">
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Mark Attendance
+              <>
+                <Link href="/attendance/mark">
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Mark Attendance
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={async () => {
+                    if (confirm('Clear all attendance for today? This will reset all records.')) {
+                      try {
+                        await api.delete('/attendance/clear-today');
+                        await loadAttendanceData();
+                        toast({ title: "Success", description: "Today's attendance cleared" });
+                      } catch (error) {
+                        toast({ title: "Error", description: "Failed to clear attendance", variant: "destructive" });
+                      }
+                    }
+                  }}
+                >
+                  Clear Today
                 </Button>
-              </Link>
+              </>
             )}
           </div>
         </div>
@@ -239,6 +310,16 @@ export default function AttendanceDashboard() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Late Today</CardTitle>
+              <Clock className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{stats.totalLate}</div>
+              <p className="text-xs text-muted-foreground">Students late</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Absent Today</CardTitle>
               <Clock className="h-4 w-4 text-red-500" />
             </CardHeader>
@@ -249,22 +330,22 @@ export default function AttendanceDashboard() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Not Marked</CardTitle>
+              <Users className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{stats.notMarked || 0}</div>
+              <p className="text-xs text-muted-foreground">Not yet marked</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.attendanceRate}%</div>
-              <p className="text-xs text-muted-foreground">Today's rate</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalStudents}</div>
-              <p className="text-xs text-muted-foreground">Enrolled</p>
+              <p className="text-xs text-muted-foreground">Of marked students</p>
             </CardContent>
           </Card>
         </div>
@@ -406,15 +487,23 @@ export default function AttendanceDashboard() {
                         ) : 'N/A'}</TableCell>
                         <TableCell>
                           <Badge 
-                            variant={record.status === 'PRESENT' || record.status === 'present' ? 'default' : 'destructive'}
+                            variant={
+                              record.status === 'PRESENT' || record.status === 'present' ? 
+                                (record.is_late ? 'secondary' : 'default') : 
+                              record.status === 'NOT_MARKED' ? 'secondary' :
+                              'destructive'
+                            }
                             className={
-                              record.status === 'PRESENT' || record.status === 'present' ? 'bg-green-100 text-green-700 hover:bg-green-100' :
-                              record.status === 'late' ? 'bg-orange-100 text-orange-700 hover:bg-orange-100' :
+                              record.status === 'PRESENT' || record.status === 'present' ? 
+                                (record.is_late ? 'bg-orange-100 text-orange-700 hover:bg-orange-100' : 'bg-green-100 text-green-700 hover:bg-green-100') :
+                              record.status === 'NOT_MARKED' ? 'bg-gray-100 text-gray-700 hover:bg-gray-100' :
                               'bg-red-100 text-red-700 hover:bg-red-100'
                             }
                           >
-                            {record.status === 'PRESENT' ? 'Present' : 
-                             record.status === 'ABSENT' ? 'Absent' : 
+                            {record.status === 'PRESENT' || record.status === 'present' ? 
+                              (record.is_late ? 'Late' : 'Present') :
+                             record.status === 'ABSENT' ? 'Absent' :
+                             record.status === 'NOT_MARKED' ? 'Not Marked' :
                              record.status}
                           </Badge>
                         </TableCell>
@@ -475,7 +564,7 @@ export default function AttendanceDashboard() {
                   <Label>Select New Status:</Label>
                   <div className="flex gap-2">
                     <Button
-                      variant={editingRecord.status === 'PRESENT' || editingRecord.status === 'present' ? 'default' : 'outline'}
+                      variant={editingRecord.status === 'PRESENT' && !editingRecord.is_late ? 'default' : 'outline'}
                       onClick={() => handleUpdateAttendance('present')}
                       disabled={isUpdating}
                       className="flex-1"
@@ -483,7 +572,15 @@ export default function AttendanceDashboard() {
                       Present
                     </Button>
                     <Button
-                      variant={editingRecord.status === 'ABSENT' || editingRecord.status === 'absent' ? 'destructive' : 'outline'}
+                      variant={editingRecord.status === 'PRESENT' && editingRecord.is_late ? 'secondary' : 'outline'}
+                      onClick={() => handleUpdateAttendance('late')}
+                      disabled={isUpdating}
+                      className="flex-1 bg-orange-100 text-orange-700 hover:bg-orange-200"
+                    >
+                      Late
+                    </Button>
+                    <Button
+                      variant={editingRecord.status === 'ABSENT' ? 'destructive' : 'outline'}
                       onClick={() => handleUpdateAttendance('absent')}
                       disabled={isUpdating}
                       className="flex-1"

@@ -336,13 +336,14 @@ export class MySQLStorage implements IStorage {
 
     await db.query(
       `INSERT INTO attendance
-       (id, student_id, date, status, check_in, check_out, notes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, student_id, date, status, is_late, check_in, check_out, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         insertAttendance.studentId,
         insertAttendance.date,
         insertAttendance.status,
+        insertAttendance.isLate || false,
         insertAttendance.checkIn || null,
         insertAttendance.checkOut || null,
         insertAttendance.notes || null,
@@ -364,10 +365,11 @@ export class MySQLStorage implements IStorage {
       // Update existing record
       await db.query(
         `UPDATE attendance SET 
-         status = ?, check_in = ?, check_out = ?, notes = ?
+         status = ?, is_late = ?, check_in = ?, check_out = ?, notes = ?
          WHERE id = ?`,
         [
           insertAttendance.status,
+          insertAttendance.isLate || false,
           insertAttendance.checkIn || null,
           insertAttendance.checkOut || null,
           insertAttendance.notes || null,
@@ -388,6 +390,7 @@ export class MySQLStorage implements IStorage {
       checkIn: "check_in",
       checkOut: "check_out",
       check_out: "check_out",  // Handle both camelCase and snake_case
+      isLate: "is_late",
       createdAt: "created_at"
     };
 

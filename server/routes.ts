@@ -361,6 +361,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         SELECT 
           DATE(a.date) as date,
           a.status,
+          a.is_late,
           a.check_in,
           a.check_out
         FROM attendance a
@@ -370,9 +371,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Calculate summary
       const totalDays = attendance.length;
-      const presentDays = attendance.filter(a => a.status === 'present').length;
-      const absentDays = attendance.filter(a => a.status === 'absent').length;
-      const lateDays = attendance.filter(a => a.status === 'late').length;
+      const presentDays = attendance.filter(a => a.status === 'PRESENT' || a.status === 'present').length;
+      const absentDays = attendance.filter(a => a.status === 'ABSENT' || a.status === 'absent').length;
+      const lateDays = attendance.filter(a => a.is_late === true || a.is_late === 1).length;
       
       res.json({
         attendance,
@@ -835,14 +836,13 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Build queries with conditional branch filtering
       let studentsQuery = "SELECT COUNT(*) as count FROM students WHERE status = 'active'";
       let attendanceQuery = `
-        SELECT COUNT(*) as present_count,
-               (SELECT COUNT(*) FROM attendance a2 
-                JOIN students s2 ON a2.student_id = s2.id 
-                WHERE DATE(a2.date) = CURDATE() AND a2.status = 'absent' AND s2.status = 'active'
-                ${branchId ? 'AND s2.branch_id = ?' : (userRole !== 'admin' ? 'AND s2.branch_id = ?' : '')}) as absent_count
+        SELECT 
+          COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) as present_count,
+          COUNT(CASE WHEN a.status = 'PRESENT' AND a.is_late = TRUE THEN 1 END) as late_count,
+          COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 END) as absent_count
         FROM attendance a 
         JOIN students s ON a.student_id = s.id 
-        WHERE DATE(a.date) = CURDATE() AND a.status = 'present' AND s.status = 'active'
+        WHERE DATE(a.date) = CURDATE() AND s.status = 'active'
       `;
       let feesQuery = `
         SELECT 
@@ -861,23 +861,24 @@ export async function registerRoutes(app: Express): Promise<void> {
         studentsQuery += " AND branch_id = ?";
         attendanceQuery += " AND s.branch_id = ?";
         feesQuery += " AND s.branch_id = ?";
-        params.push(branchId, branchId, branchId, branchId);
+        params.push(branchId, branchId, branchId);
       } else if (userRole !== 'admin') {
         studentsQuery += " AND branch_id = ?";
         attendanceQuery += " AND s.branch_id = ?";
         feesQuery += " AND s.branch_id = ?";
-        params.push(req.user.branchId, req.user.branchId, req.user.branchId, req.user.branchId);
+        params.push(req.user.branchId, req.user.branchId, req.user.branchId);
       }
       
       const [students, attendance, fees] = await Promise.all([
         storage.query(studentsQuery, branchId || (userRole !== 'admin') ? [params[0]] : []),
-        storage.query(attendanceQuery, branchId || (userRole !== 'admin') ? [params[1], params[1]] : []),
+        storage.query(attendanceQuery, branchId || (userRole !== 'admin') ? [params[1]] : []),
         storage.query(feesQuery, branchId || (userRole !== 'admin') ? [params[2]] : [])
       ]);
       
       const stats = {
         totalStudents: students[0]?.count || 0,
         presentToday: attendance[0]?.present_count || 0,
+        lateToday: attendance[0]?.late_count || 0,
         absentToday: attendance[0]?.absent_count || 0,
         feesCollectedToday: fees[0]?.fees_collected_today || 0,
         pendingDues: fees[0]?.pending_dues || 0,
@@ -1519,6 +1520,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           a.student_id,
           a.date,
           a.status,
+          a.is_late,
           a.check_in,
           a.check_out,
           a.notes,
@@ -1575,7 +1577,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Bulk attendance creation with UPSERT logic - FIXED
+  // Bulk attendance creation - FIXED to only process marked students
   app.post("/api/attendance/bulk", requireAuth(), async (req, res) => {
     try {
       const { attendanceRecords } = req.body;
@@ -1588,32 +1590,33 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "No attendance records provided" });
       }
 
-      // Sanitize record count for logging
-      const recordCount = Math.max(0, Math.min(1000, attendanceRecords.length));
-      console.log(`Bulk attendance request: ${recordCount} records`);
+      console.log(`Processing ${attendanceRecords.length} marked students only`);
 
       const results = [];
       const skipped = [];
       
-      // Process each record with proper validation
+      // Process ONLY the students that were explicitly marked
       for (const record of attendanceRecords) {
-        // Sanitize studentId for logging
         const sanitizedStudentId = String(record.studentId || '').replace(/[\r\n]/g, "");
-        console.log("Processing attendance record for student:", sanitizedStudentId);
+        console.log("Processing marked student:", sanitizedStudentId, "Status:", record.status);
         
-        // Validate required fields
-        if (!record.studentId || !record.date || !record.status) {
-          console.error("Invalid record - missing required fields:", record);
-          return res.status(400).json({ 
-            error: `Invalid record: missing studentId, date, or status` 
-          });
+        // Map frontend status to backend format
+        let backendStatus = record.status;
+        let isLate = false;
+        
+        if (record.status === 'late') {
+          backendStatus = 'PRESENT';
+          isLate = true;
+        } else if (record.status === 'present') {
+          backendStatus = 'PRESENT';
+          isLate = false;
+        } else if (record.status === 'absent') {
+          backendStatus = 'ABSENT';
+          isLate = false;
         }
-
-        // Validate student exists, is active, and belongs to user's branch
         let studentQuery = "SELECT id, branch_id FROM students WHERE id = ? AND status = 'active'";
         const studentParams = [record.studentId];
         
-        // Enforce branch access for non-admin users
         if (req.user.role !== 'admin' && req.user.branchId) {
           studentQuery += " AND branch_id = ?";
           studentParams.push(req.user.branchId);
@@ -1621,51 +1624,76 @@ export async function registerRoutes(app: Express): Promise<void> {
         
         const student = await storage.query(studentQuery, studentParams);
         if (!student || student.length === 0) {
-          const sanitizedStudentId = String(record.studentId || '').replace(/[\r\n]/g, "");
-          console.error("Student not found or access denied:", sanitizedStudentId);
+          console.error("Student not found:", sanitizedStudentId);
           return res.status(400).json({ 
-            error: `Student not found or access denied: ${sanitizedStudentId}` 
+            error: `Student not found: ${sanitizedStudentId}` 
           });
         }
 
-        // CHECK: Skip if attendance already exists for this student + date
+        // Check if attendance already exists - UPDATE instead of skip
         const existingAttendance = await storage.query(
           "SELECT id FROM attendance WHERE student_id = ? AND DATE(date) = DATE(?)",
           [record.studentId, record.date]
         );
         
         if (existingAttendance && existingAttendance.length > 0) {
-          console.log(`Skipping student ${sanitizedStudentId} - attendance already exists for ${record.date}`);
-          skipped.push({ studentId: record.studentId, reason: 'already_exists' });
-          continue;
+          // UPDATE existing record instead of skipping
+          await storage.query(
+            "UPDATE attendance SET status = ?, is_late = ?, check_in = ?, notes = ? WHERE student_id = ? AND DATE(date) = DATE(?)",
+            [backendStatus, isLate, record.checkIn, record.notes, record.studentId, record.date]
+          );
+          console.log(`Updated existing record for ${sanitizedStudentId} to ${backendStatus} (late: ${isLate})`);
+        } else {
+          // Create new record
+          const attendanceData = {
+            studentId: record.studentId,
+            date: new Date(record.date),
+            status: backendStatus,
+            isLate: isLate,
+            checkIn: record.checkIn ? new Date(record.checkIn) : null,
+            checkOut: record.checkOut ? new Date(record.checkOut) : null,
+            notes: record.notes || null
+          };
+          
+          const attendance = await storage.createAttendance(attendanceData);
+          console.log(`Created new record for ${sanitizedStudentId} as ${backendStatus} (late: ${isLate})`);
         }
-
-        // Prepare attendance data - ONLY valid attendance table columns
-        const attendanceData = {
-          studentId: record.studentId,
-          date: new Date(record.date),
-          status: record.status,
-          checkIn: record.checkIn ? new Date(record.checkIn) : null,
-          checkOut: record.checkOut ? new Date(record.checkOut) : null,
-          notes: record.notes || null
-        };
         
-        console.log("Creating new attendance data:", attendanceData);
-        const attendance = await storage.createAttendance(attendanceData);
-        results.push(attendance);
+        results.push({ studentId: record.studentId, status: record.status });
       }
       
-      console.log(`Bulk attendance completed: ${results.length} created, ${skipped.length} skipped`);
+      console.log(`Attendance completed: ${results.length} students processed`);
       res.status(201).json({ 
-        message: `Successfully created ${results.length} attendance records, skipped ${skipped.length} existing records`,
-        results,
-        skipped
+        message: `Successfully processed ${results.length} attendance records`,
+        results
       });
     } catch (error) {
-      console.error("Bulk create attendance error:", error);
+      console.error("Bulk attendance error:", error);
       res.status(500).json({ 
-        error: "Failed to create bulk attendance: " + (error as Error).message 
+        error: "Failed to process attendance: " + (error as Error).message 
       });
+    }
+  });
+
+  // Clear today's attendance - for testing
+  app.delete("/api/attendance/clear-today", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const result = await storage.query(
+        "DELETE FROM attendance WHERE DATE(date) = DATE(?)",
+        [today]
+      );
+      
+      console.log(`Cleared ${(result as any).affectedRows || 0} attendance records for ${today}`);
+      
+      res.json({ 
+        message: `Cleared attendance for ${today}`,
+        recordsDeleted: (result as any).affectedRows || 0
+      });
+    } catch (error) {
+      console.error("Clear attendance error:", error);
+      res.status(500).json({ error: "Failed to clear attendance" });
     }
   });
 
