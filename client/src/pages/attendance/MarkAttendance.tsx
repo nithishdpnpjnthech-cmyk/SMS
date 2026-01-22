@@ -28,6 +28,8 @@ export default function MarkAttendance() {
       setLocation('/dashboard');
       return;
     }
+    // Clear any existing attendance data to start fresh
+    setAttendanceData({});
     loadStudents();
   }, []);
 
@@ -60,10 +62,19 @@ export default function MarkAttendance() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (filteredStudents.length === 0) {
+    
+    // Get only students that were actually marked (have a status set)
+    const markedStudents = Object.entries(attendanceData).filter(([studentId, status]) => {
+      return status && status.trim() !== '' && status !== 'undefined';
+    });
+    
+    console.log("All attendance data:", attendanceData);
+    console.log("Filtered marked students:", markedStudents);
+    
+    if (markedStudents.length === 0) {
       toast({
         title: "Error",
-        description: "No students to mark attendance for",
+        description: "Please mark at least one student",
         variant: "destructive"
       });
       return;
@@ -71,34 +82,30 @@ export default function MarkAttendance() {
 
     setIsLoading(true);
     try {
-      console.log("Preparing attendance records for date:", date);
-      console.log("Filtered students:", filteredStudents.length);
-      console.log("Attendance data:", attendanceData);
+      console.log(`Creating attendance for ${markedStudents.length} marked students only`);
       
-      // Prepare attendance records - ONLY attendance table fields
-      const attendanceRecords = filteredStudents.map(student => {
-        const status = attendanceData[student.id] || 'absent';
+      // Create records ONLY for explicitly marked students
+      const attendanceRecords = markedStudents.map(([studentId, status]) => {
+        const student = filteredStudents.find(s => s.id === studentId);
         const record = {
-          studentId: student.id,
-          date: date, // Send as YYYY-MM-DD string
+          studentId: studentId,
+          date: date,
           status: status,
           checkIn: (status === 'present' || status === 'late') ? new Date().toISOString() : null,
           checkOut: null,
           notes: `Marked by ${user?.name || user?.username}`
-          // REMOVED: batch - not stored in attendance table
-          // batch/program info comes from students table via JOIN
         };
-        console.log(`Record for ${student.name}:`, record);
+        console.log(`Creating record for ${student?.name}:`, record);
         return record;
       });
 
-      console.log("Sending bulk attendance request:", { attendanceRecords });
+      console.log("Final attendance records to send:", attendanceRecords);
       const response = await api.createBulkAttendance(attendanceRecords);
-      console.log("Bulk attendance response:", response);
+      console.log("Backend response:", response);
       
       toast({
         title: "Success!",
-        description: `Attendance marked for ${filteredStudents.length} students`
+        description: `Attendance marked for ${markedStudents.length} students`
       });
 
       setLocation('/attendance');
@@ -268,7 +275,11 @@ export default function MarkAttendance() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isLoading || filteredStudents.length === 0}>
+                <Button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Attendance
                 </Button>
