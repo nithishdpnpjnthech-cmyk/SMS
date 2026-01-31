@@ -1,325 +1,274 @@
-const API_BASE = "/api";
+// ================= BASE URL =================
+// Use Vite-provided env var when available, otherwise fall back to relative path.
+// Keep default as empty string so endpoints (which include the `/api` prefix)
+// resolve correctly against the current origin when no VITE_API_URL is set.
+const API_BASE = ((import.meta as any).env?.VITE_API_URL || "").replace(/\/$/, "");
 
-/**
- * Generic API client
- */
-class ApiClient {
-  private async request<T>(
-    endpoint: string,
-    options?: RequestInit
-  ): Promise<T> {
-    
-    // 🚨 CRITICAL: Allow login without auth headers
-    const isLoginRequest = endpoint === "/auth/login";
-    
-    let headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    
-    // Merge any additional headers from options
-    if (options?.headers) {
-      Object.assign(headers, options.headers);
-    }
-    
-    // Only add auth headers for non-login requests
-    if (!isLoginRequest) {
-      const userStr = localStorage.getItem("user");
-      if (!userStr) {
-        throw new Error('Authentication required - please log in');
+// ================= API WRAPPER =================
+export const api = {
+  // ---------- GET ----------
+  get: async (endpoint: string, headers: Record<string, string> = {}) => {
+    const fullUrl = `${API_BASE}${endpoint}`;
+    // Dev-only debug to help diagnose 404s
+    try {
+      const mode = (import.meta as any).env?.MODE || (import.meta as any).env?.VITE_MODE || 'development';
+      if (mode !== 'production' && typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.debug('[api] GET', fullUrl, { headers });
       }
-      
-      let user;
-      try {
-        user = JSON.parse(userStr);
-      } catch {
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
-        throw new Error('Invalid session - please log in again');
-      }
-      
-      if (!user.id || !user.role) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
-        throw new Error('Invalid user session - please log in again');
-      }
-      
-      headers["x-user-role"] = user.role;
-      headers["x-user-id"] = user.id;
-      headers["x-user-branch"] = user.branchId || "";
+    } catch (e) {
+      // swallow - import.meta might not be available in some runtime checks
     }
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      headers,
-      ...options,
+    const response = await fetch(fullUrl, {
+      method: 'GET',
+      credentials: 'include', // 🔥 REQUIRED
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': localStorage.getItem('userId') || '',
+        'x-user-role': localStorage.getItem('userRole') || '',
+        'x-user-branch': localStorage.getItem('userBranch') || '',
+        ...headers,
+      },
     });
 
     if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}`;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorData.message || errorMessage;
-      } catch {
-        errorMessage = await response.text() || errorMessage;
-      }
-      throw new Error(errorMessage);
+      const errorText = await response.text();
+      console.error(`API Error ${response.status}:`, errorText);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    return response.json() as Promise<T>;
-  }
+    return response.json();
+  },
+
+  // ---------- POST ----------
+  post: async (endpoint: string, data: any, headers: Record<string, string> = {}) => {
+    const fullUrl = `${API_BASE}${endpoint}`;
+    try {
+      const mode = (import.meta as any).env?.MODE || (import.meta as any).env?.VITE_MODE || 'development';
+      if (mode !== 'production' && typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.debug('[api] POST', fullUrl, { headers, bodyPreview: data && typeof data === 'object' ? { ...data, password: data.password ? '***' : undefined } : data });
+      }
+    } catch (e) { }
+
+    const response = await fetch(fullUrl, {
+      method: 'POST',
+      credentials: 'include', // 🔥 REQUIRED
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': localStorage.getItem('userId') || '',
+        'x-user-role': localStorage.getItem('userRole') || '',
+        'x-user-branch': localStorage.getItem('userBranch') || '',
+        ...headers,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API Error ${response.status}:`, errorText);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  // ---------- PUT ----------
+  put: async (endpoint: string, data: any, headers: Record<string, string> = {}) => {
+    const fullUrl = `${API_BASE}${endpoint}`;
+    try {
+      const mode = (import.meta as any).env?.MODE || (import.meta as any).env?.VITE_MODE || 'development';
+      if (mode !== 'production' && typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.debug('[api] PUT', fullUrl);
+      }
+    } catch (e) { }
+
+    const response = await fetch(fullUrl, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': localStorage.getItem('userId') || '',
+        'x-user-role': localStorage.getItem('userRole') || '',
+        'x-user-branch': localStorage.getItem('userBranch') || '',
+        ...headers,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  // ---------- PATCH ----------
+  patch: async (endpoint: string, data: any, headers: Record<string, string> = {}) => {
+    const fullUrl = `${API_BASE}${endpoint}`;
+    try {
+      const mode = (import.meta as any).env?.MODE || (import.meta as any).env?.VITE_MODE || 'development';
+      if (mode !== 'production' && typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.debug('[api] PATCH', fullUrl);
+      }
+    } catch (e) { }
+
+    const response = await fetch(fullUrl, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': localStorage.getItem('userId') || '',
+        'x-user-role': localStorage.getItem('userRole') || '',
+        'x-user-branch': localStorage.getItem('userBranch') || '',
+        ...headers,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  // ---------- DELETE ----------
+  delete: async (endpoint: string, headers: Record<string, string> = {}) => {
+    const fullUrl = `${API_BASE}${endpoint}`;
+    try {
+      const mode = (import.meta as any).env?.MODE || (import.meta as any).env?.VITE_MODE || 'development';
+      if (mode !== 'production' && typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.debug('[api] DELETE', fullUrl);
+      }
+    } catch (e) { }
+
+    const response = await fetch(fullUrl, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': localStorage.getItem('userId') || '',
+        'x-user-role': localStorage.getItem('userRole') || '',
+        'x-user-branch': localStorage.getItem('userBranch') || '',
+        ...headers,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
 
   // ================= AUTH =================
-  async login(credentials: { username: string; password: string }): Promise<any> {
-    return this.request<any>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(credentials),
-    });
-  }
+  // Use existing `post` helper so URL construction is consistent across the app.
+  login: async (credentials: { username: string; password: string }) =>
+    api.post('/api/auth/login', credentials),
 
-  // ================= DASHBOARD =================
-  async getDashboardStats(branchId?: string): Promise<any> {
-    const query = branchId ? `?branchId=${branchId}` : "";
-    return this.request<any>(`/dashboard/stats${query}`);
-  }
+  // ================= ADMIN =================
+  getAdminPrograms: async () => api.get('/api/admin/programs'),
+  getAdminBatches: async () => api.get('/api/admin/batches'),
+
+  createProgram: async (data: { name: string; description?: string }) =>
+    api.post('/api/admin/programs', data),
+
+  createBatch: async (data: { name: string; description?: string }) =>
+    api.post('/api/admin/batches', data),
+
+  updateProgramStatus: async (id: string, status: string) =>
+    api.put(`/api/admin/programs/${id}`, { status }),
+
+  updateBatchStatus: async (id: string, status: string) =>
+    api.put(`/api/admin/batches/${id}`, { status }),
+
+  // ================= COMMON =================
+  getBranches: async () => api.get('/api/branches'),
+  getBranchDetails: async (id: string) => api.get(`/api/branches/${id}/details`),
+
+  getTrainers: async (branchId?: string) => {
+    const params = branchId ? `?branchId=${branchId}` : '';
+    return api.get(`/api/trainers${params}`);
+  },
+
+  getTrainer: async (id: string) => api.get(`/api/trainers/${id}`),
+
+  createTrainer: async (data: any) => api.post('/api/trainers', data),
+  updateTrainer: async (id: string, data: any) => api.put(`/api/trainers/${id}`, data),
+  deleteTrainer: async (id: string) => api.delete(`/api/trainers/${id}`),
+  getTrainerBatches: async (id: string) => api.get(`/api/trainers/${id}/batches`),
+  getTrainerStudents: async (id: string) => api.get(`/api/trainers/${id}/students`),
+  trainerClockIn: async (trainerId: string, data: { locationType: string; locationName: string; locationId?: string; notes?: string }) =>
+    api.post(`/api/trainers/${trainerId}/attendance/clock-in`, data),
+  trainerClockOut: async (trainerId: string, data?: { notes?: string }) =>
+    api.post(`/api/trainers/${trainerId}/attendance/clock-out`, data || {}),
+  getTrainerAttendanceToday: async (trainerId: string) =>
+    api.get(`/api/trainers/${trainerId}/attendance/today`),
+  getTrainerAttendanceRange: async (trainerId: string, params: { from: string; to: string; limit?: number; offset?: number }) => {
+    const queryString = '?' + new URLSearchParams({
+      from: params.from,
+      to: params.to,
+      ...(params.limit ? { limit: String(params.limit) } : {}),
+      ...(params.offset ? { offset: String(params.offset) } : {}),
+    }).toString();
+    return api.get(`/api/trainers/${trainerId}/attendance${queryString}`);
+  },
+
+  getStudents: async (params?: Record<string, string>) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get(`/api/students${queryString}`);
+  },
+
+  getAttendance: async (params?: Record<string, string>) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get(`/api/attendance${queryString}`);
+  },
+
+  getFees: async (branchId?: string, studentId?: string) => {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branchId', branchId);
+    if (studentId) params.append('studentId', studentId);
+    return api.get(`/api/fees?${params.toString()}`);
+  },
+
+  markAttendance: async (data: any) => api.post('/api/attendance', data),
+  createBulkAttendance: async (attendanceRecords: any[]) =>
+    api.post('/api/attendance/bulk', { attendanceRecords }),
+
+  // Update a single attendance record by id
+  updateAttendance: async (id: string, data: any) => api.put(`/api/attendance/${id}`, data),
+
+  getDashboardStats: async (branchId?: string) =>
+    api.get(`/api/dashboard/stats${branchId ? `?branchId=${branchId}` : ''}`),
 
   // ================= STUDENTS =================
-  async getStudents(branchId?: string, status?: string): Promise<any[]> {
-    const params = new URLSearchParams();
-    if (branchId) params.append("branchId", branchId);
-    if (status) params.append("status", status);
-    const query = params.toString() ? `?${params}` : "";
-    return this.request<any[]>(`/students${query}`);
-  }
+  createStudent: async (data: any) => api.post('/api/students', data),
+  updateStudent: async (id: string, data: any) => api.put(`/api/students/${id}`, data),
+  getStudent: async (id: string) => api.get(`/api/students/${id}`),
 
-  async getAllStudents(branchId?: string): Promise<any[]> {
-    const query = branchId ? `?branchId=${branchId}` : "";
-    return this.request<any[]>(`/students/all${query}`);
-  }
+  deactivateStudent: async (id: string) =>
+    api.patch(`/api/students/${id}/deactivate`, {}),
 
-  async getStudent(id: string): Promise<any> {
-    return this.request<any>(`/students/${id}`);
-  }
+  activateStudent: async (id: string) =>
+    api.patch(`/api/students/${id}/activate`, {}),
 
-  async createStudent(student: any): Promise<any> {
-    return this.request<any>("/students", {
-      method: "POST",
-      body: JSON.stringify(student),
-    });
-  }
-
-  async updateStudent(id: string, student: any): Promise<any> {
-    return this.request<any>(`/students/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(student),
-    });
-  }
-
-  async deleteStudent(id: string): Promise<void> {
-    return this.request<void>(`/students/${id}`, {
-      method: "DELETE",
-    });
-  }
-
-  // ================= TRAINERS =================
-  async getTrainers(branchId?: string): Promise<any[]> {
-    const query = branchId ? `?branchId=${branchId}` : "";
-    return this.request<any[]>(`/trainers${query}`);
-  }
-
-  async createTrainer(trainer: any): Promise<any> {
-    return this.request<any>("/trainers", {
-      method: "POST",
-      body: JSON.stringify(trainer),
-    });
-  }
-
-  async deleteTrainer(id: string): Promise<void> {
-    return this.request<void>(`/trainers/${id}`, {
-      method: "DELETE",
-    });
-  }
-
-  // ================= BRANCHES =================
-  async getBranches(): Promise<any[]> {
-    return this.request<any[]>("/branches");
-  }
-
-  async getBranchDetails(branchId: string): Promise<any> {
-    return this.request<any>(`/branches/${branchId}/details`);
-  }
-
-  async updateBranch(branchId: string, branchData: any): Promise<any> {
-    return this.request<any>(`/branches/${branchId}`, {
-      method: "PUT",
-      body: JSON.stringify(branchData),
-    });
-  }
-
-  async createBranch(branch: any): Promise<any> {
-    return this.request<any>("/branches", {
-      method: "POST",
-      body: JSON.stringify(branch),
-    });
-  }
-
-  // ================= ADMIN MASTER DATA =================
-  async getAdminPrograms(): Promise<any[]> {
-    return this.request<any[]>("/admin/programs");
-  }
-
-  async createProgram(program: { name: string; description?: string }): Promise<any> {
-    return this.request<any>("/admin/programs", {
-      method: "POST",
-      body: JSON.stringify(program),
-    });
-  }
-
-  async updateProgramStatus(id: string, status: string): Promise<any> {
-    return this.request<any>(`/admin/programs/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ status }),
-    });
-  }
-
-  async getAdminBatches(): Promise<any[]> {
-    return this.request<any[]>("/admin/batches");
-  }
-
-  async createBatch(batch: { name: string; description?: string }): Promise<any> {
-    return this.request<any>("/admin/batches", {
-      method: "POST",
-      body: JSON.stringify(batch),
-    });
-  }
-
-  async updateBatchStatus(id: string, status: string): Promise<any> {
-    return this.request<any>(`/admin/batches/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ status }),
-    });
-  }
-
-  // ================= BATCHES =================
-  async getBatches(): Promise<any[]> {
-    return this.request<any[]>("/batches");
-  }
+  suspendStudent: async (id: string) =>
+    api.patch(`/api/students/${id}/suspend`, {}),
 
   // ================= PROGRAMS =================
-  async getPrograms(): Promise<any[]> {
-    return this.request<any[]>("/programs");
-  }
+  getPrograms: async () => api.get('/api/programs'),
+  getBatches: async () => api.get('/api/batches'),
 
   // ================= ID CARD =================
-  async generateIdCard(studentId: string): Promise<any> {
-    return this.request<any>(`/students/${studentId}/id-card`, {
-      method: "POST",
-    });
-  }
+  generateIdCard: async (studentId: string) =>
+    api.post(`/api/students/${studentId}/id-card`, {}),
 
-  // ================= ATTENDANCE =================
-  async getAttendance(studentId?: string, date?: string): Promise<any[]> {
-    const params = new URLSearchParams();
-    if (studentId) params.append("studentId", studentId);
-    if (date) params.append("date", date);
-    const query = params.toString() ? `?${params}` : "";
-    return this.request<any[]>(`/attendance${query}`);
-  }
-
-  async createAttendance(attendance: any): Promise<any> {
-    return this.request<any>("/attendance", {
-      method: "POST",
-      body: JSON.stringify(attendance),
-    });
-  }
-
-  async createBulkAttendance(attendanceRecords: any[]): Promise<any> {
-    return this.request<any>("/attendance/bulk", {
-      method: "POST",
-      body: JSON.stringify({ attendanceRecords }),
-    });
-  }
-
-  async updateAttendance(id: string, attendance: any): Promise<any> {
-    return this.request<any>(`/attendance/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(attendance),
-    });
-  }
-
-  // ================= FEES =================
-  async getFees(branchId?: string, studentId?: string): Promise<any[]> {
-    const params = new URLSearchParams();
-    if (branchId) params.append("branchId", branchId);
-    if (studentId) params.append("studentId", studentId);
-    const query = params.toString() ? `?${params}` : "";
-    return this.request<any[]>(`/fees${query}`);
-  }
-
-  async getStudentDues(studentId: string): Promise<any> {
-    return this.request<any>(`/students/${studentId}/dues`);
-  }
-
-  async createFee(fee: any): Promise<any> {
-    return this.request<any>("/fees", {
-      method: "POST",
-      body: JSON.stringify(fee),
-    });
-  }
-
-  async updateFee(id: string, fee: any): Promise<any> {
-    return this.request<any>(`/fees/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(fee),
-    });
-  }
-
-  // ================= TRAINER SPECIFIC =================
-  async getTrainerDashboard(trainerId: string): Promise<any> {
-    return this.request<any>(`/trainers/${trainerId}/dashboard`);
-  }
-
-  async getTrainerStudents(trainerId: string): Promise<any[]> {
-    return this.request<any[]>(`/trainers/${trainerId}/students`);
-  }
-
-  async getTrainerBatches(trainerId: string): Promise<any[]> {
-    return this.request<any[]>(`/trainers/${trainerId}/batches`);
-  }
-
-  async assignTrainerToBatch(
-    trainerId: string,
-    batchName: string,
-    program: string
-  ): Promise<any> {
-    return this.request<any>(`/trainers/${trainerId}/batches`, {
-      method: "POST",
-      body: JSON.stringify({ batchName, program }),
-    });
-  }
-
-  // ================= ADMIN STUDENT CREDENTIALS =================
-  async get(endpoint: string): Promise<any> {
-    return this.request<any>(endpoint);
-  }
-
-  async post(endpoint: string, data: any): Promise<any> {
-    return this.request<any>(endpoint, {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async patch(endpoint: string, data: any): Promise<any> {
-    return this.request<any>(endpoint, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async delete(endpoint: string): Promise<any> {
-    return this.request<any>(endpoint, {
-      method: "DELETE",
-    });
-  }
-}
-
-export const api = new ApiClient();
+  // ================= REPORTS =================
+  getReportData: async (type: string, from: string, to: string) =>
+    api.get(`/api/reports/data?type=${type}&from=${from}&to=${to}`),
+};

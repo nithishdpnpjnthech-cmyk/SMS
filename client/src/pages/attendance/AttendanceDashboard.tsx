@@ -15,6 +15,158 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 interface AttendanceRecord {
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   id: string;
   student_id: string;
   student_name: string;
@@ -24,6 +176,8 @@ interface AttendanceRecord {
   check_in?: string;
   check_out?: string;
   date: string;
+  is_late?: boolean;
+  hasRecord?: boolean;
 }
 
 interface Student {
@@ -154,12 +308,13 @@ export default function AttendanceDashboard() {
       if (user?.role === "admin") {
         const branchId = new URLSearchParams(window.location.search).get("branchId");
         [attendanceData, studentsData] = await Promise.all([
-          api.getAttendance(undefined, today),
-          api.getStudents(branchId || undefined)
+          // pass date explicitly as query param
+          api.getAttendance({ date: today }),
+          api.getStudents(branchId ? { branchId } : undefined)
         ]);
       } else {
         [attendanceData, studentsData] = await Promise.all([
-          api.getAttendance(undefined, today),
+          api.getAttendance({ date: today }),
           api.getStudents()
         ]);
       }
@@ -193,17 +348,23 @@ export default function AttendanceDashboard() {
         }
       });
       
-      setAttendance(allStudentsWithStatus);
-      setStudents(studentsData);
+  setAttendance(allStudentsWithStatus);
+  setStudents(studentsData);
       
-      // Calculate correct stats
-      const totalPresent = attendanceData.filter(a => a.status === 'PRESENT' || a.status === 'present').length;
-      const totalLate = attendanceData.filter(a => a.is_late === true || a.is_late === 1).length;
-      const totalAbsent = attendanceData.filter(a => a.status === 'ABSENT' || a.status === 'absent').length;
-      const totalRecords = attendanceData.length;
-      const totalStudents = studentsData.length;
-      const notMarked = totalStudents - totalRecords;
-      const attendanceRate = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
+      // Calculate correct stats from the complete list (allStudentsWithStatus)
+      const totalPresent = allStudentsWithStatus.filter(a => 
+        a.status === 'PRESENT' || a.status === 'present'
+      ).length;
+      const totalLate = allStudentsWithStatus.filter(a => Boolean(a.is_late)).length;
+      const totalAbsent = allStudentsWithStatus.filter(a => 
+        a.status === 'ABSENT' || a.status === 'absent'
+      ).length;
+      const notMarked = allStudentsWithStatus.filter(a => 
+        a.status === 'NOT_MARKED'
+      ).length;
+      const totalStudents = allStudentsWithStatus.length;
+      const markedStudents = totalPresent + totalAbsent;
+      const attendanceRate = markedStudents > 0 ? Math.round((totalPresent / markedStudents) * 100) : 0;
 
       setStats({
         totalPresent,
@@ -211,15 +372,16 @@ export default function AttendanceDashboard() {
         totalAbsent,
         notMarked,
         attendanceRate,
-        totalStudents: totalRecords
+        totalStudents
       });
 
       console.log("Dashboard stats:", {
         totalPresent,
-        totalAbsent, 
+        totalLate,
+        totalAbsent,
         notMarked,
-        totalStudents: studentsData.length,
-        recordsFound: totalRecords
+        totalStudents,
+        markedStudents
       });
     } catch (error) {
       console.error("Failed to load attendance data:", error);
@@ -402,6 +564,7 @@ export default function AttendanceDashboard() {
                     <SelectItem value="present">Present</SelectItem>
                     <SelectItem value="absent">Absent</SelectItem>
                     <SelectItem value="late">Late</SelectItem>
+                    <SelectItem value="not_marked">Not Marked</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

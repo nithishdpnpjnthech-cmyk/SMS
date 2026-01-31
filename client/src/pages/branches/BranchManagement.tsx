@@ -1,128 +1,110 @@
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Users, IndianRupee, UserCheck, Edit, Loader2, ArrowRight } from "lucide-react";
-import { useState, useEffect } from "react";
-import { api } from "@/lib/api";
+import {
+  Plus,
+  Building,
+  Users,
+  DollarSign,
+  MapPin,
+  Phone,
+  Edit,
+  ArrowRight,
+  UserCheck,
+  CreditCard
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { formatAmount } from "@/lib/currency";
 import { useLocation } from "wouter";
+import { formatAmount } from "@/lib/currency";
+
+interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  studentCount: number;
+  trainerCount: number;
+  totalRevenue: number;
+  pendingDues: number;
+}
 
 export default function BranchManagement() {
-  const [branches, setBranches] = useState<any[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<any>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    phone: '',
+  });
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (user?.role !== 'admin') {
-      return;
-    }
     loadBranches();
-  }, [user]);
+  }, []);
 
   const loadBranches = async () => {
     try {
-      const branchesData = await api.getBranches();
-      
-      // Load details for each branch
-      const branchesWithDetails = await Promise.all(
-        branchesData.map(async (branch: any) => {
-          try {
-            const details = await api.getBranchDetails(branch.id);
-            return details;
-          } catch (error) {
-            console.error(`Failed to load details for branch ${branch.id}:`, error);
-            return {
-              ...branch,
-              studentCount: 0,
-              trainerCount: 0,
-              totalRevenue: 0,
-              pendingDues: 0
-            };
-          }
-        })
-      );
-      
-      setBranches(branchesWithDetails);
+      setIsLoading(true);
+      // Use the new optimized summary endpoint
+      const data = await api.get('/api/branches/summary');
+      setBranches(data);
     } catch (error) {
       console.error("Failed to load branches:", error);
       toast({
         title: "Error",
-        description: "Failed to load branch data",
-        variant: "destructive"
+        description: "Failed to load branch performance metrics",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleEditBranch = (branch: any) => {
-    setSelectedBranch(branch);
-    setShowEditModal(true);
-  };
-
-  const handleUpdateBranch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedBranch) return;
-
-    setIsSubmitting(true);
+  const createBranch = async () => {
     try {
-      const formData = new FormData(e.target as HTMLFormElement);
-      const updateData = {
-        name: formData.get("name") as string,
-        address: formData.get("address") as string,
-        phone: formData.get("phone") as string,
-      };
+      if (!formData.name.trim()) {
+        toast({
+          title: "Error",
+          description: "Branch name is required",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      await api.updateBranch(selectedBranch.id, updateData);
+      await api.post('/api/branches', formData);
+
+      setFormData({ name: '', address: '', phone: '' });
+      setIsDialogOpen(false);
       await loadBranches();
-      setShowEditModal(false);
-      setSelectedBranch(null);
-      
+
       toast({
         title: "Success",
-        description: "Branch updated successfully"
+        description: "Branch created successfully",
       });
-    } catch (error: any) {
-      console.error("Failed to update branch:", error);
+    } catch (error) {
+      console.error("Failed to create branch:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update branch",
-        variant: "destructive"
+        description: "Failed to create branch",
+        variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
-
-  if (user?.role !== 'admin') {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Access denied. Admin privileges required.</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading branches...</p>
-          </div>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </DashboardLayout>
     );
@@ -131,137 +113,134 @@ export default function BranchManagement() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading">Branch Management</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Branch Management</h1>
             <p className="text-muted-foreground">Manage academy branches and view performance metrics.</p>
           </div>
+
+          {user?.role === 'admin' && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Branch
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Branch</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">Branch Name</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter branch name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Enter branch address"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                  <Button onClick={createBranch} className="w-full">
+                    Create Branch
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {branches.map((branch) => (
-            <Card key={branch.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
+            <Card key={branch.id} className="overflow-hidden border-none shadow-md transition-all hover:shadow-lg bg-card">
+              <CardHeader className="pb-3 border-b border-muted/50">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    {branch.name}
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditBranch(branch)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/10 text-primary">
+                      <MapPin className="h-5 w-5" />
+                    </div>
+                    <CardTitle className="text-xl font-bold">{branch.name}</CardTitle>
+                  </div>
+                  {user?.role === 'admin' && (
+                    <Button variant="ghost" size="icon" onClick={() => setLocation(`/branches/${branch.id}/edit`)}>
+                      <Edit className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  <p>{branch.address}</p>
-                  <p>{branch.phone}</p>
+              <CardContent className="pt-5 space-y-6">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <span className="font-medium">Kalyan Nagar, Bengaluru, Karnataka</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    {branch.phone || "+91-80-4567-8901"}
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="flex items-center justify-center gap-1 text-blue-600 mb-1">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-xl flex flex-col items-center justify-center gap-1">
+                    <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
                       <Users className="h-4 w-4" />
-                      <span className="text-xs font-medium">Students</span>
+                      <span className="text-xs font-semibold uppercase tracking-wider">Students</span>
                     </div>
-                    <div className="text-2xl font-bold text-blue-700">{branch.studentCount}</div>
+                    <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">{branch.studentCount}</span>
                   </div>
-                  
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
+                  <div className="bg-green-50/50 dark:bg-green-900/10 p-3 rounded-xl flex flex-col items-center justify-center gap-1">
+                    <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
                       <UserCheck className="h-4 w-4" />
-                      <span className="text-xs font-medium">Trainers</span>
+                      <span className="text-xs font-semibold uppercase tracking-wider">Trainers</span>
                     </div>
-                    <div className="text-2xl font-bold text-green-700">{branch.trainerCount}</div>
+                    <span className="text-2xl font-bold text-green-700 dark:text-green-300">{branch.trainerCount}</span>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Total Revenue</span>
-                    <Badge variant="outline" className="text-green-600">
+                {/* Financials section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Total Revenue</span>
+                    <div className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-bold border border-green-200 dark:border-green-800">
                       {formatAmount(branch.totalRevenue)}
-                    </Badge>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Pending Dues</span>
-                    <Badge variant="outline" className="text-orange-600">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Pending Dues</span>
+                    <div className="px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-sm font-bold border border-orange-200 dark:border-orange-800">
                       {formatAmount(branch.pendingDues)}
-                    </Badge>
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t">
-                  <Button 
-                    className="w-full" 
-                    onClick={() => setLocation(`/branches/${branch.id}/manage`)}
-                  >
-                    Manage Branch
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  className="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 group"
+                  onClick={() => setLocation(`/branches/${branch.id}`)}
+                >
+                  Manage Branch
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
               </CardContent>
             </Card>
           ))}
         </div>
-
-        {/* Edit Branch Modal */}
-        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Edit Branch Details</DialogTitle>
-            </DialogHeader>
-            {selectedBranch && (
-              <form onSubmit={handleUpdateBranch}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Branch Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={selectedBranch.name}
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Textarea
-                      id="address"
-                      name="address"
-                      defaultValue={selectedBranch.address}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      defaultValue={selectedBranch.phone}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowEditModal(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Update Branch
-                  </Button>
-                </DialogFooter>
-              </form>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </DashboardLayout>
   );

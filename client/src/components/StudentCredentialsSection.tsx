@@ -47,7 +47,7 @@ export default function StudentCredentialsSection({
 
   const loadCredentials = async () => {
     try {
-      const response = await api.get(`/admin/student-credentials/${studentId}`);
+      const response = await api.get(`/api/admin/student-credentials/${studentId}`);
       setCredentials(response);
     } catch {
       setCredentials(null);
@@ -69,7 +69,7 @@ export default function StudentCredentialsSection({
     setIsLoading(true);
     try {
       // Create credentials without specific username since students can use email/phone/ID
-      await api.post('/admin/student-credentials', {
+      await api.post('/api/admin/student-credentials', {
         studentId,
         username: studentData.email || studentData.phone || studentData.id, // Fallback username for admin reference
         password: generatedPassword,
@@ -99,7 +99,7 @@ export default function StudentCredentialsSection({
     if (!credentials) return;
     
     try {
-      await api.patch(`/admin/student-credentials/${credentials.id}`, {
+      await api.patch(`/api/admin/student-credentials/${credentials.id}`, {
         isActive: !credentials.isActive,
       });
       
@@ -124,7 +124,7 @@ export default function StudentCredentialsSection({
     
     setIsLoading(true);
     try {
-      await api.patch(`/admin/student-credentials/${credentials.id}/reset-password`, {
+      await api.patch(`/api/admin/student-credentials/${credentials.id}/reset-password`, {
         password: generatedPassword,
       });
       

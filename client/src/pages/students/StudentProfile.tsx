@@ -42,7 +42,7 @@ export default function StudentProfile() {
       const [studentData, feesData, attendanceData] = await Promise.all([
         api.getStudent(studentId),
         api.getFees(undefined, studentId).catch(() => []),
-        api.getAttendance(studentId).catch(() => [])
+        api.getAttendance({ studentId }).catch(() => [])
       ]);
       
       setStudent(studentData);
@@ -89,10 +89,44 @@ export default function StudentProfile() {
     );
   }
 
-  const studentFees = fees.filter(f => f.studentId === student.id || f.studentName === student.name);
-  const studentAttendance = attendance.filter(a => a.studentId === student.id);
-  const presentCount = studentAttendance.filter(a => a.status === 'present').length;
+  const studentFees = fees.filter(f => f.student_id === student.id || f.studentId === student.id || f.studentName === student.name);
+  const studentAttendance = attendance.filter(a => a.student_id === student.id || a.studentId === student.id);
+  const presentCount = studentAttendance.filter(a => a.status === 'present' || a.status === 'PRESENT').length;
   const attendanceRate = studentAttendance.length > 0 ? Math.round((presentCount / studentAttendance.length) * 100) : 0;
+
+  const handleDeactivate = async () => {
+    try {
+      await api.deactivateStudent(student.id);
+      toast({
+        title: "Success",
+        description: "Student deactivated successfully",
+      });
+      loadStudentData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to deactivate student",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSuspend = async () => {
+    try {
+      await api.suspendStudent(student.id);
+      toast({
+        title: "Success",
+        description: "Student suspended successfully",
+      });
+      loadStudentData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to suspend student",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,9 +205,14 @@ export default function StudentProfile() {
               </div>
               
               <div className="w-full mt-6 flex gap-2">
-                <Button className="flex-1" variant="outline">Message</Button>
-                <Button className="flex-1" onClick={() => setIsEditOpen(true)}>
-                    <Edit className="mr-2 h-4 w-4" /> Edit
+                <Button className="flex-1" variant="outline" onClick={() => setIsEditOpen(true)}>
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+                <Button className="flex-1" variant="outline" onClick={handleDeactivate}>
+                  Deactivate
+                </Button>
+                <Button className="px-3" variant="destructive" onClick={handleSuspend}>
+                  Suspend
                 </Button>
               </div>
             </CardContent>
@@ -278,12 +317,41 @@ export default function StudentProfile() {
 
               <TabsContent value="attendance" className="mt-6">
                 <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p className="mb-4">Recorded Attendance Rate</p>
-                      <span className="text-4xl font-bold text-foreground">{attendanceRate}%</span>
-                      <p className="text-sm mt-2">{presentCount} classes present</p>
+                  <CardHeader>
+                    <CardTitle>Attendance Summary</CardTitle>
+                    <CardDescription>Student attendance records and statistics</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="text-center py-8">
+                        <p className="mb-4 text-muted-foreground">Recorded Attendance Rate</p>
+                        <span className="text-4xl font-bold text-foreground">{attendanceRate}%</span>
+                        <p className="text-sm mt-2">{presentCount} classes present out of {studentAttendance.length} total</p>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Total Classes:</span>
+                          <span className="font-bold">{studentAttendance.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Present:</span>
+                          <span className="font-bold text-green-600">{presentCount}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Absent:</span>
+                          <span className="font-bold text-red-600">{studentAttendance.filter(a => a.status === 'absent' || a.status === 'ABSENT').length}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Late:</span>
+                          <span className="font-bold text-orange-600">{studentAttendance.filter(a => a.is_late).length}</span>
+                        </div>
+                      </div>
                     </div>
+                    {studentAttendance.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No attendance records found for this student.</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

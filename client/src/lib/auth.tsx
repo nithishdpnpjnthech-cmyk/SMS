@@ -68,7 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('userId', userData.id);
       localStorage.setItem('userRole', userData.role);
+      localStorage.setItem('userBranch', userData.branchId || '');
       console.log("Auth: Login completed successfully", { userId: userData.id, role: userData.role, branchId: userData.branchId });
     } catch (error) {
       console.error("Auth: Login failed:", error);
@@ -79,7 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('userId');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('userBranch');
     window.location.href = '/';
   };
 

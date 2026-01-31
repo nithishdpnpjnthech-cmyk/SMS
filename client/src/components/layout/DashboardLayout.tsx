@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Sidebar, MobileSidebar } from "./Sidebar";
 import { Bell, Search, User, LogOut, Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { BackButton } from "@/components/ui/back-button";
 import { useAuth } from "@/lib/auth";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from "@/components/ui/command";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -17,6 +18,25 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [, setLocation] = useLocation();
+
+  const handleNavigate = (path: string) => {
+    setIsSearchOpen(false);
+    setLocation(path);
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsSearchOpen((open) => !open);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
@@ -27,6 +47,50 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
+        <CommandDialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+          <CommandInput placeholder="Search pages, students, fees..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Navigation">
+              <CommandItem onSelect={() => handleNavigate("/dashboard")}>
+                Dashboard
+                <CommandShortcut>Go</CommandShortcut>
+              </CommandItem>
+              <CommandItem onSelect={() => handleNavigate("/students")}>
+                Students
+                <CommandShortcut>Go</CommandShortcut>
+              </CommandItem>
+              <CommandItem onSelect={() => handleNavigate("/attendance")}>
+                Attendance
+                <CommandShortcut>Go</CommandShortcut>
+              </CommandItem>
+              <CommandItem onSelect={() => handleNavigate("/fees")}>
+                Fees & Billing
+                <CommandShortcut>Go</CommandShortcut>
+              </CommandItem>
+              <CommandItem onSelect={() => handleNavigate("/trainers")}>
+                Trainers
+                <CommandShortcut>Go</CommandShortcut>
+              </CommandItem>
+              <CommandItem onSelect={() => handleNavigate("/branches")}>
+                Branches
+                <CommandShortcut>Go</CommandShortcut>
+              </CommandItem>
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup heading="Profile">
+              <CommandItem onSelect={() => handleNavigate("/profile")}>
+                View Profile
+                <CommandShortcut>Go</CommandShortcut>
+              </CommandItem>
+              <CommandItem onSelect={() => handleNavigate("/settings")}>
+                Settings
+                <CommandShortcut>Go</CommandShortcut>
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </CommandDialog>
+
         {/* Header */}
         <header className="flex h-16 items-center justify-between border-b bg-card px-4 sm:px-6 shadow-sm">
           <div className="flex items-center gap-2 sm:gap-4">
@@ -37,7 +101,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <Input 
                 type="search" 
                 placeholder="Search anything..." 
-                className="pl-9 h-9 bg-muted/50 border-none focus-visible:ring-1" 
+                className="pl-9 h-9 bg-muted/50 border-none focus-visible:ring-1 cursor-pointer" 
+                readOnly
+                onClick={() => setIsSearchOpen(true)}
               />
             </div>
           </div>

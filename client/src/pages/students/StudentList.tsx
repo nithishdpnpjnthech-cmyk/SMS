@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Search, Plus, MoreHorizontal, Eye, Edit, UserX, UserCheck, UserMinus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
@@ -32,12 +32,12 @@ interface Student {
 
 export default function StudentList() {
   const [students, setStudents] = useState<Student[]>([]);
+  const [programs, setPrograms] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [programFilter, setProgramFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("active"); // NEW: Status filter
+  const [statusFilter, setStatusFilter] = useState("active");
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [location] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -47,20 +47,43 @@ export default function StudentList() {
     setIsLoading(true);
     setStudents([]);
     loadStudents();
-  }, [branchId, statusFilter]); // Reload when status filter changes
+    loadPrograms();
+  }, [branchId, statusFilter, user]);
+
+  const loadPrograms = async () => {
+    try {
+      const programsData = await api.getPrograms();
+      setPrograms(programsData || []);
+    } catch (error) {
+      console.error("Failed to load programs:", error);
+      setPrograms([]);
+    }
+  };
 
   const loadStudents = async () => {
     try {
       console.log("Loading students with status:", statusFilter);
+      console.log("User role:", user?.role);
+      console.log("Branch ID from URL:", branchId);
       
-      let data;
-      if (user?.role === "admin") {
-        data = await api.getStudents(branchId || undefined, statusFilter);
-      } else {
-        data = await api.getStudents(undefined, statusFilter);
+      const params: Record<string, string> = {};
+      
+      if (statusFilter && statusFilter !== 'active') {
+        params.status = statusFilter;
       }
       
+      if (user?.role === 'admin' && branchId) {
+        params.branchId = branchId;
+      }
+      
+      console.log("API params:", params);
+      
+      const data = await api.getStudents(params);
+      console.log("Raw API response:", data);
+      
       const studentsArray: Student[] = Array.isArray(data) ? data : [];
+      console.log("Processed students array:", studentsArray);
+      
       setStudents(studentsArray);
       console.log("Students loaded:", studentsArray.length, "students");
     } catch (error) {
@@ -79,29 +102,23 @@ export default function StudentList() {
   const handleStatusChange = async (studentId: string, action: 'deactivate' | 'activate' | 'suspend', studentName: string) => {
     setActionLoading(studentId);
     try {
-      let response;
       let message;
       
       switch (action) {
         case 'deactivate':
-          response = await fetch(`/api/students/${studentId}/deactivate`, { method: 'PATCH' });
+          await api.deactivateStudent(studentId);
           message = `${studentName} has been deactivated`;
           break;
         case 'activate':
-          response = await fetch(`/api/students/${studentId}/activate`, { method: 'PATCH' });
+          await api.activateStudent(studentId);
           message = `${studentName} has been activated`;
           break;
         case 'suspend':
-          response = await fetch(`/api/students/${studentId}/suspend`, { method: 'PATCH' });
+          await api.suspendStudent(studentId);
           message = `${studentName} has been suspended`;
           break;
       }
       
-      if (!response?.ok) {
-        throw new Error(`Failed to ${action} student`);
-      }
-      
-      // Reload students to reflect status change
       await loadStudents();
       
       toast({
@@ -120,18 +137,20 @@ export default function StudentList() {
     }
   };
 
-  const filteredStudents = students.filter((student) => {
-    const matchesSearch =
-      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredStudents = useMemo(() => {
+    return students.filter((student) => {
+      const matchesSearch = !searchTerm.trim() || 
+        (student.name && student.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (student.email && student.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (student.phone && student.phone.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesProgram =
-      programFilter === "all" || 
-      student.program?.toLowerCase().includes(programFilter.toLowerCase());
+      const matchesProgram =
+        programFilter === "all" || 
+        (student.program && student.program.toLowerCase().includes(programFilter.toLowerCase()));
 
-    return matchesSearch && matchesProgram;
-  });
+      return matchesSearch && matchesProgram;
+    });
+  }, [students, searchTerm, programFilter]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -208,180 +227,159 @@ export default function StudentList() {
             <p className="text-muted-foreground">Manage student enrollments and profiles.</p>
           </div>
           <Link href="/students/add">
-            <Button className="gap-2 shadow-md min-h-[44px] w-full sm:w-auto">
+            <Button className="gap-2">
               <Plus className="h-4 w-4" />
-              Add New Student
+              Add Student
             </Button>
           </Link>
         </div>
 
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-medium">
-              Student Directory ({students.length} students)
-              {branchId && <span className="text-sm text-muted-foreground ml-2">(Branch View)</span>}
-            </CardTitle>
+          <CardHeader>
+            <CardTitle>Student Management</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search by name, email, phone..." 
-                  className="pl-9"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="w-full sm:w-[150px]">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search students..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full sm:w-80"
+                  />
+                </div>
+                <Select value={programFilter} onValueChange={setProgramFilter}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by program" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Programs</SelectItem>
+                    {programs.map((program) => (
+                      <SelectItem key={program.id} value={program.name}>
+                        {program.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
                     <SelectItem value="suspended">Suspended</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-full sm:w-[200px]">
-                <Select value={programFilter} onValueChange={setProgramFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by Program" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Programs</SelectItem>
-                    <SelectItem value="Karate">Karate</SelectItem>
-                    <SelectItem value="Yoga">Yoga</SelectItem>
-                    <SelectItem value="Bharatnatyam">Bharatnatyam</SelectItem>
+                    <SelectItem value="all">All Status</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="rounded-md border overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table className="min-w-full">
+            {filteredStudents.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-muted-foreground">
+                  {students.length === 0 ? "No students found." : "No students match your search criteria."}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-[150px]">Student Name</TableHead>
-                      <TableHead className="min-w-[120px] hidden sm:table-cell">Email</TableHead>
-                      <TableHead className="min-w-[100px]">Phone</TableHead>
-                      <TableHead className="min-w-[100px] hidden md:table-cell">Program</TableHead>
-                      <TableHead className="min-w-[80px] hidden lg:table-cell">Batch</TableHead>
-                      <TableHead className="min-w-[80px]">Status</TableHead>
-                      <TableHead className="text-right min-w-[80px]">Actions</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Program</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Status</TableHead>
+                      {user?.role === 'admin' && <TableHead>Branch</TableHead>}
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredStudents.length > 0 ? (
-                      filteredStudents.map((student) => {
-                        const actionButtons = getActionButtons(student);
-                        return (
-                          <TableRow key={student.id} className="hover:bg-muted/50">
-                            <TableCell className="min-w-[150px]">
-                              <div className="flex flex-col">
-                                <span className="font-medium">{student.name}</span>
-                                <span className="text-xs text-muted-foreground font-mono">{student.id?.slice(0, 8)}</span>
-                                <span className="text-xs text-muted-foreground sm:hidden">{student.email || 'N/A'}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm hidden sm:table-cell">{student.email || 'N/A'}</TableCell>
-                            <TableCell className="text-sm">{student.phone || 'N/A'}</TableCell>
-                            <TableCell className="hidden md:table-cell">{student.program || 'N/A'}</TableCell>
-                            <TableCell className="hidden lg:table-cell">{student.batch || 'N/A'}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary" className={getStatusBadge(student.status || 'active')}>
-                                {student.status || 'active'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0 min-h-[44px] min-w-[44px]">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/students/${student.id}`} className="cursor-pointer">
-                                      <Eye className="mr-2 h-4 w-4" /> View Profile
-                                    </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/students/${student.id}/edit`} className="cursor-pointer">
-                                      <Edit className="mr-2 h-4 w-4" /> Edit Details
-                                    </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  {actionButtons.map((button, index) => (
-                                    <AlertDialog key={index}>
-                                      <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem 
-                                          className={`${button.className} cursor-pointer`}
-                                          onSelect={(e) => e.preventDefault()}
-                                        >
-                                          <button.icon className="mr-2 h-4 w-4" /> {button.label}
-                                        </DropdownMenuItem>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent className="mx-4 max-w-md">
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>{button.confirmTitle}</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            {button.confirmDesc}
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                                          <AlertDialogCancel className="min-h-[44px]">Cancel</AlertDialogCancel>
-                                          <AlertDialogAction 
-                                            onClick={() => handleStatusChange(student.id, button.action, student.name)}
-                                            className="min-h-[44px]"
-                                            disabled={actionLoading === student.id}
-                                          >
-                                            {actionLoading === student.id ? `${button.label}ing...` : button.label}
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
-                          {students.length === 0 ? (
-                            <div className="text-center py-8">
-                              <p className="text-muted-foreground mb-4">
-                                {statusFilter === 'active' ? 'No active students found.' :
-                                 statusFilter === 'inactive' ? 'No inactive students found.' :
-                                 'No suspended students found.'}
-                              </p>
-                              {statusFilter === 'active' && (
-                                <Link href="/students/add">
-                                  <Button className="min-h-[44px]">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add First Student
-                                  </Button>
+                    {filteredStudents.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell className="font-medium">{student.name}</TableCell>
+                        <TableCell>{student.email || '-'}</TableCell>
+                        <TableCell>{student.phone || '-'}</TableCell>
+                        <TableCell>{student.program || '-'}</TableCell>
+                        <TableCell>{student.batch || '-'}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusBadge(student.status || 'active')}>
+                            {(student.status || 'active').charAt(0).toUpperCase() + (student.status || 'active').slice(1)}
+                          </Badge>
+                        </TableCell>
+                        {user?.role === 'admin' && (
+                          <TableCell>{student.branch_name || '-'}</TableCell>
+                        )}
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/students/${student.id}`} className="flex items-center">
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Details
                                 </Link>
-                              )}
-                            </div>
-                          ) : (
-                            "No students match your search criteria."
-                          )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/students/${student.id}/edit`} className="flex items-center">
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {getActionButtons(student).map((actionBtn, index) => {
+                                const IconComponent = actionBtn.icon;
+                                return (
+                                  <AlertDialog key={index}>
+                                    <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem
+                                        onSelect={(e) => e.preventDefault()}
+                                        className={actionBtn.className}
+                                        disabled={actionLoading === student.id}
+                                      >
+                                        <IconComponent className="mr-2 h-4 w-4" />
+                                        {actionBtn.label}
+                                      </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>{actionBtn.confirmTitle}</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          {actionBtn.confirmDesc}
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleStatusChange(student.id, actionBtn.action, student.name)}
+                                          disabled={actionLoading === student.id}
+                                        >
+                                          {actionLoading === student.id ? 'Processing...' : 'Confirm'}
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                );
+                              })}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,168 +1,82 @@
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Users, 
-  CalendarCheck, 
-  CreditCard, 
-  IndianRupee, 
-  TrendingUp,
-  Clock,
-  MapPin,
-  MoreHorizontal
-} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Link, useLocation } from "wouter";
-import { useState, useEffect } from "react";
-import { api } from "@/lib/api";
+import {
+  Users,
+  UserCheck,
+  CreditCard,
+  AlertCircle,
+  Plus,
+  Download,
+  Settings,
+  Calendar,
+  FileText,
+  UserPlus,
+  Coins
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { formatAmount } from "@/lib/currency";
 
+interface DashboardStats {
+  totalStudents: number;
+  presentToday: number;
+  lateToday: number;
+  absentToday: number;
+  feesCollectedToday: number;
+  pendingDues: number;
+  totalRevenue: number;
+}
+
 export default function Dashboard() {
-  const [, setLocation] = useLocation();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalStudents: 0,
     presentToday: 0,
+    lateToday: 0,
     absentToday: 0,
     feesCollectedToday: 0,
-    pendingDues: 0
+    pendingDues: 0,
+    totalRevenue: 0,
   });
-  const [students, setStudents] = useState([]);
+  const [recentStudents, setRecentStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    loadDashboardStats();
+  }, [user]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardStats = async () => {
     try {
-      // ✅ Check if non-admin user has branch assigned
-      if (user?.role !== 'admin' && !user?.branchId) {
-        console.warn('Non-admin user has no branch assigned:', user);
-        setStats({
-          totalStudents: 0,
-          presentToday: 0,
-          absentToday: 0,
-          feesCollectedToday: 0,
-          pendingDues: 0
-        });
-        setStudents([]);
-        setIsLoading(false);
-        return;
-      }
-      
-      // ✅ For admin: no branchId, for others: use their branchId
-      const branchId = user?.role === 'admin' ? undefined : user?.branchId;
-      
-      const [dashboardStats, studentsData] = await Promise.all([
-        api.getDashboardStats(branchId),
-        api.getStudents(branchId)
+      setIsLoading(true);
+      const [statsData, studentsData] = await Promise.all([
+        api.getDashboardStats(user?.branchId),
+        api.getStudents({ limit: '5' })
       ]);
-      
-      // ✅ Defensive: Ensure data is valid before setting
-      setStats(dashboardStats || {
-        totalStudents: 0,
-        presentToday: 0,
-        absentToday: 0,
-        feesCollectedToday: 0,
-        pendingDues: 0
-      });
-      setStudents(Array.isArray(studentsData) ? studentsData : []);
-      console.log("Dashboard loaded:", { stats: dashboardStats, students: studentsData });
+      setStats(statsData);
+      setRecentStudents(studentsData);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
-      // ✅ Set empty data on error instead of crashing
-      setStats({
-        totalStudents: 0,
-        presentToday: 0,
-        absentToday: 0,
-        feesCollectedToday: 0,
-        pendingDues: 0
-      });
-      setStudents([]);
       toast({
         title: "Error",
         description: "Failed to load dashboard data",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleQuickAction = (action: string) => {
-    switch (action) {
-      case 'add-student':
-        if (hasPermission('students.write')) {
-          setLocation('/students/add');
-        } else {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to add students",
-            variant: "destructive"
-          });
-        }
-        break;
-      case 'collect-fee':
-        if (hasPermission('fees.write')) {
-          setLocation('/fees/collect');
-        } else {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to collect fees",
-            variant: "destructive"
-          });
-        }
-        break;
-      case 'attendance':
-        setLocation('/attendance');
-        break;
-      case 'reports':
-        if (hasPermission('reports.read')) {
-          setLocation('/reports');
-        } else {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to view reports",
-            variant: "destructive"
-          });
-        }
-        break;
-    }
-  };
-
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading dashboard...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  // ✅ Show branch assignment error for non-admin users
-  if (user?.role !== 'admin' && !user?.branchId) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center max-w-md">
-            <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Branch Not Assigned</h2>
-            <p className="text-muted-foreground mb-4">
-              Your account is not assigned to any branch. Please contact the administrator to assign you to a branch.
-            </p>
-            <Badge variant="outline" className="text-sm">
-              Role: {user?.role} | User: {user?.username}
-            </Badge>
-          </div>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </DashboardLayout>
     );
@@ -171,156 +85,162 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        {/* Header with Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight font-heading">Dashboard</h1>
-            <p className="text-muted-foreground">Overview of today's academy operations.</p>
+            <p className="text-muted-foreground">
+              Overview of today's academy operations.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            {user?.role === 'admin' && (
-              <Button variant="outline" onClick={() => setLocation('/branches')}>Manage Branches</Button>
-            )}
-            {hasPermission('reports.read') && (
-              <Button variant="outline" onClick={() => handleQuickAction('reports')}>Download Report</Button>
-            )}
-            {hasPermission('students.write') && (
-              <Button onClick={() => handleQuickAction('add-student')}>Add Student</Button>
-            )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setLocation("/branches")}>
+              <Settings className="mr-2 h-4 w-4" />
+              Manage Branches
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setLocation("/reports")}>
+              <Download className="mr-2 h-4 w-4" />
+              Download Report
+            </Button>
+            <Button size="sm" onClick={() => setLocation("/students?add=true")}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Student
+            </Button>
           </div>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="hover-elevate transition-all border-l-4 border-l-primary cursor-pointer" onClick={() => setLocation('/students')}>
+          <Card className="border-l-4 border-l-blue-500 shadow-sm transition-all hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Students</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalStudents}</div>
-              <p className="text-xs text-muted-foreground">
-                Active students
-              </p>
+              <p className="text-xs text-muted-foreground">Active students</p>
             </CardContent>
           </Card>
-          <Card className="hover-elevate transition-all border-l-4 border-l-green-500 cursor-pointer" onClick={() => setLocation('/attendance')}>
+
+          <Card className="border-l-4 border-l-green-500 shadow-sm transition-all hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Attendance</CardTitle>
-              <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+              <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.presentToday} / {stats.presentToday + stats.absentToday}</div>
-              <p className="text-xs text-muted-foreground">
-                Present today
-              </p>
+              <div className="text-2xl font-bold">{stats.presentToday} / {stats.totalStudents}</div>
+              <p className="text-xs text-muted-foreground">Present today</p>
             </CardContent>
           </Card>
-          <Card className="hover-elevate transition-all border-l-4 border-l-blue-500 cursor-pointer" onClick={() => hasPermission('fees.read') && setLocation('/fees')}>
+
+          <Card className="border-l-4 border-l-blue-600 shadow-sm transition-all hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Fees Collected</CardTitle>
-              <IndianRupee className="h-4 w-4 text-muted-foreground" />
+              <Coins className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatAmount(stats.feesCollectedToday)}</div>
-              <p className="text-xs text-muted-foreground">
-                Today's revenue
-              </p>
+              <p className="text-xs text-muted-foreground">Today's revenue</p>
             </CardContent>
           </Card>
-          <Card className="hover-elevate transition-all border-l-4 border-l-orange-500 cursor-pointer" onClick={() => hasPermission('fees.read') && setLocation('/fees')}>
+
+          <Card className="border-l-4 border-l-orange-500 shadow-sm transition-all hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending Dues</CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">{formatAmount(stats.pendingDues)}</div>
-              <p className="text-xs text-muted-foreground">
-                Outstanding fees
-              </p>
+              <p className="text-xs text-muted-foreground">Outstanding fees</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Students */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Recent Students Area */}
+          <Card className="md:col-span-2 shadow-sm">
             <CardHeader>
-              <CardTitle>Recent Students</CardTitle>
-              <CardDescription>Latest student registrations</CardDescription>
+              <CardTitle className="text-lg font-semibold">Recent Students</CardTitle>
+              <p className="text-xs text-muted-foreground">Latest student registrations</p>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {students.slice(0, 5).map((student: any) => (
-                  <div key={student.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-4">
-                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                        {student.name?.charAt(0) || 'S'}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{student.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{student.program} - {student.batch}</span>
-                          {user?.role === 'admin' && student.branch_name && (
-                            <Badge variant="secondary" className="text-xs">{student.branch_name}</Badge>
-                          )}
+              {recentStudents.length > 0 ? (
+                <div className="space-y-4">
+                  {recentStudents.map((student) => (
+                    <div key={student.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                          {student.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{student.name}</p>
+                          <p className="text-xs text-muted-foreground">{student.program || "No Program"} • {student.batch || "No Batch"}</p>
                         </div>
                       </div>
+                      <div className="text-right">
+                        <p className="text-xs font-medium">{student.status}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {student.created_at ? new Date(student.created_at).toLocaleDateString() : 'New'}
+                        </p>
+                      </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">{student.status}</Badge>
-                  </div>
-                ))}
-                {students.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">No students found. Add your first student!</p>
-                )}
-              </div>
+                  ))}
+                  <Button variant="ghost" className="w-full text-xs" onClick={() => setLocation("/students")}>
+                    View All Students
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-muted-foreground mb-4">No students found. Add your first student!</p>
+                  <Button variant="outline" size="sm" onClick={() => setLocation("/students?add=true")}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Student
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="col-span-3">
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
-              {hasPermission('students.write') && (
-                <Button 
-                  variant="outline" 
-                  className="w-full h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors"
-                  onClick={() => handleQuickAction('add-student')}
+          {/* Quick Actions Area */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  variant="outline"
+                  className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 hover:border-primary/50 transition-all border shadow-sm"
+                  onClick={() => setLocation("/students?add=true")}
                 >
-                  <Users className="h-5 w-5" />
-                  <span className="text-xs">Add Student</span>
+                  <UserPlus className="h-6 w-6 text-primary" />
+                  <span className="text-xs font-medium">Add Student</span>
                 </Button>
-              )}
-              {hasPermission('fees.write') && (
-                <Button 
-                  variant="outline" 
-                  className="w-full h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors"
-                  onClick={() => handleQuickAction('collect-fee')}
+                <Button
+                  variant="outline"
+                  className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 hover:border-primary/50 transition-all border shadow-sm"
+                  onClick={() => setLocation("/fees")}
                 >
-                  <CreditCard className="h-5 w-5" />
-                  <span className="text-xs">Collect Fee</span>
+                  <Coins className="h-6 w-6 text-primary" />
+                  <span className="text-xs font-medium">Collect Fee</span>
                 </Button>
-              )}
-              <Button 
-                variant="outline" 
-                className="w-full h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors"
-                onClick={() => handleQuickAction('attendance')}
-              >
-                <CalendarCheck className="h-5 w-5" />
-                <span className="text-xs">Attendance</span>
-              </Button>
-              {hasPermission('reports.read') && (
-                <Button 
-                  variant="outline" 
-                  className="w-full h-20 flex-col gap-2 hover:bg-primary/5 hover:border-primary/50 transition-colors"
-                  onClick={() => handleQuickAction('reports')}
+                <Button
+                  variant="outline"
+                  className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 hover:border-primary/50 transition-all border shadow-sm"
+                  onClick={() => setLocation("/attendance")}
                 >
-                  <TrendingUp className="h-5 w-5" />
-                  <span className="text-xs">Reports</span>
+                  <Calendar className="h-6 w-6 text-primary" />
+                  <span className="text-xs font-medium">Attendance</span>
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+                <Button
+                  variant="outline"
+                  className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 hover:border-primary/50 transition-all border shadow-sm"
+                  onClick={() => setLocation("/reports")}
+                >
+                  <FileText className="h-6 w-6 text-primary" />
+                  <span className="text-xs font-medium">Reports</span>
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </DashboardLayout>

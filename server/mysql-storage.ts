@@ -16,6 +16,11 @@ export class MySQLStorage implements IStorage {
     return await db.query<T>(sql, params);
   }
 
+  // Convenience: return first row or undefined
+  async queryOne<T = any>(sql: string, params?: any[]): Promise<T | undefined> {
+    return await db.queryOne<T>(sql, params);
+  }
+
   // ============= USERS =============
   async getUser(id: string): Promise<User | undefined> {
     return await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [id]);
@@ -148,7 +153,8 @@ export class MySQLStorage implements IStorage {
           now
         ]
       );
-      
+
+
       // Insert student-program relationships
       if (insertStudent.programs && insertStudent.programs.length > 0) {
         for (const programId of insertStudent.programs) {
@@ -157,7 +163,30 @@ export class MySQLStorage implements IStorage {
             [id, programId]
           );
         }
+
+        // Systemic Fee Integrity: Auto-enroll in matching fee structures
+        // Get program names again to match with fee structures
+        const programs = await db.query(
+          `SELECT name FROM programs WHERE id IN (${insertStudent.programs.map(() => '?').join(',')})`,
+          insertStudent.programs
+        );
+
+        for (const prog of programs) {
+          // Find fee structure with same name (case-insensitive)
+          const feeStructure = await db.queryOne("SELECT id FROM fee_structures WHERE LOWER(name) = LOWER(?)", [(prog as any).name]);
+
+          if (feeStructure) {
+            console.log(`Auto-enrolling student ${id} in fee structure ${(prog as any).name}`);
+            await this.createStudentEnrollment({
+              studentId: id,
+              feeStructureId: (feeStructure as any).id,
+              startDate: now,
+              status: 'active'
+            });
+          }
+        }
       }
+
 
       return {
         id,
@@ -215,7 +244,7 @@ export class MySQLStorage implements IStorage {
     // Soft delete: Mark student as inactive instead of hard delete
     // This preserves historical data integrity for attendance and fees
     const result = await db.query(
-      "UPDATE students SET status = 'inactive' WHERE id = ?", 
+      "UPDATE students SET status = 'inactive' WHERE id = ?",
       [id]
     );
     return (result as any).affectedRows > 0;
@@ -262,6 +291,22 @@ export class MySQLStorage implements IStorage {
       );
     }
     return await db.query<Trainer>("SELECT * FROM trainers ORDER BY created_at DESC");
+  }
+
+  async getTrainer(id: string): Promise<Trainer | undefined> {
+    const trainers = await db.query<Trainer>("SELECT * FROM trainers WHERE id = ?", [id]);
+    return trainers[0];
+  }
+
+  async updateTrainer(id: string, updates: Partial<Trainer>): Promise<Trainer | undefined> {
+    const keys = Object.keys(updates).filter(k => k !== 'id' && k !== 'created_at');
+    if (keys.length === 0) return this.getTrainer(id);
+
+    const setClause = keys.map(k => `${k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)} = ?`).join(', ');
+    const values = keys.map(k => (updates as any)[k]);
+
+    await db.query(`UPDATE trainers SET ${setClause} WHERE id = ?`, [...values, id]);
+    return this.getTrainer(id);
   }
 
   async createTrainer(insertTrainer: InsertTrainer): Promise<Trainer> {
@@ -376,7 +421,7 @@ export class MySQLStorage implements IStorage {
           existing.id
         ]
       );
-      
+
       return { ...existing, ...insertAttendance } as any;
     } else {
       // Create new record
@@ -431,12 +476,12 @@ export class MySQLStorage implements IStorage {
     sql += " ORDER BY f.due_date DESC";
 
     const fees = await db.query<Fee>(sql, params);
-    
+
     // Calculate overdue status
     const today = new Date();
     return fees.map(fee => ({
       ...fee,
-      status: fee.status === 'pending' && new Date(fee.due_date) < today ? 'overdue' : fee.status
+      status: fee.status === 'pending' && new Date((fee as any).due_date) < today ? 'overdue' : fee.status
     }));
   }
 
@@ -505,7 +550,7 @@ export class MySQLStorage implements IStorage {
     if (!batch) {
       throw new Error(`Batch '${batchName}' not found`);
     }
-    
+
     await db.query(
       `INSERT IGNORE INTO trainer_batches (trainer_id, batch_name, program)
        VALUES (?, ?, ?)`,
@@ -525,5 +570,126 @@ export class MySQLStorage implements IStorage {
        ORDER BY s.name`,
       [userId, branchId]
     );
+  }
+  // ============= NEW FEES MODULE =============
+
+  async getFeeStructures(): Promise<any[]> {
+    return await db.query("SELECT * FROM fee_structures ORDER BY name");
+  }
+
+  async getStudentEnrollments(studentId: string): Promise<any[]> {
+    return await db.query(`
+      SELECT se.*, fs.name as fee_structure_name, fs.amount as monthly_amount
+      FROM student_enrollments se
+      JOIN fee_structures fs ON se.fee_structure_id = fs.id
+      WHERE se.student_id = ? AND se.status = 'active'
+    `, [studentId]);
+  }
+
+  async createStudentEnrollment(enrollment: any): Promise<any> {
+    const id = randomUUID();
+    const now = new Date();
+    await db.query(`
+      INSERT INTO student_enrollments (id, student_id, fee_structure_id, start_date, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [id, enrollment.studentId, enrollment.feeStructureId, enrollment.startDate || now, 'active', now]);
+    return { id, ...enrollment };
+  }
+
+  async getStudentFees(studentId: string): Promise<any[]> {
+    return await db.query(`
+      SELECT sf.*, fs.name as fee_name
+      FROM student_fees sf
+      LEFT JOIN student_enrollments se ON sf.enrollment_id = se.id
+      LEFT JOIN fee_structures fs ON se.fee_structure_id = fs.id
+      WHERE sf.student_id = ?
+      ORDER BY sf.year DESC, sf.month DESC
+    `, [studentId]);
+  }
+
+  async getStudentFee(id: string): Promise<any | undefined> {
+    return await db.queryOne("SELECT * FROM student_fees WHERE id = ?", [id]);
+  }
+
+  async createStudentFee(fee: any): Promise<any> {
+    const id = randomUUID();
+    const now = new Date();
+    await db.query(`
+      INSERT INTO student_fees (id, student_id, enrollment_id, month, year, amount, paid_amount, status, due_date, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id,
+      fee.studentId,
+      fee.enrollmentId,
+      fee.month,
+      fee.year,
+      fee.amount,
+      fee.paidAmount || 0,
+      fee.status || 'pending',
+      fee.dueDate || null,
+      now
+    ]);
+    return { id, ...fee };
+  }
+
+  async updateStudentFee(id: string, updates: any): Promise<any | undefined> {
+    const keys = Object.keys(updates).filter(k => k !== 'id' && k !== 'created_at');
+    if (keys.length === 0) return this.getStudentFee(id);
+
+    const columnMap: Record<string, string> = {
+      paidAmount: "paid_amount",
+      dueDate: "due_date",
+    };
+
+    const setClause = keys.map(k => `${columnMap[k] || k} = ?`).join(', ');
+    const values = keys.map(k => updates[k]);
+
+    await db.query(`UPDATE student_fees SET ${setClause} WHERE id = ?`, [...values, id]);
+    return this.getStudentFee(id);
+  }
+
+  async createPayment(payment: any): Promise<any> {
+    const id = randomUUID();
+    const now = new Date();
+    await db.query(`
+      INSERT INTO payments (id, student_id, amount, payment_date, payment_method, notes, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id,
+      payment.studentId,
+      payment.amount,
+      payment.paymentDate || now,
+      payment.paymentMethod,
+      payment.notes || null,
+      now
+    ]);
+    return { id, ...payment };
+  }
+
+  async getPayments(studentId: string): Promise<any[]> {
+    return await db.query("SELECT * FROM payments WHERE student_id = ? ORDER BY payment_date DESC", [studentId]);
+  }
+
+  // ============= TRAINER ATTENDANCE (STUBS TO SATISFY INTERFACE) =============
+  async ensureTrainerAttendanceTable(): Promise<void> {
+    // Stub
+  }
+  async getTrainerOpenAttendance(trainerId: string): Promise<any | undefined> {
+    return undefined;
+  }
+  async clockInTrainerAttendance(trainerId: string, payload: any): Promise<any> {
+    throw new Error("Not implemented");
+  }
+  async clockOutTrainerAttendance(trainerId: string, notes?: string | null): Promise<any> {
+    throw new Error("Not implemented");
+  }
+  async getTrainerAttendanceToday(trainerId: string): Promise<any[]> {
+    return [];
+  }
+  async getTrainerAttendanceRange(trainerId: string, from: string, to: string, limit?: number, offset?: number): Promise<any[]> {
+    return [];
+  }
+  async getTrainerAttendanceSummary(trainerId: string, from?: string, to?: string): Promise<any> {
+    return {};
   }
 }

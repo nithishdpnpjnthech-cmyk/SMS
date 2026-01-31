@@ -32,7 +32,7 @@ export default function ReportsDashboard() {
       return;
     }
     loadReportStats();
-    
+
     // Set default date range (last 30 days)
     const today = new Date();
     const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -42,37 +42,15 @@ export default function ReportsDashboard() {
 
   const loadReportStats = async () => {
     try {
-      const [dashboardStats, students, fees] = await Promise.all([
-        api.getDashboardStats(),
-        api.getStudents(),
-        api.getFees()
-      ]);
-      
-      const programs = [...new Set(students.map((s: any) => s.program).filter(Boolean))];
-      
-      // Calculate real revenue and dues
-      const totalRevenue = fees
-        .filter((f: any) => f.status === 'paid')
-        .reduce((sum: number, fee: any) => sum + Number(fee.amount || 0), 0);
-      
-      const pendingDues = fees
-        .filter((f: any) => f.status === 'pending')
-        .reduce((sum: number, fee: any) => sum + Number(fee.amount || 0), 0);
-      
-      const today = new Date();
-      const overdueAmount = fees
-        .filter((f: any) => f.status === 'pending' && new Date(f.due_date) < today)
-        .reduce((sum: number, fee: any) => sum + Number(fee.amount || 0), 0);
-      
+      const dashboardStats = await api.getDashboardStats();
+
       setStats({
-        totalStudents: students.length,
-        totalRevenue,
-        pendingDues,
-        overdueAmount,
-        attendanceRate: dashboardStats.presentToday + dashboardStats.absentToday > 0 
-          ? Math.round((dashboardStats.presentToday / (dashboardStats.presentToday + dashboardStats.absentToday)) * 100)
-          : 0,
-        activePrograms: programs.length
+        totalStudents: dashboardStats.totalStudents || 0,
+        totalRevenue: dashboardStats.totalRevenue || 0,
+        pendingDues: dashboardStats.pendingDues || 0,
+        overdueAmount: dashboardStats.overdueAmount || 0, // We should ensure this is in dashboard stats or add it
+        attendanceRate: dashboardStats.attendanceRate || 0,
+        activePrograms: dashboardStats.activePrograms || 0
       });
     } catch (error) {
       console.error("Failed to load report stats:", error);
@@ -91,23 +69,8 @@ export default function ReportsDashboard() {
 
     setIsGenerating(true);
     try {
-      let data: any[] = [];
-      let filename = "";
-      
-      switch (reportType) {
-        case "students":
-          data = await api.getStudents();
-          filename = `students_report_${dateFrom}_to_${dateTo}.csv`;
-          break;
-        case "fees":
-          data = await api.getFees();
-          filename = `fees_report_${dateFrom}_to_${dateTo}.csv`;
-          break;
-        case "attendance":
-          data = await api.getAttendance();
-          filename = `attendance_report_${dateFrom}_to_${dateTo}.csv`;
-          break;
-      }
+      const data = await api.getReportData(reportType, dateFrom, dateTo);
+      const filename = `${reportType}_report_${dateFrom}_to_${dateTo}.csv`;
 
       if (data.length === 0) {
         toast({
@@ -121,7 +84,7 @@ export default function ReportsDashboard() {
       // Convert to CSV
       const csvContent = convertToCSV(data, reportType);
       downloadCSV(csvContent, filename);
-      
+
       toast({
         title: "Success!",
         description: `${reportType} report generated successfully`
@@ -153,32 +116,33 @@ export default function ReportsDashboard() {
           item.email || "",
           item.phone || "",
           item.program || "",
-          item.batch || "",
+          item.batch || item.batch_name || "",
           item.status || "",
-          item.joining_date ? new Date(item.joining_date).toLocaleDateString() : ""
+          item.joining_date || item.created_at ? new Date(item.joining_date || item.created_at).toLocaleDateString() : ""
         ]);
         break;
       case "fees":
-        headers = ["ID", "Student ID", "Amount", "Due Date", "Paid Date", "Status", "Payment Method"];
+        headers = ["ID", "Student", "Batch", "Amount", "Date", "Method", "Notes"];
         rows = data.map(item => [
           item.id || "",
-          item.student_id || "",
-          item.amount || "",
-          item.due_date ? new Date(item.due_date).toLocaleDateString() : "",
-          item.paid_date ? new Date(item.paid_date).toLocaleDateString() : "",
-          item.status || "",
-          item.payment_method || ""
+          item.student_name || "",
+          item.batch || "",
+          item.amount || "0",
+          item.payment_date ? new Date(item.payment_date).toLocaleDateString() : "",
+          item.payment_method || "",
+          item.notes || ""
         ]);
         break;
       case "attendance":
-        headers = ["ID", "Student ID", "Date", "Status", "Check In", "Check Out"];
+        headers = ["Date", "Student", "Batch", "Status", "Check In", "Check Out", "Notes"];
         rows = data.map(item => [
-          item.id || "",
-          item.student_id || "",
           item.date ? new Date(item.date).toLocaleDateString() : "",
+          item.student_name || "",
+          item.batch || "",
           item.status || "",
-          item.check_in ? new Date(item.check_in).toLocaleTimeString() : "",
-          item.check_out ? new Date(item.check_out).toLocaleTimeString() : ""
+          item.check_in ? new Date(item.check_in).toLocaleTimeString() : "-",
+          item.check_out ? new Date(item.check_out).toLocaleTimeString() : "-",
+          item.notes || ""
         ]);
         break;
     }

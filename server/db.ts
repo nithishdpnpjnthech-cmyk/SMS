@@ -41,10 +41,21 @@ class Database {
 
   async query<T = any>(sql: string, params?: any[]): Promise<T[]> {
     try {
-      const [rows] = await this.pool.execute(sql, params);
+      // use `query` (simple protocol) instead of `execute` (prepared statements)
+      // because some control commands like START TRANSACTION are not supported
+      // by the prepared-statement protocol in mysql2. Using `query` lets us run
+      // those statements and still pass parameters for normal queries.
+      const [rows] = await this.pool.query(sql, params);
       return rows as T[];
     } catch (error) {
-      console.error("Database query error:", error);
+      // Improved error logging with SQL and parameters for easier debugging
+      console.error("Database query error:", {
+        message: (error as any).message,
+        code: (error as any).code,
+        sql: sql,
+        params: params,
+        stack: (error as any).stack
+      });
       throw error;
     }
   }

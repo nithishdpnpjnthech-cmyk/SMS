@@ -22,7 +22,9 @@ import { MySQLStorage } from "./mysql-storage";
 export interface IStorage {
   // Raw query method for custom queries
   query<T = any>(sql: string, params?: any[]): Promise<T[]>;
-  
+  // Convenience: return first row or undefined
+  queryOne<T = any>(sql: string, params?: any[]): Promise<T | undefined>;
+
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -38,8 +40,13 @@ export interface IStorage {
 
   // Trainers
   getTrainers(branchId?: string): Promise<Trainer[]>;
+  getTrainer(id: string): Promise<Trainer | undefined>;
   createTrainer(trainer: InsertTrainer): Promise<Trainer>;
+  updateTrainer(id: string, trainer: Partial<Trainer>): Promise<Trainer | undefined>;
   deleteTrainer(id: string): Promise<boolean>;
+  getTrainerBatches(userId: string): Promise<any[]>;
+  getStudentsByTrainerBatches(userId: string, branchId: string): Promise<any[]>;
+  assignTrainerToBatch(userId: string, batchName: string, program: string): Promise<void>;
 
   // Branches
   getBranches(): Promise<Branch[]>;
@@ -51,10 +58,31 @@ export interface IStorage {
   upsertAttendance(attendance: InsertAttendance): Promise<Attendance>;
   updateAttendance(id: string, attendance: Partial<Attendance>): Promise<Attendance | undefined>;
 
+  // Trainer Attendance (attendance-first design)
+  ensureTrainerAttendanceTable(): Promise<void>;
+  getTrainerOpenAttendance(trainerId: string): Promise<any | undefined>;
+  clockInTrainerAttendance(trainerId: string, payload: { locationType: string; locationName: string; locationId?: string | null; notes?: string | null; }): Promise<any>;
+  clockOutTrainerAttendance(trainerId: string, notes?: string | null): Promise<any>;
+  getTrainerAttendanceToday(trainerId: string): Promise<any[]>;
+  getTrainerAttendanceRange(trainerId: string, from: string, to: string, limit?: number, offset?: number): Promise<any[]>;
+  getTrainerAttendanceSummary(trainerId: string, from?: string, to?: string): Promise<any>;
+
   // Fees
   getFees(studentId?: string): Promise<Fee[]>;
   createFee(fee: InsertFee): Promise<Fee>;
   updateFee(id: string, fee: Partial<Fee>): Promise<Fee | undefined>;
+  // Fees Module
+  getFeeStructures(): Promise<any[]>;
+  getStudentEnrollments(studentId: string): Promise<any[]>;
+  createStudentEnrollment(enrollment: any): Promise<any>;
+
+  getStudentFees(studentId: string): Promise<any[]>;
+  getStudentFee(id: string): Promise<any | undefined>;
+  createStudentFee(fee: any): Promise<any>;
+  updateStudentFee(id: string, updates: any): Promise<any | undefined>;
+
+  createPayment(payment: any): Promise<any>;
+  getPayments(studentId: string): Promise<any[]>;
 }
 
 /**

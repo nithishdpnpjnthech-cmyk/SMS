@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatAmount } from "@/lib/currency";
 
 export default function BranchDetail() {
-  const [match, params] = useRoute("/branches/:id/manage");
+  const [match, params] = useRoute("/branches/:id");
   const [, setLocation] = useLocation();
   const [branch, setBranch] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,7 +23,7 @@ export default function BranchDetail() {
       setLocation('/dashboard');
       return;
     }
-    
+
     if (params?.id) {
       loadBranchDetails(params.id);
     }
@@ -35,7 +35,7 @@ export default function BranchDetail() {
       setBranch(branchData);
     } catch (error: any) {
       console.error("Failed to load branch details:", error);
-      
+
       if (error.message.includes('404') || error.message.includes('not found')) {
         toast({
           title: "Branch Not Found",
@@ -49,7 +49,7 @@ export default function BranchDetail() {
           variant: "destructive"
         });
       }
-      
+
       setLocation('/branches');
     } finally {
       setIsLoading(false);
@@ -132,7 +132,7 @@ export default function BranchDetail() {
                     </div>
                     <div className="text-2xl font-bold text-blue-700">{branch.studentCount}</div>
                   </div>
-                  
+
                   <div className="text-center p-3 bg-green-50 rounded-lg">
                     <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
                       <UserCheck className="h-4 w-4" />
@@ -182,26 +182,26 @@ export default function BranchDetail() {
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-3 gap-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="h-20 flex-col gap-2"
                 onClick={() => setLocation(`/students?branchId=${branch.id}`)}
               >
                 <Users className="h-6 w-6" />
                 <span>View Students</span>
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="h-20 flex-col gap-2"
                 onClick={() => setLocation(`/trainers?branchId=${branch.id}`)}
               >
                 <UserCheck className="h-6 w-6" />
                 <span>View Trainers</span>
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="h-20 flex-col gap-2"
                 onClick={() => setLocation(`/fees?branchId=${branch.id}`)}
               >

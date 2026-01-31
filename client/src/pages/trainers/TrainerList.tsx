@@ -24,7 +24,7 @@ export default function TrainerList() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined);
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -39,8 +39,8 @@ export default function TrainerList() {
       setBranches(branchesData || []);
       
       // Set default branch for managers
-      if (user?.role === 'manager' && user?.branch_id) {
-        setSelectedBranch(user.branch_id);
+      if (user?.role === 'manager' && user?.branchId) {
+        setSelectedBranch(user.branchId);
       }
     } catch (error) {
       console.error("Failed to load branches:", error);
@@ -58,7 +58,7 @@ export default function TrainerList() {
       // Determine branch ID based on user role
       let branchId = selectedBranch;
       if (user?.role === 'manager') {
-        branchId = user.branch_id; // Manager can only add to their branch
+        branchId = user.branchId; // Manager can only add to their branch
       }
       
       if (!branchId) {
@@ -240,10 +240,10 @@ export default function TrainerList() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem className="cursor-pointer">
+                              <DropdownMenuItem className="cursor-pointer" onClick={() => setLocation(`/trainers/${trainer.id}`)}>
                                 <Eye className="mr-2 h-4 w-4" /> View Profile
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="cursor-pointer">
+                              <DropdownMenuItem className="cursor-pointer" onClick={() => setLocation(`/trainers/${trainer.id}/edit`)}>
                                 <Edit className="mr-2 h-4 w-4" /> Edit Details
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />

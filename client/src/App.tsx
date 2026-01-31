@@ -21,6 +21,8 @@ import MarkAttendance from "@/pages/attendance/MarkAttendance";
 import FeesDashboard from "@/pages/fees/FeesDashboard";
 import CollectFees from "@/pages/fees/CollectFees";
 import TrainerList from "@/pages/trainers/TrainerList";
+import TrainerProfile from "@/pages/trainers/TrainerProfile";
+import EditTrainer from "@/pages/trainers/EditTrainer";
 import MasterData from "@/pages/admin/MasterData";
 import BranchManagement from "@/pages/branches/BranchManagement";
 import BranchDetail from "@/pages/branches/BranchDetail";
@@ -42,37 +44,40 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Login} />
-      
+
       {/* Student Portal Routes */}
       <Route path="/student/login" component={StudentLoginPage} />
       <StudentProtectedRoute path="/student/:page?" component={StudentLayout} />
-      
+
       {/* Protected Routes */}
       <ProtectedRoute path="/dashboard" component={Dashboard} requiredRole="admin" />
       <ProtectedRoute path="/dashboard/manager" component={ManagerDashboard} requiredRole="manager" />
       <ProtectedRoute path="/dashboard/receptionist" component={ReceptionistDashboard} requiredRole="receptionist" />
       <ProtectedRoute path="/dashboard/trainer" component={TrainerDashboard} requiredRole="trainer" />
-      
+
       <ProtectedRoute path="/students" component={StudentList} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
       <ProtectedRoute path="/students/add" component={AddStudent} allowedRoles={["admin", "receptionist"]} />
       <ProtectedRoute path="/students/:id/edit" component={EditStudent} allowedRoles={["admin", "receptionist"]} />
       <ProtectedRoute path="/students/:id" component={StudentProfile} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
-      
+
       <ProtectedRoute path="/attendance" component={AttendanceDashboard} allowedRoles={["admin", "manager", "trainer"]} />
       <ProtectedRoute path="/attendance/mark" component={MarkAttendance} allowedRoles={["admin", "trainer"]} />
-      
+
       <ProtectedRoute path="/fees" component={FeesDashboard} allowedRoles={["admin", "manager", "receptionist"]} />
       <ProtectedRoute path="/fees/collect" component={CollectFees} allowedRoles={["admin", "receptionist"]} />
-      
+
       <ProtectedRoute path="/trainers" component={TrainerList} allowedRoles={["admin", "manager"]} />
+      <ProtectedRoute path="/trainers/:id" component={TrainerProfile} allowedRoles={["admin", "manager"]} />
+      <ProtectedRoute path="/trainers/:id/edit" component={EditTrainer} allowedRoles={["admin", "manager"]} />
+
       <ProtectedRoute path="/admin/master-data" component={MasterData} allowedRoles={["admin"]} />
       <ProtectedRoute path="/branches" component={BranchManagement} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/branches/:id/manage" component={BranchDetail} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/branches/:id" component={BranchDetail} allowedRoles={["admin"]} />
       <ProtectedRoute path="/reports" component={ReportsDashboard} allowedRoles={["admin", "manager"]} />
-      
+
       <ProtectedRoute path="/profile" component={Profile} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
       <ProtectedRoute path="/settings" component={Settings} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
-      
+
       <Route component={NotFound} />
     </Switch>
   );

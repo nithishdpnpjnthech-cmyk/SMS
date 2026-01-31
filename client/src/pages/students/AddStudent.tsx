@@ -80,7 +80,7 @@ export default function AddStudent() {
       if (!selectedBranch) {
         toast({
           title: "Validation Error",
-          description: "Please select a branch",
+          description: "Please select a branch. If no branches are available, contact admin to create one.",
           variant: "destructive"
         });
         return;
@@ -395,7 +395,7 @@ export default function AddStudent() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={isSubmitting || branches.length === 0 || programs.length === 0 || batches.length === 0 || selectedPrograms.length === 0 || !selectedBatch}
+                  disabled={isSubmitting || branches.length === 0 || programs.length === 0 || batches.length === 0 || selectedPrograms.length === 0 || !selectedBatch || !selectedBranch}
                   className={isSubmitting ? "opacity-50 cursor-not-allowed" : ""}
                 >
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
