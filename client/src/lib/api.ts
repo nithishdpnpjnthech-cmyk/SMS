@@ -203,20 +203,27 @@ export const api = {
   deleteTrainer: async (id: string) => api.delete(`/api/trainers/${id}`),
   getTrainerBatches: async (id: string) => api.get(`/api/trainers/${id}/batches`),
   getTrainerStudents: async (id: string) => api.get(`/api/trainers/${id}/students`),
-  trainerClockIn: async (trainerId: string, data: { locationType: string; locationName: string; locationId?: string; notes?: string }) =>
-    api.post(`/api/trainers/${trainerId}/attendance/clock-in`, data),
-  trainerClockOut: async (trainerId: string, data?: { notes?: string }) =>
-    api.post(`/api/trainers/${trainerId}/attendance/clock-out`, data || {}),
+
+  // Trainer attendance
+  trainerClockIn: async (trainerId: string, data: { location: string; area?: string; notes?: string }) =>
+    api.post(`/api/trainers/${trainerId}/clock-in`, data),
+  trainerClockOut: async (trainerId: string) =>
+    api.post(`/api/trainers/${trainerId}/clock-out`, {}),
   getTrainerAttendanceToday: async (trainerId: string) =>
     api.get(`/api/trainers/${trainerId}/attendance/today`),
-  getTrainerAttendanceRange: async (trainerId: string, params: { from: string; to: string; limit?: number; offset?: number }) => {
-    const queryString = '?' + new URLSearchParams({
-      from: params.from,
-      to: params.to,
-      ...(params.limit ? { limit: String(params.limit) } : {}),
-      ...(params.offset ? { offset: String(params.offset) } : {}),
-    }).toString();
-    return api.get(`/api/trainers/${trainerId}/attendance${queryString}`);
+  getTrainerAttendanceHistory: async (trainerId: string, params?: { from?: string; to?: string; limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.from) query.append('from', params.from);
+    if (params?.to) query.append('to', params.to);
+    if (params?.limit) query.append('limit', String(params.limit));
+    if (params?.offset) query.append('offset', String(params.offset));
+    return api.get(`/api/trainers/${trainerId}/attendance/history?${query.toString()}`);
+  },
+
+  // Admin APIs
+  getAdminTrainerAttendance: async (date?: string) => {
+    const params = date ? `?date=${date}` : '';
+    return api.get(`/api/admin/trainer-attendance${params}`);
   },
 
   getStudents: async (params?: Record<string, string>) => {

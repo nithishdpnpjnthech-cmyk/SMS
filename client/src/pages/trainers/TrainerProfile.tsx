@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, FileText, Edit, History } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Edit, History } from "lucide-react";
 import { Link, useRoute, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
@@ -18,9 +18,10 @@ export default function TrainerProfile() {
   const [location] = useLocation();
   // Fallback to extracting ID from location if params are missing (wouter issue workaround)
   const trainerId = params?.id || location.split('/')[2];
-  
+
   const [trainer, setTrainer] = useState<any>(null);
-  const [today, setToday] = useState<{ sessions: any[]; summary: any } | null>(null);
+  const [todaySessions, setTodaySessions] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>({ todayHours: 0, monthHours: 0, totalHours: 0 });
   const [history, setHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,7 +33,7 @@ export default function TrainerProfile() {
 
   const loadTrainerData = async () => {
     if (!trainerId) return;
-    
+
     setIsLoading(true);
     try {
       let trainerData: any = null;
@@ -52,24 +53,32 @@ export default function TrainerProfile() {
 
       if (!trainerData) {
         setTrainer(null);
-        setToday({ sessions: [], summary: { todayHours: 0, monthHours: 0, totalHours: 0 } });
-        setHistory([]);
         return;
       }
 
-      const [todayResp, historyResp] = await Promise.all([
-        api.getTrainerAttendanceToday(trainerId).catch(() => ({ sessions: [], summary: { todayHours: 0, monthHours: 0, totalHours: 0 } })),
-        api.getTrainerAttendanceRange(trainerId, {
+      setTrainer(trainerData);
+
+      // Load today's sessions
+      try {
+        const todayRecords = await api.getTrainerAttendanceToday(trainerId);
+        setTodaySessions(Array.isArray(todayRecords) ? todayRecords : []);
+      } catch {
+        setTodaySessions([]);
+      }
+
+      // Load history with summary
+      try {
+        const historyData = await api.getTrainerAttendanceHistory(trainerId, {
           from: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10),
           to: new Date().toISOString().slice(0, 10),
           limit: 50,
           offset: 0
-        }).catch(() => [])
-      ]);
-      
-      setTrainer(trainerData);
-      setToday(todayResp);
-      setHistory(Array.isArray(historyResp) ? historyResp : []);
+        });
+        setHistory(historyData?.records || []);
+        setSummary(historyData?.summary || { todayHours: 0, monthHours: 0, totalHours: 0 });
+      } catch {
+        setHistory([]);
+      }
     } catch (error) {
       console.error("Failed to load trainer data:", error);
       toast({
@@ -80,6 +89,18 @@ export default function TrainerProfile() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const formatTime = (timestamp: string) => {
+    if (!timestamp) return '—';
+    return new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const formatWorkedTime = (minutes: number | null) => {
+    if (!minutes) return '0m';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
   if (isLoading) {
@@ -176,9 +197,9 @@ export default function TrainerProfile() {
             <Tabs defaultValue="overview">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="attendance">Attendance</TabsTrigger>
+                <TabsTrigger value="attendance">Attendance History</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="overview" className="space-y-4 mt-4">
                 <Card>
                   <CardHeader>
@@ -192,7 +213,7 @@ export default function TrainerProfile() {
                           <CardTitle className="text-lg opacity-90">Today</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <div className="text-4xl font-bold">{today?.summary?.todayHours || 0}h</div>
+                          <div className="text-4xl font-bold">{summary.todayHours}h</div>
                           <p className="text-sm opacity-80 mt-1">Worked hours</p>
                         </CardContent>
                       </Card>
@@ -201,7 +222,7 @@ export default function TrainerProfile() {
                           <CardTitle className="text-lg">This Month</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <div className="text-4xl font-bold">{today?.summary?.monthHours || 0}h</div>
+                          <div className="text-4xl font-bold">{summary.monthHours}h</div>
                           <p className="text-sm text-muted-foreground mt-1">Total hours</p>
                         </CardContent>
                       </Card>
@@ -210,7 +231,7 @@ export default function TrainerProfile() {
                           <CardTitle className="text-lg">Lifetime</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <div className="text-4xl font-bold">{today?.summary?.totalHours || 0}h</div>
+                          <div className="text-4xl font-bold">{summary.totalHours}h</div>
                           <p className="text-sm text-muted-foreground mt-1">Across all sessions</p>
                         </CardContent>
                       </Card>
@@ -220,36 +241,50 @@ export default function TrainerProfile() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Today’s attendance</CardTitle>
-                    <CardDescription>Sessions recorded today</CardDescription>
+                    <CardTitle>Today's Sessions</CardTitle>
+                    <CardDescription>Clock in / clock out records for today</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      {today?.sessions?.length ? (
-                        today.sessions.map((s: any) => (
-                          <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <History className="h-4 w-4 text-primary" />
+                    <div className="space-y-3">
+                      {todaySessions.length > 0 ? (
+                        todaySessions.map((s: any) => (
+                          <div key={s.id} className="p-4 border rounded-lg space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Badge variant={s.clock_out ? "secondary" : "default"} className={!s.clock_out ? "bg-green-500" : ""}>
+                                {s.clock_out ? 'Completed' : '● Active'}
+                              </Badge>
+                              <span className="text-xs font-medium text-muted-foreground">
+                                {s.worked_minutes ? formatWorkedTime(s.worked_minutes) : (!s.clock_out ? 'Ongoing' : '—')}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-green-50 rounded-lg p-2.5">
+                                <p className="text-[10px] font-semibold text-green-600 uppercase mb-0.5">Clock In</p>
+                                <p className="text-sm font-bold text-green-800">{formatTime(s.clock_in)}</p>
                               </div>
-                              <div>
-                                <p className="font-medium">{s.location_type} — {s.location_name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  In: {new Date(s.clock_in_time).toLocaleTimeString()} {s.clock_out_time ? `| Out: ${new Date(s.clock_out_time).toLocaleTimeString()}` : '| Open'}
+                              <div className={`rounded-lg p-2.5 ${s.clock_out ? 'bg-red-50' : 'bg-gray-50'}`}>
+                                <p className={`text-[10px] font-semibold uppercase mb-0.5 ${s.clock_out ? 'text-red-600' : 'text-gray-400'}`}>Clock Out</p>
+                                <p className={`text-sm font-bold ${s.clock_out ? 'text-red-800' : 'text-gray-400'}`}>
+                                  {s.clock_out ? formatTime(s.clock_out) : '—'}
                                 </p>
                               </div>
                             </div>
-                            <Badge variant="outline">{s.status}</Badge>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <MapPin className="h-3.5 w-3.5" />
+                              <span>{s.location || 'N/A'}</span>
+                              {s.area && <span>• {s.area}</span>}
+                            </div>
+                            {s.notes && <p className="text-xs text-muted-foreground italic">📝 {s.notes}</p>}
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-muted-foreground">No sessions recorded today.</p>
+                        <p className="text-sm text-muted-foreground text-center py-4">No sessions recorded today.</p>
                       )}
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="attendance" className="mt-4">
                 <Card>
                   <CardHeader>
@@ -257,28 +292,50 @@ export default function TrainerProfile() {
                     <CardDescription>Last 30 days</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {history.length > 0 ? (
                         history.map((s: any) => (
-                          <div key={s.id} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9">
-                                <AvatarFallback>{(s.location_name || 'L').charAt(0)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium">{s.date?.slice(0, 10)} — {s.location_type} — {s.location_name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  In: {new Date(s.clock_in_time).toLocaleTimeString()} | Out: {s.clock_out_time ? new Date(s.clock_out_time).toLocaleTimeString() : 'Open'} | {s.total_hours ? `${s.total_hours}h` : ''}
+                          <div key={s.id} className="p-4 border rounded-lg space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium text-sm">
+                                  {s.date ? format(new Date(s.date), 'EEE, MMM d, yyyy') : '—'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
+                                  {formatWorkedTime(s.worked_minutes)}
+                                </span>
+                                <Badge variant={s.status === 'clocked_out' ? "secondary" : "default"} className={s.status !== 'clocked_out' ? "bg-green-500" : ""}>
+                                  {s.status === 'clocked_out' ? 'Completed' : 'Active'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-green-50 rounded-lg p-2">
+                                <p className="text-[10px] font-semibold text-green-600 uppercase">Clock In</p>
+                                <p className="text-sm font-bold text-green-800">{formatTime(s.clock_in)}</p>
+                              </div>
+                              <div className={`rounded-lg p-2 ${s.clock_out ? 'bg-red-50' : 'bg-gray-50'}`}>
+                                <p className={`text-[10px] font-semibold uppercase ${s.clock_out ? 'text-red-600' : 'text-gray-400'}`}>Clock Out</p>
+                                <p className={`text-sm font-bold ${s.clock_out ? 'text-red-800' : 'text-gray-400'}`}>
+                                  {s.clock_out ? formatTime(s.clock_out) : '—'}
                                 </p>
                               </div>
                             </div>
-                            <Badge variant="outline">{s.status}</Badge>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              <span>{s.location || 'N/A'}</span>
+                              {s.area && <span>• {s.area}</span>}
+                              {s.notes && <span className="italic">| 📝 {s.notes}</span>}
+                            </div>
                           </div>
                         ))
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
                           <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p>No past attendance recorded.</p>
+                          <p>No attendance records found in the last 30 days.</p>
                         </div>
                       )}
                     </div>

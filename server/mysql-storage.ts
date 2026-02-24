@@ -671,25 +671,150 @@ export class MySQLStorage implements IStorage {
   }
 
   // ============= TRAINER ATTENDANCE (STUBS TO SATISFY INTERFACE) =============
+  // ============= TRAINER ATTENDANCE =============
   async ensureTrainerAttendanceTable(): Promise<void> {
-    // Stub
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS trainer_attendance (
+        id VARCHAR(36) PRIMARY KEY,
+        trainer_id VARCHAR(36) NOT NULL,
+        clock_in_time DATETIME(3) NOT NULL,
+        clock_out_time DATETIME(3) DEFAULT NULL,
+        worked_minutes INT DEFAULT 0,
+        location_type VARCHAR(50) NOT NULL,
+        location_name VARCHAR(100) NOT NULL,
+        notes TEXT DEFAULT NULL,
+        status VARCHAR(20) DEFAULT 'open',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX (trainer_id),
+        INDEX (clock_in_time)
+      )
+    `);
+
+    // Ensure worked_minutes column exists (migration)
+    try {
+      await db.query("ALTER TABLE trainer_attendance ADD COLUMN worked_minutes INT DEFAULT 0");
+    } catch (e) { }
+
+    // Ensure status column exists (migration)
+    try {
+      await db.query("ALTER TABLE trainer_attendance ADD COLUMN status VARCHAR(20) DEFAULT 'open'");
+    } catch (e) { }
+
+    // Ensure date column exists (migration)
+    try {
+      await db.query("ALTER TABLE trainer_attendance ADD COLUMN date DATE");
+    } catch (e) { }
+
+    // Ensure updated_at column exists (migration)
+    try {
+      await db.query("ALTER TABLE trainer_attendance ADD COLUMN updated_at DATETIME(3)");
+    } catch (e) { }
   }
+
   async getTrainerOpenAttendance(trainerId: string): Promise<any | undefined> {
-    return undefined;
+    await this.ensureTrainerAttendanceTable();
+    return await db.queryOne(
+      "SELECT * FROM trainer_attendance WHERE trainer_id = ? AND clock_out_time IS NULL ORDER BY clock_in_time DESC LIMIT 1",
+      [trainerId]
+    );
   }
+
   async clockInTrainerAttendance(trainerId: string, payload: any): Promise<any> {
-    throw new Error("Not implemented");
+    await this.ensureTrainerAttendanceTable();
+    const open = await this.getTrainerOpenAttendance(trainerId);
+    if (open) throw new Error("Open session already exists");
+
+    const id = randomUUID();
+    const now = new Date();
+    const dateOnly = now.toISOString().slice(0, 10);
+
+    await db.query(
+      `INSERT INTO trainer_attendance (id, trainer_id, date, clock_in_time, location_type, location_name, notes, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, trainerId, dateOnly, now, payload.locationType, payload.locationName, payload.notes || null, 'open', now, now]
+    );
+    return { id, trainerId, date: dateOnly, clock_in_time: now, status: 'open', ...payload };
   }
+
   async clockOutTrainerAttendance(trainerId: string, notes?: string | null): Promise<any> {
-    throw new Error("Not implemented");
+    await this.ensureTrainerAttendanceTable();
+    const open = await this.getTrainerOpenAttendance(trainerId);
+    if (!open) throw new Error("No open session found");
+
+    const now = new Date();
+    const diffMs = now.getTime() - new Date(open.clock_in_time).getTime();
+    const workedMinutes = Math.max(0, Math.floor(diffMs / 60000));
+
+    await db.query(
+      `UPDATE trainer_attendance SET clock_out_time = ?, worked_minutes = ?, status = 'completed', notes = COALESCE(?, notes), updated_at = ? WHERE id = ?`,
+      [now, workedMinutes, notes || null, now, open.id]
+    );
+
+    return { ...open, clock_out_time: now, worked_minutes: workedMinutes, status: 'completed' };
   }
+
   async getTrainerAttendanceToday(trainerId: string): Promise<any[]> {
-    return [];
+    await this.ensureTrainerAttendanceTable();
+    const sessions = await db.query(
+      `SELECT *, 
+       CASE WHEN clock_out_time IS NULL THEN 'open' ELSE 'completed' END as status,
+       clock_in_time,
+       clock_out_time
+       FROM trainer_attendance 
+       WHERE trainer_id = ? AND DATE(clock_in_time) = CURDATE() 
+       ORDER BY clock_in_time DESC`,
+      [trainerId]
+    );
+    return sessions;
   }
+
   async getTrainerAttendanceRange(trainerId: string, from: string, to: string, limit?: number, offset?: number): Promise<any[]> {
-    return [];
+    await this.ensureTrainerAttendanceTable();
+    const sessions = await db.query(
+      `SELECT *, 
+       DATE(clock_in_time) as date,
+       CASE WHEN clock_out_time IS NULL THEN 'open' ELSE 'completed' END as status,
+       clock_in_time,
+       clock_out_time,
+       ROUND(COALESCE(worked_minutes, 0) / 60, 1) as total_hours
+       FROM trainer_attendance 
+       WHERE trainer_id = ? AND DATE(clock_in_time) BETWEEN ? AND ? 
+       ORDER BY clock_in_time DESC 
+       LIMIT ? OFFSET ?`,
+      [trainerId, from, to, limit || 50, offset || 0]
+    );
+    return sessions;
   }
-  async getTrainerAttendanceSummary(trainerId: string, from?: string, to?: string): Promise<any> {
-    return {};
+
+  async getTrainerAttendanceSummary(trainerId: string): Promise<any> {
+    await this.ensureTrainerAttendanceTable();
+    const result = await db.queryOne(`
+      SELECT 
+        ROUND(COALESCE(SUM(CASE WHEN DATE(clock_in_time) = CURDATE() THEN worked_minutes ELSE 0 END), 0) / 60, 1) as todayHours,
+        ROUND(COALESCE(SUM(CASE WHEN MONTH(clock_in_time) = MONTH(CURDATE()) AND YEAR(clock_in_time) = YEAR(CURDATE()) THEN worked_minutes ELSE 0 END), 0) / 60, 1) as monthHours,
+        ROUND(COALESCE(SUM(worked_minutes), 0) / 60, 1) as totalHours
+      FROM trainer_attendance 
+      WHERE trainer_id = ?
+    `, [trainerId]);
+
+    return result || { todayHours: 0, monthHours: 0, totalHours: 0 };
+  }
+
+  async getTrainersPresentDetails(branchId?: string): Promise<{ count: number; trainers: string[] }> {
+    await this.ensureTrainerAttendanceTable();
+    let query = `
+      SELECT DISTINCT t.name 
+      FROM trainer_attendance ta
+      JOIN trainers t ON ta.trainer_id = t.id
+      WHERE DATE(ta.clock_in_time) = CURDATE() AND ta.status = 'open'
+    `;
+    const params: any[] = [];
+    if (branchId && branchId !== 'all') {
+      query += " AND t.branch_id = ?";
+      params.push(branchId);
+    }
+    const rows = await db.query(query, params);
+    const trainers = rows.map((r: any) => r.name);
+    return { count: trainers.length, trainers };
   }
 }

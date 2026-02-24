@@ -71,10 +71,22 @@ function enforceBranchAccess() {
 
 
 export async function registerRoutes(app: Express): Promise<void> {
-  // Diagnostic endpoint
   app.get("/api/me", requireAuth(), (req, res) => {
     res.json(req.user);
   });
+
+  app.get("/api/debug/trainer-links", async (req, res) => {
+    try {
+      const users = await storage.query("SELECT id, username, role FROM users WHERE role = 'trainer'");
+      const trainers = await storage.query("SELECT id, name, user_id, branch_id FROM trainers");
+      const columns = await storage.query("SHOW COLUMNS FROM trainer_attendance");
+      const attendance = await storage.query("SELECT * FROM trainer_attendance ORDER BY created_at DESC LIMIT 20");
+      res.json({ users, trainers, columns, attendance });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message, stack: e.stack });
+    }
+  });
+
   // CSRF Protection Note: These endpoints use JWT tokens in Authorization headers
   // which are not automatically sent by browsers in cross-site requests,
   // providing inherent CSRF protection. No additional CSRF tokens needed.
@@ -308,7 +320,9 @@ export async function registerRoutes(app: Express): Promise<void> {
           s.id, s.name, s.email, s.phone, s.parent_phone, s.guardian_name,
           s.address, s.program, s.batch, s.joining_date, s.branch_id,
           b.name as branch_name, b.address as branch_address, b.phone as branch_phone,
-          su.issued as uniform_issued, su.issue_date as uniform_issue_date, su.uniform_size
+          COALESCE(su.issued, s.uniform_issued, FALSE) as uniform_issued, 
+          COALESCE(su.issue_date, NULL) as uniform_issue_date, 
+          COALESCE(su.uniform_size, s.uniform_size, NULL) as uniform_size
         FROM students s
         LEFT JOIN branches b ON s.branch_id = b.id
         LEFT JOIN student_uniforms su ON s.id = su.student_id
@@ -961,7 +975,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       let feesQuery = `
         SELECT 
-          (SELECT COALESCE(SUM(p.amount), 0) FROM payments p JOIN students s1 ON p.student_id = s1.id WHERE DATE(p.created_at) = CURDATE() AND s1.status = 'active' ${branchFilter.replace(/s\./g, 's1.')}) as fees_collected_today,
+          (SELECT COALESCE(SUM(p.amount), 0) FROM payments p JOIN students s1 ON p.student_id = s1.id WHERE DATE(p.payment_date) = CURDATE() AND s1.status = 'active' ${branchFilter.replace(/s\./g, 's1.')}) as fees_collected_today,
           (SELECT COALESCE(SUM(sf.amount - sf.paid_amount), 0) FROM student_fees sf JOIN students s2 ON sf.student_id = s2.id WHERE sf.status != 'paid' AND s2.status = 'active' ${branchFilter.replace(/s\./g, 's2.')}) as pending_dues,
           (SELECT COALESCE(SUM(sf.amount - sf.paid_amount), 0) FROM student_fees sf JOIN students s2 ON sf.student_id = s2.id WHERE sf.status != 'paid' AND sf.due_date < CURDATE() AND s2.status = 'active' ${branchFilter.replace(/s\./g, 's2.')}) as overdue_amount,
           (SELECT COALESCE(SUM(p.amount), 0) FROM payments p JOIN students s3 ON p.student_id = s3.id WHERE s3.status = 'active' ${branchFilter.replace(/s\./g, 's3.')}) as total_revenue
@@ -979,11 +993,12 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       console.log(`Executing dashboard queries with branch filter: ${branchFilter || 'none'}`);
 
-      const [students, attendance, fees, programs] = await Promise.all([
+      const [students, attendance, fees, programs, trainerDetails] = await Promise.all([
         storage.query(studentsQuery, params),
         storage.query(attendanceQuery, params),
         storage.query(feesQuery, [...params, ...params, ...params, ...params]),
-        storage.query(programsQuery, params)
+        storage.query(programsQuery, params),
+        storage.getTrainersPresentDetails(branchId)
       ]);
 
       const stats = {
@@ -996,6 +1011,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         overdueAmount: parseFloat(fees[0]?.overdue_amount) || 0,
         totalRevenue: parseFloat(fees[0]?.total_revenue) || 0,
         activePrograms: programs[0]?.count || 0,
+        trainersPresentToday: trainerDetails.count,
+        trainerNames: trainerDetails.trainers,
         attendanceRate: attendance[0] && (attendance[0].present_count + attendance[0].absent_count) > 0
           ? Math.round((attendance[0].present_count / (attendance[0].present_count + attendance[0].absent_count)) * 100)
           : 0
@@ -1666,6 +1683,28 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Get trainers error:", error);
       res.status(500).json({ error: "Failed to fetch trainers" });
+    }
+  });
+
+  // Get trainer record for current authenticated user
+  // IMPORTANT: This route MUST be before /api/trainers/:id to avoid Express matching "me" as an :id param
+  app.get("/api/trainers/me", requireAuth(), async (req, res) => {
+    try {
+      console.log(`[trainers/me] Looking up trainer for user_id: ${req.user.id}`);
+      const rows = await storage.query(
+        "SELECT t.*, b.name as branch_name FROM trainers t LEFT JOIN branches b ON t.branch_id = b.id WHERE t.user_id = ? LIMIT 1",
+        [req.user.id]
+      );
+      console.log(`[trainers/me] Query returned ${rows?.length || 0} rows`);
+      if (!rows || rows.length === 0) {
+        console.warn(`[trainers/me] No trainer found for user_id: ${req.user.id}`);
+        return res.status(404).json({ error: "Trainer not found" });
+      }
+      console.log(`[trainers/me] Found trainer:`, rows[0].id, rows[0].name);
+      res.json(rows[0]);
+    } catch (error) {
+      console.error("Get trainer for current user error:", error);
+      res.status(500).json({ error: "Failed to fetch trainer record" });
     }
   });
 
@@ -2761,147 +2800,183 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Get trainer record for current authenticated user
-  app.get("/api/trainers/me", requireAuth(), async (req, res) => {
-    try {
-      const rows = await storage.query(
-        "SELECT t.*, b.name as branch_name FROM trainers t LEFT JOIN branches b ON t.branch_id = b.id WHERE t.user_id = ? LIMIT 1",
-        [req.user.id]
-      );
-      if (!rows || rows.length === 0) {
-        return res.status(404).json({ error: "Trainer record not found for user" });
-      }
-      res.json(rows[0]);
-    } catch (error) {
-      console.error("Get trainer for current user error:", error);
-      res.status(500).json({ error: "Failed to fetch trainer record" });
-    }
-  });
+  // NOTE: /api/trainers/me route has been moved above /api/trainers/:id to fix route ordering
 
-  // ================= TRAINER ATTENDANCE (ATTENDANCE-FIRST) =================
   // Clock In
-  app.post("/api/trainers/:id/attendance/clock-in", requireAuth(), async (req, res) => {
+  app.post("/api/trainers/:id/clock-in", requireAuth(), async (req, res) => {
     try {
-      const trainerIdParam = req.params.id;
-      const { locationType, locationName, locationId, notes } = req.body || {};
+      const trainerId = req.params.id;
+      const { location, area, notes } = req.body;
 
-      if (!locationType || !locationName) {
-        return res.status(400).json({ error: "locationType and locationName are required" });
-      }
+      console.log('Clock in request:', { trainerId, location, area, notes });
 
-      // Only admin/manager or the trainer themselves
-      const trainer = await storage.getTrainer(trainerIdParam);
-      const effectiveTrainerId = (trainer && (trainer as any).id) ? (trainer as any).id : trainerIdParam;
-      // If the caller is a trainer, their user id should map to trainer record; allow admins/managers
-      if (req.user.role === 'trainer') {
-        // req.user.id is a users.id; trainers table has id; allow if trainer record maps to user
-        if (trainer && (trainer as any).user_id && req.user.id !== (trainer as any).user_id) {
-          return res.status(403).json({ error: "Access denied" });
-        }
-      } else if (req.user.role !== 'admin' && req.user.role !== 'manager') {
-        return res.status(403).json({ error: "Access denied" });
-      }
+      const id = randomUUID();
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
 
-      const created = await storage.clockInTrainerAttendance(effectiveTrainerId, {
-        locationType,
-        locationName,
-        locationId: locationId || null,
-        notes: notes || null
-      });
-      return res.status(201).json(created);
-    } catch (error: any) {
-      if (String(error.message || '').includes('Open session')) {
-        return res.status(409).json({ error: "Trainer already clocked in" });
-      }
-      console.error("Clock-in error:", error);
-      return res.status(500).json({ error: "Failed to clock in" });
+      await storage.query(
+        `INSERT INTO trainer_attendance (id, trainer_id, date, clock_in_time, location_type, location_name, notes, status, created_at, updated_at)
+         VALUES (?, ?, ?, NOW(), ?, ?, ?, 'clocked_in', NOW(), NOW())`,
+        [id, trainerId, dateStr, area || 'branch', location || 'Not specified', notes || null]
+      );
+
+      const record = await storage.query(
+        `SELECT id, trainer_id, clock_in_time as clock_in, clock_out_time as clock_out,
+                location_name as location, location_type as area, notes, status, created_at
+         FROM trainer_attendance WHERE id = ?`, [id]
+      );
+      console.log('Clock in successful:', record[0]);
+      res.json(record[0]);
+    } catch (error) {
+      console.error("Clock in error:", error);
+      res.status(500).json({ error: "Failed to clock in" });
     }
   });
 
   // Clock Out
-  app.post("/api/trainers/:id/attendance/clock-out", requireAuth(), async (req, res) => {
+  app.post("/api/trainers/:id/clock-out", requireAuth(), async (req, res) => {
     try {
-      const trainerIdParam = req.params.id;
-      const { notes } = req.body || {};
+      const trainerId = req.params.id;
 
-      const trainer = await storage.getTrainer(trainerIdParam);
-      const effectiveTrainerId = (trainer && (trainer as any).id) ? (trainer as any).id : trainerIdParam;
+      const openSession = await storage.query(
+        `SELECT id, clock_in_time FROM trainer_attendance
+         WHERE trainer_id = ? AND clock_out_time IS NULL
+         ORDER BY clock_in_time DESC LIMIT 1`,
+        [trainerId]
+      );
 
-      if (req.user.role === 'trainer') {
-        if (trainer && (trainer as any).user_id && req.user.id !== (trainer as any).user_id) {
-          return res.status(403).json({ error: "Access denied" });
-        }
-      } else if (req.user.role !== 'admin' && req.user.role !== 'manager') {
-        return res.status(403).json({ error: "Access denied" });
+      if (!openSession.length) {
+        return res.status(400).json({ error: "No open session found" });
       }
 
-      const updated = await storage.clockOutTrainerAttendance(effectiveTrainerId, notes || null);
-      // add computed totals
-      const totals = await storage.getTrainerAttendanceSummary(effectiveTrainerId);
-      return res.status(200).json({ ...updated, summary: totals });
-    } catch (error: any) {
-      if (String(error.message || '').includes('No open session')) {
-        return res.status(409).json({ error: "No open session to close" });
-      }
-      console.error("Clock-out error:", error);
-      return res.status(500).json({ error: "Failed to clock out" });
+      // Calculate worked minutes
+      await storage.query(
+        `UPDATE trainer_attendance
+         SET clock_out_time = NOW(),
+             status = 'clocked_out',
+             worked_minutes = TIMESTAMPDIFF(MINUTE, clock_in_time, NOW()),
+             updated_at = NOW()
+         WHERE id = ?`,
+        [openSession[0].id]
+      );
+
+      const updated = await storage.query(
+        `SELECT id, trainer_id, clock_in_time as clock_in, clock_out_time as clock_out,
+                location_name as location, location_type as area, notes, status, worked_minutes, created_at
+         FROM trainer_attendance WHERE id = ?`,
+        [openSession[0].id]
+      );
+      res.json(updated[0]);
+    } catch (error) {
+      console.error("Clock out error:", error);
+      res.status(500).json({ error: "Failed to clock out" });
     }
   });
 
-  // Today's attendance
+  // Get today's attendance
   app.get("/api/trainers/:id/attendance/today", requireAuth(), async (req, res) => {
     try {
-      const trainerIdParam = req.params.id;
-      const trainer = await storage.getTrainer(trainerIdParam);
-      const effectiveTrainerId = (trainer && (trainer as any).id) ? (trainer as any).id : trainerIdParam;
+      const trainerId = req.params.id;
 
-      if (req.user.role === 'trainer') {
-        if (trainer && (trainer as any).user_id && req.user.id !== (trainer as any).user_id) {
-          return res.status(403).json({ error: "Access denied" });
-        }
-      } else if (req.user.role !== 'admin' && req.user.role !== 'manager') {
-        return res.status(403).json({ error: "Access denied" });
-      }
-
-      const sessions = await storage.getTrainerAttendanceToday(effectiveTrainerId);
-      const summary = await storage.getTrainerAttendanceSummary(effectiveTrainerId);
-      return res.json({ sessions, summary });
+      const records = await storage.query(
+        `SELECT id, trainer_id, clock_in_time as clock_in, clock_out_time as clock_out,
+                location_name as location, location_type as area, notes, status, worked_minutes, created_at
+         FROM trainer_attendance
+         WHERE trainer_id = ? AND date = CURDATE()
+         ORDER BY clock_in_time DESC`,
+        [trainerId]
+      );
+      res.json(records);
     } catch (error) {
-      console.error("Get today's trainer attendance error:", error);
-      return res.status(500).json({ error: "Failed to fetch today's attendance" });
+      console.error("Get today attendance error:", error);
+      res.status(500).json({ error: "Failed to fetch attendance" });
     }
   });
 
-  // History (range)
-  app.get("/api/trainers/:id/attendance", requireAuth(), async (req, res) => {
+  // Get trainer attendance history (for admin profile view)
+  app.get("/api/trainers/:id/attendance/history", requireAuth(), async (req, res) => {
     try {
-      const trainerIdParam = req.params.id;
-      const { from, to, limit, offset } = req.query as any;
-      if (!from || !to) {
-        return res.status(400).json({ error: "from and to (YYYY-MM-DD) are required" });
-      }
-      const trainer = await storage.getTrainer(trainerIdParam);
-      const effectiveTrainerId = (trainer && (trainer as any).id) ? (trainer as any).id : trainerIdParam;
+      const trainerId = req.params.id;
+      const { from, to, limit, offset } = req.query;
 
-      if (req.user.role === 'trainer') {
-        if (trainer && (trainer as any).user_id && req.user.id !== (trainer as any).user_id) {
-          return res.status(403).json({ error: "Access denied" });
-        }
-      } else if (req.user.role !== 'admin' && req.user.role !== 'manager') {
-        return res.status(403).json({ error: "Access denied" });
-      }
+      const fromDate = from || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const toDate = to || new Date().toISOString().slice(0, 10);
+      const limitVal = parseInt(limit as string) || 50;
+      const offsetVal = parseInt(offset as string) || 0;
 
-      const rows = await storage.getTrainerAttendanceRange(
-        effectiveTrainerId,
-        String(from),
-        String(to),
-        limit ? Number(limit) : 50,
-        offset ? Number(offset) : 0
+      const records = await storage.query(
+        `SELECT id, trainer_id, date, clock_in_time as clock_in, clock_out_time as clock_out,
+                location_name as location, location_type as area, notes, status, worked_minutes, created_at
+         FROM trainer_attendance
+         WHERE trainer_id = ? AND date BETWEEN ? AND ?
+         ORDER BY clock_in_time DESC
+         LIMIT ? OFFSET ?`,
+        [trainerId, fromDate, toDate, limitVal, offsetVal]
       );
-      return res.json(rows);
+
+      // Get summary stats
+      const todayStats = await storage.query(
+        `SELECT COALESCE(SUM(worked_minutes), 0) as total_minutes
+         FROM trainer_attendance
+         WHERE trainer_id = ? AND date = CURDATE()`,
+        [trainerId]
+      );
+
+      const monthStats = await storage.query(
+        `SELECT COALESCE(SUM(worked_minutes), 0) as total_minutes
+         FROM trainer_attendance
+         WHERE trainer_id = ? AND MONTH(date) = MONTH(CURDATE()) AND YEAR(date) = YEAR(CURDATE())`,
+        [trainerId]
+      );
+
+      const totalStats = await storage.query(
+        `SELECT COALESCE(SUM(worked_minutes), 0) as total_minutes
+         FROM trainer_attendance
+         WHERE trainer_id = ?`,
+        [trainerId]
+      );
+
+      res.json({
+        records,
+        summary: {
+          todayHours: Math.round((todayStats[0]?.total_minutes || 0) / 60 * 10) / 10,
+          monthHours: Math.round((monthStats[0]?.total_minutes || 0) / 60 * 10) / 10,
+          totalHours: Math.round((totalStats[0]?.total_minutes || 0) / 60 * 10) / 10
+        }
+      });
     } catch (error) {
       console.error("Get trainer attendance history error:", error);
-      return res.status(500).json({ error: "Failed to fetch attendance history" });
+      res.status(500).json({ error: "Failed to fetch trainer attendance history" });
+    }
+  });
+
+  // Admin: Get all trainer attendance
+  app.get("/api/admin/trainer-attendance", requireAuth(), requireRole(['admin']), async (req, res) => {
+    try {
+      const { date } = req.query;
+      const dateFilter = date ? "AND ta.date = ?" : "AND ta.date = CURDATE()";
+      const params = date ? [date] : [];
+
+      const records = await storage.query(`
+        SELECT 
+          ta.id, ta.trainer_id, ta.clock_in_time as clock_in, ta.clock_out_time as clock_out,
+          ta.location_name as location, ta.location_type as area, ta.notes, ta.status,
+          ta.worked_minutes, ta.created_at,
+          t.name as trainer_name,
+          t.email as trainer_email,
+          b.name as branch_name,
+          TIMESTAMPDIFF(MINUTE, ta.clock_in_time, COALESCE(ta.clock_out_time, NOW())) as minutes_worked
+        FROM trainer_attendance ta
+        JOIN trainers t ON ta.trainer_id = t.id
+        LEFT JOIN branches b ON t.branch_id = b.id
+        WHERE 1=1 ${dateFilter}
+        ORDER BY ta.clock_in_time DESC
+      `, params);
+
+      res.json(records);
+    } catch (error) {
+      console.error("Get admin trainer attendance error:", error);
+      res.status(500).json({ error: "Failed to fetch trainer attendance" });
     }
   });
 }

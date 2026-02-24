@@ -58,15 +58,6 @@ export interface IStorage {
   upsertAttendance(attendance: InsertAttendance): Promise<Attendance>;
   updateAttendance(id: string, attendance: Partial<Attendance>): Promise<Attendance | undefined>;
 
-  // Trainer Attendance (attendance-first design)
-  ensureTrainerAttendanceTable(): Promise<void>;
-  getTrainerOpenAttendance(trainerId: string): Promise<any | undefined>;
-  clockInTrainerAttendance(trainerId: string, payload: { locationType: string; locationName: string; locationId?: string | null; notes?: string | null; }): Promise<any>;
-  clockOutTrainerAttendance(trainerId: string, notes?: string | null): Promise<any>;
-  getTrainerAttendanceToday(trainerId: string): Promise<any[]>;
-  getTrainerAttendanceRange(trainerId: string, from: string, to: string, limit?: number, offset?: number): Promise<any[]>;
-  getTrainerAttendanceSummary(trainerId: string, from?: string, to?: string): Promise<any>;
-
   // Fees
   getFees(studentId?: string): Promise<Fee[]>;
   createFee(fee: InsertFee): Promise<Fee>;

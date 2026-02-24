@@ -29,6 +29,8 @@ interface DashboardStats {
   feesCollectedToday: number;
   pendingDues: number;
   totalRevenue: number;
+  trainersPresentToday: number;
+  trainerNames: string[];
 }
 
 export default function Dashboard() {
@@ -40,6 +42,8 @@ export default function Dashboard() {
     feesCollectedToday: 0,
     pendingDues: 0,
     totalRevenue: 0,
+    trainersPresentToday: 0,
+    trainerNames: []
   });
   const [recentStudents, setRecentStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -110,7 +114,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card className="border-l-4 border-l-blue-500 shadow-sm transition-all hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Students</CardTitle>
@@ -152,6 +156,21 @@ export default function Dashboard() {
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">{formatAmount(stats.pendingDues)}</div>
               <p className="text-xs text-muted-foreground">Outstanding fees</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-purple-500 shadow-sm transition-all hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Trainers</CardTitle>
+              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.trainersPresentToday}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.trainerNames.length > 0
+                  ? stats.trainerNames.join(", ")
+                  : "None active now"}
+              </p>
             </CardContent>
           </Card>
         </div>

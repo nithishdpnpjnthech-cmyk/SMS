@@ -23,6 +23,7 @@ import CollectFees from "@/pages/fees/CollectFees";
 import TrainerList from "@/pages/trainers/TrainerList";
 import TrainerProfile from "@/pages/trainers/TrainerProfile";
 import EditTrainer from "@/pages/trainers/EditTrainer";
+import TrainerAttendance from "@/pages/trainers/TrainerAttendance";
 import MasterData from "@/pages/admin/MasterData";
 import BranchManagement from "@/pages/branches/BranchManagement";
 import BranchDetail from "@/pages/branches/BranchDetail";
@@ -67,6 +68,7 @@ function Router() {
       <ProtectedRoute path="/fees/collect" component={CollectFees} allowedRoles={["admin", "receptionist"]} />
 
       <ProtectedRoute path="/trainers" component={TrainerList} allowedRoles={["admin", "manager"]} />
+      <ProtectedRoute path="/trainers/attendance" component={TrainerAttendance} allowedRoles={["admin", "manager"]} />
       <ProtectedRoute path="/trainers/:id" component={TrainerProfile} allowedRoles={["admin", "manager"]} />
       <ProtectedRoute path="/trainers/:id/edit" component={EditTrainer} allowedRoles={["admin", "manager"]} />
 

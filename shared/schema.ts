@@ -99,7 +99,7 @@ export const studentEnrollments = pgTable("student_enrollments", {
 export const studentFees = pgTable("student_fees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   studentId: varchar("student_id").notNull(),
-  enrollmentId: varchar("enrollment_id"), 
+  enrollmentId: varchar("enrollment_id"),
   month: integer("month").notNull(), // 1-12
   year: integer("year").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
@@ -122,7 +122,9 @@ export const payments = pgTable("payments", {
 // Schema exports
 export const insertUserSchema = createInsertSchema(users);
 export const insertBranchSchema = createInsertSchema(branches);
-export const insertStudentSchema = createInsertSchema(students);
+export const insertStudentSchema = createInsertSchema(students).extend({
+  programs: z.array(z.string()).optional(),
+});
 export const insertTrainerSchema = createInsertSchema(trainers);
 export const insertAttendanceSchema = createInsertSchema(attendance);
 export const insertFeeSchema = createInsertSchema(fees);

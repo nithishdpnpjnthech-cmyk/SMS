@@ -1,248 +1,306 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/lib/auth";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Clock, History } from "lucide-react";
+import { Clock, MapPin, LogIn, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function TrainerDashboard() {
-  const [trainerId, setTrainerId] = useState<string | null>(null);
-  const [today, setToday] = useState<{ sessions: any[]; summary: any } | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [locationType, setLocationType] = useState<string>("");
-  const [locationName, setLocationName] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
-  const [isClockingIn, setIsClockingIn] = useState(false);
-  const [isClockingOut, setIsClockingOut] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [trainerId, setTrainerId] = useState<string | null>(null);
+  const [location, setLocation] = useState("");
+  const [area, setArea] = useState("");
+  const [notes, setNotes] = useState("");
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasOpenSession, setHasOpenSession] = useState(false);
 
   useEffect(() => {
-    initialize();
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  const initialize = async () => {
+  useEffect(() => {
+    loadTrainerData();
+  }, []);
+
+  const loadTrainerData = async () => {
     try {
-      setIsLoading(true);
+      console.log('Loading trainer data for user:', user?.id);
       const me = await api.get("/api/trainers/me");
-      if (!me?.id) {
-        setTrainerId(null);
-        setToday({ sessions: [], summary: { todayHours: 0, monthHours: 0, totalHours: 0 } });
-        setHistory([]);
-        return;
+      console.log('Trainer data received:', me);
+      if (me?.id) {
+        setTrainerId(me.id);
+        await loadTodayAttendance(me.id);
+      } else {
+        toast({
+          title: "Setup Required",
+          description: "Please contact admin to link your trainer account",
+          variant: "destructive"
+        });
       }
-      setTrainerId(me.id);
-      const [todayResp, historyResp] = await Promise.all([
-        api.getTrainerAttendanceToday(me.id),
-        api.getTrainerAttendanceRange(me.id, {
-          from: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10),
-          to: new Date().toISOString().slice(0, 10),
-          limit: 50,
-          offset: 0,
-        }),
-      ]);
-      setToday(todayResp || { sessions: [], summary: { todayHours: 0, monthHours: 0, totalHours: 0 } });
-      setHistory(Array.isArray(historyResp) ? historyResp : []);
-    } catch (error) {
-      setTrainerId(null);
-      setToday({ sessions: [], summary: { todayHours: 0, monthHours: 0, totalHours: 0 } });
-      setHistory([]);
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      console.error("Failed to load trainer data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load trainer profile. Contact admin.",
+        variant: "destructive"
+      });
     }
   };
 
-  const hasOpenSession = !!today?.sessions?.find((s: any) => s.status === "open");
+  const loadTodayAttendance = async (id: string) => {
+    try {
+      const records = await api.getTrainerAttendanceToday(id);
+      setRecentActivity(records || []);
+      setHasOpenSession(records.some((r: any) => !r.clock_out));
+    } catch (error) {
+      console.error("Failed to load attendance:", error);
+    }
+  };
 
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading trainer portal...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const handleClockIn = async () => {
+    if (!trainerId) {
+      toast({ title: "Error", description: "Trainer ID not found", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      console.log('Clock in with:', { trainerId, location, area, notes });
+      await api.trainerClockIn(trainerId, {
+        location: location.trim() || 'Not specified',
+        area: area.trim() || undefined,
+        notes: notes.trim() || undefined
+      });
+      toast({ title: "Success", description: "Clocked in successfully" });
+      setLocation("");
+      setArea("");
+      setNotes("");
+      await loadTodayAttendance(trainerId);
+    } catch (error: any) {
+      console.error('Clock in error:', error);
+      toast({ title: "Error", description: error.message || "Failed to clock in", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    if (!trainerId) {
+      toast({ title: "Error", description: "Trainer ID not found", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      console.log('Clock out for trainer:', trainerId);
+      await api.trainerClockOut(trainerId);
+      toast({ title: "Success", description: "Clocked out successfully" });
+      await loadTodayAttendance(trainerId);
+    } catch (error: any) {
+      console.error('Clock out error:', error);
+      toast({ title: "Error", description: error.message || "Failed to clock out", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+
+  const formatActivityTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <span className="text-2xl font-bold text-primary">{user?.name?.[0] || 'T'}</span>
+          </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading">Trainer Portal</h1>
-            <p className="text-muted-foreground">Welcome back, {user?.name || 'Trainer'}.</p>
+            <h1 className="text-2xl font-bold">TrainerPro</h1>
+            <p className="text-sm text-muted-foreground">{user?.name || 'Trainer'}</p>
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="bg-primary text-primary-foreground border-none">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg opacity-90">Today</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold">{today?.summary?.todayHours || 0}h</div>
-              <p className="text-sm opacity-80 mt-1">Worked hours</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">This Month</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold">{today?.summary?.monthHours || 0}h</div>
-              <p className="text-sm text-muted-foreground mt-1">Total hours</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Lifetime</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold">{today?.summary?.totalHours || 0}h</div>
-              <p className="text-sm text-muted-foreground mt-1">Across all sessions</p>
-            </CardContent>
-          </Card>
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            <Card className="border-none shadow-lg">
+              <CardContent className="p-8">
+                <div className="flex items-center gap-2 mb-6">
+                  <Clock className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold">Time Tracking</h2>
+                </div>
+
+                <div className="text-center mb-8">
+                  <p className="text-sm text-muted-foreground mb-2">CURRENT TIME</p>
+                  <div className="text-6xl font-bold mb-2">{formatTime(currentTime)}</div>
+                  <p className="text-primary font-medium">{formatDate(currentTime)}</p>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>Location</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="e.g., Downtown Branch"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>Specific Area</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="e.g., Weight Room, Studio A"
+                      value={area}
+                      onChange={(e) => setArea(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <span>✏️</span>
+                      <span>Notes</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Anything to add?"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Button
+                    size="lg"
+                    className="bg-green-500 hover:bg-green-600 text-white h-14"
+                    onClick={handleClockIn}
+                    disabled={loading || hasOpenSession}
+                  >
+                    <LogIn className="h-5 w-5 mr-2" />
+                    Clock In
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="destructive"
+                    className="h-14"
+                    onClick={handleClockOut}
+                    disabled={loading || !hasOpenSession}
+                  >
+                    <LogOut className="h-5 w-5 mr-2" />
+                    Clock Out
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div>
+            <Card className="border-none shadow-lg">
+              <CardContent className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold">Recent Activity</h2>
+                  <span className="text-sm px-3 py-1 bg-primary/10 text-primary rounded-full">Today</span>
+                </div>
+
+                <div className="space-y-4">
+                  {recentActivity.length > 0 ? (
+                    recentActivity.map((activity) => {
+                      // Calculate worked duration
+                      const clockInDate = new Date(activity.clock_in);
+                      const clockOutDate = activity.clock_out ? new Date(activity.clock_out) : null;
+                      const workedMs = clockOutDate
+                        ? clockOutDate.getTime() - clockInDate.getTime()
+                        : (Date.now() - clockInDate.getTime());
+                      const workedHours = Math.floor(workedMs / (1000 * 60 * 60));
+                      const workedMins = Math.floor((workedMs % (1000 * 60 * 60)) / (1000 * 60));
+
+                      return (
+                        <div key={activity.id} className="p-4 rounded-lg border space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className={`text-xs font-semibold px-2 py-1 rounded ${activity.clock_out
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-green-100 text-green-700'
+                              }`}>
+                              {activity.clock_out ? 'COMPLETED' : '● ACTIVE SESSION'}
+                            </span>
+                            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
+                              {workedHours > 0 ? `${workedHours}h ${workedMins}m` : `${workedMins}m`}
+                              {!activity.clock_out && ' (ongoing)'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-green-50 rounded-lg p-2.5">
+                              <p className="text-[10px] font-semibold text-green-600 uppercase mb-0.5">Clock In</p>
+                              <p className="text-sm font-bold text-green-800">{formatActivityTime(activity.clock_in)}</p>
+                            </div>
+                            <div className={`rounded-lg p-2.5 ${activity.clock_out ? 'bg-red-50' : 'bg-gray-50'}`}>
+                              <p className={`text-[10px] font-semibold uppercase mb-0.5 ${activity.clock_out ? 'text-red-600' : 'text-gray-400'}`}>Clock Out</p>
+                              <p className={`text-sm font-bold ${activity.clock_out ? 'text-red-800' : 'text-gray-400'}`}>
+                                {activity.clock_out ? formatActivityTime(activity.clock_out) : '—'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium">{activity.location}</p>
+                              {activity.area && <p className="text-xs text-muted-foreground">• {activity.area}</p>}
+                            </div>
+                          </div>
+                          {activity.notes && (
+                            <p className="text-xs text-muted-foreground italic">📝 {activity.notes}</p>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No activity today
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Attendance</CardTitle>
-            <CardDescription>Clock in/out and record your location</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="w-full">
-                <Select value={locationType} onValueChange={setLocationType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Location type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="branch">Branch</SelectItem>
-                    <SelectItem value="school">School</SelectItem>
-                    <SelectItem value="college">College</SelectItem>
-                    <SelectItem value="corporate">Corporate</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+        <Card className="border-none shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                <span className="text-lg font-bold">{user?.name?.[0] || 'T'}</span>
               </div>
-              <div className="w-full md:col-span-2">
-                <Input placeholder="Location name" value={locationName} onChange={(e) => setLocationName(e.target.value)} />
+              <div>
+                <p className="font-semibold">{user?.name || 'Trainer'}</p>
+                <p className="text-sm text-muted-foreground">Lead Trainer</p>
               </div>
-              <div className="w-full">
-                <Input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <Button
-                className="gap-2"
-                disabled={!trainerId || !locationType || !locationName || hasOpenSession || isClockingIn}
-                onClick={async () => {
-                  try {
-                    setIsClockingIn(true);
-                    await api.trainerClockIn(trainerId!, { locationType, locationName, notes });
-                    const todayResp = await api.getTrainerAttendanceToday(trainerId!);
-                    setToday(todayResp);
-                    toast({ title: "Clocked in" });
-                  } catch (e: any) {
-                    toast({ title: "Error", description: e.message || "Failed to clock in", variant: "destructive" });
-                  } finally {
-                    setIsClockingIn(false);
-                  }
-                }}
-              >
-                <Clock className="h-4 w-4" /> Clock In
-              </Button>
-              <Button
-                variant="outline"
-                className="gap-2"
-                disabled={!trainerId || !hasOpenSession || isClockingOut}
-                onClick={async () => {
-                  try {
-                    setIsClockingOut(true);
-                    await api.trainerClockOut(trainerId!, { notes });
-                    const todayResp = await api.getTrainerAttendanceToday(trainerId!);
-                    setToday(todayResp);
-                    toast({ title: "Clocked out" });
-                  } catch (e: any) {
-                    toast({ title: "Error", description: e.message || "Failed to clock out", variant: "destructive" });
-                  } finally {
-                    setIsClockingOut(false);
-                  }
-                }}
-              >
-                <Clock className="h-4 w-4" /> Clock Out
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Today’s attendance</CardTitle>
-            <CardDescription>Sessions recorded today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {today?.sessions?.length ? (
-                today.sessions.map((s: any) => (
-                  <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <History className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{s.location_type} — {s.location_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          In: {new Date(s.clock_in_time).toLocaleTimeString()} {s.clock_out_time ? `| Out: ${new Date(s.clock_out_time).toLocaleTimeString()}` : '| Open'}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline">{s.status}</Badge>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No sessions recorded today.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Past attendance</CardTitle>
-            <CardDescription>Last 30 days</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {history.length ? (
-                history.map((s: any) => (
-                  <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <History className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{s.date?.slice(0, 10)} — {s.location_type} — {s.location_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          In: {new Date(s.clock_in_time).toLocaleTimeString()} | Out: {s.clock_out_time ? new Date(s.clock_out_time).toLocaleTimeString() : 'Open'} | {s.total_hours ? `${s.total_hours}h` : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline">{s.status}</Badge>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No past sessions.</p>
-              )}
             </div>
           </CardContent>
         </Card>
