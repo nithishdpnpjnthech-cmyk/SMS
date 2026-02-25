@@ -15,158 +15,158 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 interface AttendanceRecord {
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   id: string;
   student_id: string;
   student_name: string;
@@ -225,16 +225,16 @@ export default function AttendanceDashboard() {
   const handleCheckOut = async (record: AttendanceRecord) => {
     try {
       const now = new Date();
-      
+
       const updates = {
         checkOut: now.toISOString()  // Use camelCase to match backend expectation
       };
-      
+
       console.log('Checking out with datetime:', now.toISOString());
-      
+
       await api.updateAttendance(record.id, updates);
       await loadAttendanceData();
-      
+
       toast({
         title: "Success",
         description: `Check-out recorded at ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
@@ -251,12 +251,12 @@ export default function AttendanceDashboard() {
 
   const handleUpdateAttendance = async (newStatus: string) => {
     if (!editingRecord) return;
-    
+
     setIsUpdating(true);
     try {
       // Map frontend status to backend format
       let backendStatus, isLate;
-      
+
       if (newStatus === 'present') {
         backendStatus = 'PRESENT';
         isLate = false;
@@ -267,16 +267,16 @@ export default function AttendanceDashboard() {
         backendStatus = 'ABSENT';
         isLate = false;
       }
-      
+
       const updates = {
         status: backendStatus,
         isLate: isLate,
         checkIn: backendStatus === 'PRESENT' ? new Date().toISOString() : null,
         checkOut: null
       };
-      
+
       await api.updateAttendance(editingRecord.id, updates);
-      
+
       setEditingRecord(null);
       await loadAttendanceData();
       toast({
@@ -302,9 +302,10 @@ export default function AttendanceDashboard() {
   const loadAttendanceData = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      
-      let attendanceData, studentsData;
-      
+
+      let attendanceData: any[] = [];
+      let studentsData: Student[] = [];
+
       if (user?.role === "admin") {
         const branchId = new URLSearchParams(window.location.search).get("branchId");
         [attendanceData, studentsData] = await Promise.all([
@@ -318,11 +319,11 @@ export default function AttendanceDashboard() {
           api.getStudents()
         ]);
       }
-      
+
       // Create a complete list showing all students with their attendance status
-      const allStudentsWithStatus = studentsData.map(student => {
-        const attendanceRecord = attendanceData.find(record => record.student_id === student.id);
-        
+      const allStudentsWithStatus: AttendanceRecord[] = studentsData.map((student: Student) => {
+        const attendanceRecord = attendanceData.find((record: any) => record.student_id === student.id);
+
         if (attendanceRecord) {
           // Student has an attendance record
           return {
@@ -347,19 +348,19 @@ export default function AttendanceDashboard() {
           };
         }
       });
-      
-  setAttendance(allStudentsWithStatus);
-  setStudents(studentsData);
-      
+
+      setAttendance(allStudentsWithStatus);
+      setStudents(studentsData);
+
       // Calculate correct stats from the complete list (allStudentsWithStatus)
-      const totalPresent = allStudentsWithStatus.filter(a => 
+      const totalPresent = allStudentsWithStatus.filter(a =>
         a.status === 'PRESENT' || a.status === 'present'
       ).length;
       const totalLate = allStudentsWithStatus.filter(a => Boolean(a.is_late)).length;
-      const totalAbsent = allStudentsWithStatus.filter(a => 
+      const totalAbsent = allStudentsWithStatus.filter(a =>
         a.status === 'ABSENT' || a.status === 'absent'
       ).length;
-      const notMarked = allStudentsWithStatus.filter(a => 
+      const notMarked = allStudentsWithStatus.filter(a =>
         a.status === 'NOT_MARKED'
       ).length;
       const totalStudents = allStudentsWithStatus.length;
@@ -396,14 +397,14 @@ export default function AttendanceDashboard() {
       const recordProgram = record.program || getStudentProgram(record.student_id);
       const recordBatch = record.batch || getStudentBatch(record.student_id);
       const recordStatus = record.status || '';
-      
+
       const matchesSearch = studentName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesProgram = selectedProgram === "all" || 
+      const matchesProgram = selectedProgram === "all" ||
         recordProgram.toLowerCase() === selectedProgram.toLowerCase();
-      const matchesBatch = selectedBatch === "all" || 
+      const matchesBatch = selectedBatch === "all" ||
         recordBatch.toLowerCase() === selectedBatch.toLowerCase();
       const matchesStatus = statusFilter === "all" || recordStatus.toLowerCase() === statusFilter.toLowerCase();
-      
+
       return matchesSearch && matchesProgram && matchesBatch && matchesStatus;
     });
   }, [attendance, students, searchTerm, selectedProgram, selectedBatch, statusFilter]);
@@ -423,23 +424,24 @@ export default function AttendanceDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading">Attendance</h1>
-            <p className="text-muted-foreground">Track and manage student attendance records.</p>
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Attendance</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Track and manage student attendance records.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {hasPermission('attendance.write') && (
               <>
-                <Link href="/attendance/mark">
-                  <Button className="gap-2">
+                <Link href="/attendance/mark" className="w-full sm:w-auto">
+                  <Button className="w-full sm:w-auto gap-2 shadow-sm">
                     <Plus className="h-4 w-4" />
                     Mark Attendance
                   </Button>
                 </Link>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto shadow-sm"
                   onClick={async () => {
                     if (confirm('Clear all attendance for today? This will reset all records.')) {
                       try {
@@ -459,7 +461,7 @@ export default function AttendanceDashboard() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Present Today</CardTitle>
@@ -512,17 +514,17 @@ export default function AttendanceDashboard() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Today's Attendance</CardTitle>
-            <CardDescription>Student attendance records for {new Date().toLocaleDateString()}</CardDescription>
+        <Card className="mx-1 sm:mx-0 shadow-sm border-muted/50">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-lg sm:text-xl">Today's Attendance</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Student attendance records for {new Date().toLocaleDateString()}</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search by student name..." 
+                <Input
+                  placeholder="Search by student name..."
                   className="pl-9"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -570,142 +572,138 @@ export default function AttendanceDashboard() {
               </div>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student Name</TableHead>
-                    <TableHead>Program</TableHead>
-                    <TableHead>Batch</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAttendance.length > 0 ? (
-                    filteredAttendance.map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-medium">{record.student_name || 'N/A'}</TableCell>
-                        <TableCell>{record.program || getStudentProgram(record.student_id) || 'N/A'}</TableCell>
-                        <TableCell>{record.batch || getStudentBatch(record.student_id) || 'N/A'}</TableCell>
-                        <TableCell>{record.check_in ? (
-                          (() => {
-                            try {
-                              const checkInValue = record.check_in;
-                              if (!checkInValue || checkInValue === 'N/A') return 'N/A';
-                              
-                              // Handle full datetime or time-only formats
-                              let dateTime;
-                              if (checkInValue.includes('T') || checkInValue.includes(' ')) {
-                                // Full datetime format
-                                dateTime = new Date(checkInValue);
-                              } else {
-                                // Time-only format - combine with today's date
-                                const today = new Date().toISOString().split('T')[0];
-                                dateTime = new Date(`${today}T${checkInValue}`);
+            <div className="rounded-md border overflow-x-auto">
+              <div className="min-w-[800px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-4">Student Name</TableHead>
+                      <TableHead className="px-4">Program</TableHead>
+                      <TableHead className="px-4">Batch</TableHead>
+                      <TableHead className="px-4">Check In</TableHead>
+                      <TableHead className="px-4">Check Out</TableHead>
+                      <TableHead className="px-4">Status</TableHead>
+                      <TableHead className="text-right px-4">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAttendance.length > 0 ? (
+                      filteredAttendance.map((record) => (
+                        <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
+                          <TableCell className="font-medium px-4">{record.student_name || 'N/A'}</TableCell>
+                          <TableCell className="px-4">{record.program || getStudentProgram(record.student_id) || 'N/A'}</TableCell>
+                          <TableCell className="px-4">{record.batch || getStudentBatch(record.student_id) || 'N/A'}</TableCell>
+                          <TableCell className="px-4">{record.check_in ? (
+                            (() => {
+                              try {
+                                const checkInValue = record.check_in;
+                                if (!checkInValue || checkInValue === 'N/A') return 'N/A';
+
+                                let dateTime;
+                                if (checkInValue.includes('T') || checkInValue.includes(' ')) {
+                                  dateTime = new Date(checkInValue);
+                                } else {
+                                  const today = new Date().toISOString().split('T')[0];
+                                  dateTime = new Date(`${today}T${checkInValue}`);
+                                }
+
+                                if (isNaN(dateTime.getTime())) return 'N/A';
+
+                                return dateTime.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                });
+                              } catch {
+                                return 'N/A';
                               }
-                              
-                              if (isNaN(dateTime.getTime())) return 'N/A';
-                              
-                              return dateTime.toLocaleTimeString('en-US', {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                hour12: true
-                              });
-                            } catch {
-                              return 'N/A';
-                            }
-                          })()
-                        ) : 'N/A'}</TableCell>
-                        <TableCell>{record.check_out ? (
-                          (() => {
-                            try {
-                              const checkOutValue = record.check_out;
-                              if (!checkOutValue || checkOutValue === 'N/A') return 'N/A';
-                              
-                              // Handle full datetime or time-only formats
-                              let dateTime;
-                              if (checkOutValue.includes('T') || checkOutValue.includes(' ')) {
-                                // Full datetime format
-                                dateTime = new Date(checkOutValue);
-                              } else {
-                                // Time-only format - combine with today's date
-                                const today = new Date().toISOString().split('T')[0];
-                                dateTime = new Date(`${today}T${checkOutValue}`);
+                            })()
+                          ) : 'N/A'}</TableCell>
+                          <TableCell className="px-4">{record.check_out ? (
+                            (() => {
+                              try {
+                                const checkOutValue = record.check_out;
+                                if (!checkOutValue || checkOutValue === 'N/A') return 'N/A';
+
+                                let dateTime;
+                                if (checkOutValue.includes('T') || checkOutValue.includes(' ')) {
+                                  dateTime = new Date(checkOutValue);
+                                } else {
+                                  const today = new Date().toISOString().split('T')[0];
+                                  dateTime = new Date(`${today}T${checkOutValue}`);
+                                }
+
+                                if (isNaN(dateTime.getTime())) return 'N/A';
+
+                                return dateTime.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                });
+                              } catch {
+                                return 'N/A';
                               }
-                              
-                              if (isNaN(dateTime.getTime())) return 'N/A';
-                              
-                              return dateTime.toLocaleTimeString('en-US', {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                hour12: true
-                              });
-                            } catch {
-                              return 'N/A';
-                            }
-                          })()
-                        ) : 'N/A'}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={
-                              record.status === 'PRESENT' || record.status === 'present' ? 
-                                (record.is_late ? 'secondary' : 'default') : 
-                              record.status === 'NOT_MARKED' ? 'secondary' :
-                              'destructive'
-                            }
-                            className={
-                              record.status === 'PRESENT' || record.status === 'present' ? 
-                                (record.is_late ? 'bg-orange-100 text-orange-700 hover:bg-orange-100' : 'bg-green-100 text-green-700 hover:bg-green-100') :
-                              record.status === 'NOT_MARKED' ? 'bg-gray-100 text-gray-700 hover:bg-gray-100' :
-                              'bg-red-100 text-red-700 hover:bg-red-100'
-                            }
-                          >
-                            {record.status === 'PRESENT' || record.status === 'present' ? 
-                              (record.is_late ? 'Late' : 'Present') :
-                             record.status === 'ABSENT' ? 'Absent' :
-                             record.status === 'NOT_MARKED' ? 'Not Marked' :
-                             record.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            {record.check_in && !record.check_out && (record.status === 'PRESENT' || record.status === 'present') ? (
-                              <Button size="sm" variant="outline" onClick={() => handleCheckOut(record)}>
-                                Check Out
+                            })()
+                          ) : 'N/A'}</TableCell>
+                          <TableCell className="px-4">
+                            <Badge
+                              variant={
+                                record.status === 'PRESENT' || record.status === 'present' ?
+                                  (record.is_late ? 'secondary' : 'default') :
+                                  record.status === 'NOT_MARKED' ? 'secondary' :
+                                    'destructive'
+                              }
+                              className={
+                                record.status === 'PRESENT' || record.status === 'present' ?
+                                  (record.is_late ? 'bg-orange-100 text-orange-700 hover:bg-orange-100 shadow-none' : 'bg-green-100 text-green-700 hover:bg-green-100 shadow-none') :
+                                  record.status === 'NOT_MARKED' ? 'bg-gray-100 text-gray-700 hover:bg-gray-100 shadow-none' :
+                                    'bg-red-100 text-red-700 hover:bg-red-100 shadow-none'
+                              }
+                            >
+                              {record.status === 'PRESENT' || record.status === 'present' ?
+                                (record.is_late ? 'Late' : 'Present') :
+                                record.status === 'ABSENT' ? 'Absent' :
+                                  record.status === 'NOT_MARKED' ? 'Not Marked' :
+                                    record.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right px-4">
+                            <div className="flex gap-2 justify-end">
+                              {record.check_in && !record.check_out && (record.status === 'PRESENT' || record.status === 'present') ? (
+                                <Button size="sm" variant="outline" onClick={() => handleCheckOut(record)} className="h-8 shadow-sm">
+                                  Check Out
+                                </Button>
+                              ) : null}
+                              <Button size="sm" variant="outline" onClick={() => handleEditAttendance(record)} className="h-8 shadow-sm">
+                                <Edit2 className="h-3 w-3 mr-1" />
+                                Edit
                               </Button>
-                            ) : null}
-                            <Button size="sm" variant="outline" onClick={() => handleEditAttendance(record)}>
-                              <Edit2 className="h-3 w-3 mr-1" />
-                              Edit
-                            </Button>
-                          </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          {attendance.length === 0 ? (
+                            <div className="text-center py-8">
+                              <p className="text-muted-foreground mb-4">No attendance records for today.</p>
+                              <Link href="/attendance/mark">
+                                <Button className="shadow-sm">
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Start Taking Attendance
+                                </Button>
+                              </Link>
+                            </div>
+                          ) : (
+                            "No attendance records match your search criteria."
+                          )}
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
-                        {attendance.length === 0 ? (
-                          <div className="text-center py-8">
-                            <p className="text-muted-foreground mb-4">No attendance records for today.</p>
-                            <Link href="/attendance/mark">
-                              <Button>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Start Taking Attendance
-                              </Button>
-                            </Link>
-                          </div>
-                        ) : (
-                          "No attendance records match your search criteria."
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </CardContent>
         </Card>

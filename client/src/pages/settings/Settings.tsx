@@ -88,7 +88,7 @@ export default function Settings() {
         darkMode,
         savedAt: new Date().toISOString()
       }));
-      
+
       toast({
         title: "Success",
         description: "Settings saved successfully"
@@ -110,11 +110,11 @@ export default function Settings() {
         darkMode,
         exportDate: new Date().toISOString()
       };
-      
+
       const dataStr = JSON.stringify(settingsData, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(dataBlob);
-      
+
       const link = document.createElement('a');
       link.href = url;
       link.download = `settings-export-${new Date().toISOString().split('T')[0]}.json`;
@@ -122,7 +122,7 @@ export default function Settings() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: "Success",
         description: "Settings exported successfully"
@@ -143,9 +143,9 @@ export default function Settings() {
         timestamp: new Date().toISOString(),
         version: '1.0'
       };
-      
+
       localStorage.setItem('settingsBackup', JSON.stringify(backup));
-      
+
       toast({
         title: "Success",
         description: "Settings backed up successfully"
@@ -164,13 +164,13 @@ export default function Settings() {
       // Clear relevant cache items
       const keysToKeep = ['user', 'userRole', 'settings', 'settingsBackup'];
       const allKeys = Object.keys(localStorage);
-      
+
       allKeys.forEach(key => {
         if (!keysToKeep.includes(key)) {
           localStorage.removeItem(key);
         }
       });
-      
+
       toast({
         title: "Success",
         description: "Cache cleared successfully"
@@ -186,10 +186,10 @@ export default function Settings() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight font-heading">Settings</h1>
-          <p className="text-muted-foreground">Manage your application preferences and system settings.</p>
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Settings</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Manage your application preferences and system settings.</p>
         </div>
 
         <div className="grid gap-6">
@@ -205,38 +205,39 @@ export default function Settings() {
             <CardContent className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="academyName">Academy Name</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     id="academyName"
-                    placeholder="Enter academy name (e.g., Excellence Academy)"
+                    placeholder="Enter academy name"
                     value={academyName}
                     onChange={(e) => setAcademyName(e.target.value)}
                     className="flex-1"
                   />
-                  <Button 
+                  <Button
                     onClick={handleSaveAcademyName}
                     disabled={isLoadingAcademy}
+                    className="w-full sm:w-auto"
                   >
                     {isLoadingAcademy ? 'Saving...' : 'Save'}
                   </Button>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  This name will appear in the student portal instead of "Student Portal". Leave empty to use default.
+                <p className="text-sm text-muted-foreground mt-1 text-center sm:text-left">
+                  This name will appear in the student portal. Leave empty to use default.
                 </p>
               </div>
             </CardContent>
           </Card>
 
           {/* Notifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="shadow-sm border-muted/50">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Bell className="h-5 w-5" />
                 Notifications
               </CardTitle>
               <CardDescription>Configure how you receive notifications and alerts.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 sm:px-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Push Notifications</Label>
@@ -256,58 +257,60 @@ export default function Settings() {
           </Card>
 
           {/* Appearance */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="shadow-sm border-muted/50">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Palette className="h-5 w-5" />
                 Appearance
               </CardTitle>
               <CardDescription>Customize the look and feel of your dashboard.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label>Theme</Label>
-                <Select defaultValue="light">
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Language</Label>
-                <Select defaultValue="en">
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Spanish</SelectItem>
-                    <SelectItem value="fr">French</SelectItem>
-                  </SelectContent>
-                </Select>
+            <CardContent className="space-y-4 px-4 sm:px-6">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Theme</Label>
+                  <Select defaultValue="light">
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">Light</SelectItem>
+                      <SelectItem value="dark">Dark</SelectItem>
+                      <SelectItem value="system">System</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Language</Label>
+                  <Select defaultValue="en">
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="es">Spanish</SelectItem>
+                      <SelectItem value="fr">French</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Security */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="shadow-sm border-muted/50">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Shield className="h-5 w-5" />
                 Security
               </CardTitle>
               <CardDescription>Manage your account security and privacy settings.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
+            <CardContent className="space-y-4 px-4 sm:px-6">
+              <div className="space-y-2">
                 <Label>Session Timeout</Label>
                 <Select defaultValue="30">
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -318,11 +321,11 @@ export default function Settings() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-4">
-                <Button variant="outline" onClick={() => toast({ title: "Info", description: "Password change feature coming soon" })}>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Button variant="outline" onClick={() => toast({ title: "Info", description: "Password change feature coming soon" })} className="w-full sm:w-auto">
                   Change Password
                 </Button>
-                <Button variant="outline" onClick={() => toast({ title: "Info", description: "2FA feature coming soon" })}>
+                <Button variant="outline" onClick={() => toast({ title: "Info", description: "2FA feature coming soon" })} className="w-full sm:w-auto">
                   Enable 2FA
                 </Button>
               </div>
@@ -330,62 +333,64 @@ export default function Settings() {
           </Card>
 
           {/* System */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="shadow-sm border-muted/50">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Database className="h-5 w-5" />
                 System
               </CardTitle>
               <CardDescription>System-wide settings and data management.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label>Default Branch</Label>
-                <Select defaultValue="main">
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="main">Main Branch</SelectItem>
-                    <SelectItem value="north">North Branch</SelectItem>
-                    <SelectItem value="south">South Branch</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Date Format</Label>
-                <Select defaultValue="mm/dd/yyyy">
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mm/dd/yyyy">MM/DD/YYYY</SelectItem>
-                    <SelectItem value="dd/mm/yyyy">DD/MM/YYYY</SelectItem>
-                    <SelectItem value="yyyy-mm-dd">YYYY-MM-DD</SelectItem>
-                  </SelectContent>
-                </Select>
+            <CardContent className="space-y-4 px-4 sm:px-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Default Branch</Label>
+                  <Select defaultValue="main">
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="main">Main Branch</SelectItem>
+                      <SelectItem value="north">North Branch</SelectItem>
+                      <SelectItem value="south">South Branch</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Date Format</Label>
+                  <Select defaultValue="mm/dd/yyyy">
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mm/dd/yyyy">MM/DD/YYYY</SelectItem>
+                      <SelectItem value="dd/mm/yyyy">DD/MM/YYYY</SelectItem>
+                      <SelectItem value="yyyy-mm-dd">YYYY-MM-DD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Data Management */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="shadow-sm border-muted/50">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Download className="h-5 w-5" />
                 Data Management
               </CardTitle>
               <CardDescription>Export, backup, and manage your data.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
-                <Button variant="outline" onClick={handleExportData}>
+            <CardContent className="px-4 sm:px-6">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button variant="outline" onClick={handleExportData} className="w-full sm:flex-1">
                   Export Data
                 </Button>
-                <Button variant="outline" onClick={handleBackupSettings}>
+                <Button variant="outline" onClick={handleBackupSettings} className="w-full sm:flex-1">
                   Backup Settings
                 </Button>
-                <Button variant="outline" onClick={handleClearCache}>
+                <Button variant="outline" onClick={handleClearCache} className="w-full sm:flex-1 text-red-600 border-red-100 hover:bg-red-50">
                   Clear Cache
                 </Button>
               </div>
@@ -393,8 +398,10 @@ export default function Settings() {
           </Card>
 
           {/* Save Settings */}
-          <div className="flex justify-end">
-            <Button onClick={handleSaveSettings}>Save Settings</Button>
+          <div className="flex justify-center sm:justify-end px-1 sm:px-0">
+            <Button onClick={handleSaveSettings} size="lg" className="w-full sm:w-auto shadow-md">
+              Save All Settings
+            </Button>
           </div>
         </div>
       </div>

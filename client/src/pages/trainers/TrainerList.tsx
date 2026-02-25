@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Loader2 } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Eye, Edit, Trash2, Loader2, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -37,7 +37,7 @@ export default function TrainerList() {
     try {
       const branchesData = await api.getBranches();
       setBranches(branchesData || []);
-      
+
       // Set default branch for managers
       if (user?.role === 'manager' && user?.branchId) {
         setSelectedBranch(user.branchId);
@@ -54,13 +54,13 @@ export default function TrainerList() {
 
     try {
       const formData = new FormData(e.target as HTMLFormElement);
-      
+
       // Determine branch ID based on user role
       let branchId = selectedBranch;
       if (user?.role === 'manager') {
         branchId = user.branchId; // Manager can only add to their branch
       }
-      
+
       if (!branchId) {
         toast({
           title: "Validation Error",
@@ -70,7 +70,7 @@ export default function TrainerList() {
         setIsSubmitting(false);
         return;
       }
-      
+
       const trainerData = {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
@@ -84,7 +84,7 @@ export default function TrainerList() {
       await loadTrainers();
       setShowAddModal(false);
       setSelectedBranch(undefined);
-      
+
       // Show success with login credentials
       toast({
         title: "Trainer Created Successfully!",
@@ -105,7 +105,7 @@ export default function TrainerList() {
 
   const handleDeleteTrainer = async (trainerId: string) => {
     if (!confirm('Are you sure you want to remove this trainer?')) return;
-    
+
     try {
       await api.deleteTrainer(trainerId);
       await loadTrainers();
@@ -131,7 +131,7 @@ export default function TrainerList() {
       } else {
         trainersData = await api.getTrainers();
       }
-      
+
       setTrainers(trainersData);
       console.log("Trainers loaded:", trainersData);
     } catch (error) {
@@ -141,7 +141,7 @@ export default function TrainerList() {
     }
   };
 
-  const filteredTrainers = trainers.filter(trainer => 
+  const filteredTrainers = trainers.filter(trainer =>
     trainer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     trainer.specialization?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -161,119 +161,125 @@ export default function TrainerList() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading">Trainers</h1>
-            <p className="text-muted-foreground">Manage academy trainers and instructors.</p>
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Trainers</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Manage academy trainers and instructors.</p>
           </div>
-          <Button className="gap-2 shadow-md" onClick={() => setShowAddModal(true)}>
+          <Button className="w-full sm:w-auto gap-2 shadow-md h-10" onClick={() => setShowAddModal(true)}>
             <Plus className="h-4 w-4" />
             Add New Trainer
           </Button>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
+        <Card className="mx-1 sm:mx-0 shadow-sm border-muted/50">
+          <CardHeader className="pb-3 px-4 sm:px-6">
             <CardTitle className="text-lg font-medium">Trainer Directory ({trainers.length} trainers)</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search by name or specialization..." 
-                  className="pl-9"
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or specialization..."
+                  className="pl-10 w-full"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Trainer</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Specialization</TableHead>
-                    <TableHead>Branch</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTrainers.length > 0 ? (
-                    filteredTrainers.map((trainer) => (
-                      <TableRow key={trainer.id} className="hover:bg-muted/50">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage src={trainer.avatar} alt={trainer.name} />
-                              <AvatarFallback>{trainer.name?.charAt(0) || 'T'}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{trainer.name}</p>
-                              <p className="text-xs text-muted-foreground font-mono">{trainer.id?.slice(0, 8)}</p>
+            <div className="rounded-md border overflow-x-auto">
+              <div className="min-w-[800px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="font-semibold">Trainer</TableHead>
+                      <TableHead className="font-semibold">Email</TableHead>
+                      <TableHead className="font-semibold">Phone</TableHead>
+                      <TableHead className="font-semibold">Specialization</TableHead>
+                      <TableHead className="font-semibold">Branch</TableHead>
+                      <TableHead className="text-right font-semibold">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTrainers.length > 0 ? (
+                      filteredTrainers.map((trainer) => (
+                        <TableRow key={trainer.id} className="hover:bg-muted/50 transition-colors">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9 border">
+                                <AvatarImage src={trainer.avatar} alt={trainer.name} />
+                                <AvatarFallback className="bg-primary/10 text-primary">{trainer.name?.charAt(0) || 'T'}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-gray-900">{trainer.name}</p>
+                                <p className="text-xs text-muted-foreground font-mono">{trainer.id?.slice(0, 8)}</p>
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{trainer.email || 'N/A'}</TableCell>
-                        <TableCell className="text-sm">{trainer.phone || 'N/A'}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{trainer.specialization || 'General'}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {user?.role === 'admin' ? (
-                            <Badge variant="secondary">{trainer.branch_name || 'Unknown'}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-700">{trainer.email || 'N/A'}</TableCell>
+                          <TableCell className="text-sm text-gray-700">{trainer.phone || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-normal border-muted-foreground/30">{trainer.specialization || 'General'}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {user?.role === 'admin' ? (
+                              <Badge variant="secondary" className="font-normal bg-orange-50 text-orange-700 border-orange-100">{trainer.branch_name || 'Unknown'}</Badge>
+                            ) : (
+                              <span className="text-gray-700">{trainer.branch_name || 'Main Branch'}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem className="cursor-pointer" onClick={() => setLocation(`/trainers/${trainer.id}`)}>
+                                  <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> View Profile
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer" onClick={() => setLocation(`/trainers/${trainer.id}/edit`)}>
+                                  <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Edit Details
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-600" onClick={() => handleDeleteTrainer(trainer.id)}>
+                                  <Trash2 className="mr-2 h-4 w-4" /> Remove
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-32 text-center">
+                          {trainers.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-4">
+                              <Users className="h-10 w-10 text-muted-foreground/30 mb-2" />
+                              <p className="text-muted-foreground mb-4">No trainers found. Add your first trainer!</p>
+                              <Button variant="outline" size="sm" onClick={() => setShowAddModal(true)} className="gap-2">
+                                <Plus className="h-4 w-4" />
+                                Add First Trainer
+                              </Button>
+                            </div>
                           ) : (
-                            trainer.branch_name || 'Main Branch'
+                            <div className="flex flex-col items-center justify-center py-4">
+                              <Search className="h-10 w-10 text-muted-foreground/30 mb-2" />
+                              <p className="text-muted-foreground">No trainers match your search criteria.</p>
+                            </div>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem className="cursor-pointer" onClick={() => setLocation(`/trainers/${trainer.id}`)}>
-                                <Eye className="mr-2 h-4 w-4" /> View Profile
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="cursor-pointer" onClick={() => setLocation(`/trainers/${trainer.id}/edit`)}>
-                                <Edit className="mr-2 h-4 w-4" /> Edit Details
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={() => handleDeleteTrainer(trainer.id)}>
-                                <Trash2 className="mr-2 h-4 w-4" /> Remove
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        {trainers.length === 0 ? (
-                          <div className="text-center py-8">
-                            <p className="text-muted-foreground mb-4">No trainers found. Add your first trainer!</p>
-                            <Button onClick={() => setShowAddModal(true)}>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add First Trainer
-                            </Button>
-                          </div>
-                        ) : (
-                          "No trainers match your search criteria."
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </CardContent>
         </Card>

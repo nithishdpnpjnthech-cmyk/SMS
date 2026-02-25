@@ -94,18 +94,18 @@ export default function BranchDetail() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => setLocation('/branches')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading flex items-center gap-2">
-              <MapPin className="h-8 w-8 text-primary" />
-              {branch.name}
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setLocation('/branches')} className="h-8 w-8 sm:h-10 sm:w-10">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading flex items-center gap-2">
+              <MapPin className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" />
+              <span className="truncate">{branch.name}</span>
             </h1>
-            <p className="text-muted-foreground">Branch management and performance overview</p>
           </div>
+          <p className="text-muted-foreground text-sm sm:text-base ml-10 sm:ml-0">Branch management and performance overview</p>
         </div>
 
         <Card>
@@ -177,36 +177,36 @@ export default function BranchDetail() {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Branch Management Actions</CardTitle>
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-lg font-medium">Branch Management Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
+          <CardContent className="px-4 sm:px-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2"
+                className="h-14 sm:h-20 flex-row sm:flex-col gap-2 justify-start sm:justify-center px-4"
                 onClick={() => setLocation(`/students?branchId=${branch.id}`)}
               >
-                <Users className="h-6 w-6" />
-                <span>View Students</span>
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+                <span className="text-sm font-medium">View Students</span>
               </Button>
 
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2"
+                className="h-14 sm:h-20 flex-row sm:flex-col gap-2 justify-start sm:justify-center px-4"
                 onClick={() => setLocation(`/trainers?branchId=${branch.id}`)}
               >
-                <UserCheck className="h-6 w-6" />
-                <span>View Trainers</span>
+                <UserCheck className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+                <span className="text-sm font-medium">View Trainers</span>
               </Button>
 
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2"
+                className="h-14 sm:h-20 flex-row sm:flex-col gap-2 justify-start sm:justify-center px-4"
                 onClick={() => setLocation(`/fees?branchId=${branch.id}`)}
               >
-                <IndianRupee className="h-6 w-6" />
-                <span>View Fees</span>
+                <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+                <span className="text-sm font-medium">View Fees</span>
               </Button>
             </div>
           </CardContent>

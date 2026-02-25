@@ -47,18 +47,18 @@ export default function MasterData() {
   const handleCreateProgram = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       const formData = new FormData(e.target as HTMLFormElement);
       const programData = {
         name: formData.get("name") as string,
         description: formData.get("description") as string
       };
-      
+
       await api.createProgram(programData);
       await loadMasterData();
       setShowProgramModal(false);
-      
+
       toast({
         title: "Success",
         description: "Program created successfully"
@@ -77,18 +77,18 @@ export default function MasterData() {
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       const formData = new FormData(e.target as HTMLFormElement);
       const batchData = {
         name: formData.get("name") as string,
         description: formData.get("description") as string
       };
-      
+
       await api.createBatch(batchData);
       await loadMasterData();
       setShowBatchModal(false);
-      
+
       toast({
         title: "Success",
         description: "Batch created successfully"
@@ -109,7 +109,7 @@ export default function MasterData() {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       await api.updateProgramStatus(id, newStatus);
       await loadMasterData();
-      
+
       toast({
         title: "Success",
         description: `Program ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`
@@ -128,7 +128,7 @@ export default function MasterData() {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       await api.updateBatchStatus(id, newStatus);
       await loadMasterData();
-      
+
       toast({
         title: "Success",
         description: `Batch ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`
@@ -167,121 +167,131 @@ export default function MasterData() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading">Master Data Management</h1>
-            <p className="text-muted-foreground">Manage programs and batches for student enrollment.</p>
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Master Data</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Manage programs and batches for student enrollment.</p>
           </div>
         </div>
 
         {/* Programs */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Programs ({programs.length})</CardTitle>
-            <Button onClick={() => setShowProgramModal(true)}>
+        <Card className="mx-1 sm:mx-0 shadow-sm border-muted/50">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-6">
+            <CardTitle className="text-lg font-semibold">Programs ({programs.length})</CardTitle>
+            <Button onClick={() => setShowProgramModal(true)} className="w-full sm:w-auto h-9">
               <Plus className="mr-2 h-4 w-4" />
               Add Program
             </Button>
           </CardHeader>
-          <CardContent>
-            {programs.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {programs.map((program) => (
-                    <TableRow key={program.id}>
-                      <TableCell className="font-medium">{program.name}</TableCell>
-                      <TableCell>{program.description || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant={(program.is_active ?? program.status === 'active') ? 'default' : 'secondary'}>
-                          {program.is_active !== undefined ? (program.is_active ? 'active' : 'inactive') : program.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleProgramStatus(program.id, program.is_active !== undefined ? (program.is_active ? 'active' : 'inactive') : program.status)}
-                        >
-                          {(program.is_active ?? program.status === 'active') ? 'Deactivate' : 'Activate'}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No programs created yet.</p>
-                <Button onClick={() => setShowProgramModal(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add First Program
-                </Button>
+          <CardContent className="px-0 sm:px-6">
+            <div className="overflow-x-auto">
+              <div className="min-w-[600px] w-full px-4 sm:px-0">
+                {programs.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {programs.map((program) => (
+                        <TableRow key={program.id}>
+                          <TableCell className="font-medium">{program.name}</TableCell>
+                          <TableCell>{program.description || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant={(program.is_active ?? program.status === 'active') ? 'default' : 'secondary'}>
+                              {program.is_active !== undefined ? (program.is_active ? 'active' : 'inactive') : program.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => toggleProgramStatus(program.id, program.is_active !== undefined ? (program.is_active ? 'active' : 'inactive') : program.status)}
+                            >
+                              {(program.is_active ?? program.status === 'active') ? 'Deactivate' : 'Activate'}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground mb-4">No programs created yet.</p>
+                    <Button onClick={() => setShowProgramModal(true)} variant="outline">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add First Program
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Batches */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Batches ({batches.length})</CardTitle>
-            <Button onClick={() => setShowBatchModal(true)}>
+        <Card className="mx-1 sm:mx-0 shadow-sm border-muted/50">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-6">
+            <CardTitle className="text-lg font-semibold">Batches ({batches.length})</CardTitle>
+            <Button onClick={() => setShowBatchModal(true)} className="w-full sm:w-auto h-9">
               <Plus className="mr-2 h-4 w-4" />
               Add Batch
             </Button>
           </CardHeader>
-          <CardContent>
-            {batches.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {batches.map((batch) => (
-                    <TableRow key={batch.id}>
-                      <TableCell className="font-medium">{batch.name}</TableCell>
-                      <TableCell>{batch.description || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant={(batch.is_active ?? batch.status === 'active') ? 'default' : 'secondary'}>
-                          {batch.is_active !== undefined ? (batch.is_active ? 'active' : 'inactive') : batch.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleBatchStatus(batch.id, batch.is_active !== undefined ? (batch.is_active ? 'active' : 'inactive') : batch.status)}
-                        >
-                          {(batch.is_active ?? batch.status === 'active') ? 'Deactivate' : 'Activate'}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No batches created yet.</p>
-                <Button onClick={() => setShowBatchModal(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add First Batch
-                </Button>
+          <CardContent className="px-0 sm:px-6">
+            <div className="overflow-x-auto">
+              <div className="min-w-[600px] w-full px-4 sm:px-0">
+                {batches.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {batches.map((batch) => (
+                        <TableRow key={batch.id}>
+                          <TableCell className="font-medium">{batch.name}</TableCell>
+                          <TableCell>{batch.description || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant={(batch.is_active ?? batch.status === 'active') ? 'default' : 'secondary'}>
+                              {batch.is_active !== undefined ? (batch.is_active ? 'active' : 'inactive') : batch.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => toggleBatchStatus(batch.id, batch.is_active !== undefined ? (batch.is_active ? 'active' : 'inactive') : batch.status)}
+                            >
+                              {(batch.is_active ?? batch.status === 'active') ? 'Deactivate' : 'Activate'}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground mb-4">No batches created yet.</p>
+                    <Button onClick={() => setShowBatchModal(true)} variant="outline">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add First Batch
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 

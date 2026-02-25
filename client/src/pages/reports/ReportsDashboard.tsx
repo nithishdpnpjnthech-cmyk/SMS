@@ -165,68 +165,68 @@ export default function ReportsDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading">Reports</h1>
-            <p className="text-muted-foreground">Generate and download academy reports</p>
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Reports</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Generate and download academy reports</p>
           </div>
         </div>
 
         {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 px-1 sm:px-0">
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
+              <CardTitle className="text-xs sm:text-sm font-medium">Total Students</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalStudents}</div>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold">{stats.totalStudents}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <Card className="border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
+              <CardTitle className="text-xs sm:text-sm font-medium">Total Revenue</CardTitle>
+              <CreditCard className="h-4 w-4 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{formatAmount(stats.totalRevenue)}</div>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{formatAmount(stats.totalRevenue)}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Dues</CardTitle>
-              <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+          <Card className="border-l-4 border-l-orange-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
+              <CardTitle className="text-xs sm:text-sm font-medium">Pending Dues</CardTitle>
+              <CalendarCheck className="h-4 w-4 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{formatAmount(stats.pendingDues)}</div>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">{formatAmount(stats.pendingDues)}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue Amount</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <Card className="border-l-4 border-l-red-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
+              <CardTitle className="text-xs sm:text-sm font-medium">Overdue Amount</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{formatAmount(stats.overdueAmount)}</div>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold text-red-600">{formatAmount(stats.overdueAmount)}</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Report Generator */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="mx-1 sm:mx-0 shadow-sm border-muted/50">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <FileText className="h-5 w-5" />
               Generate Report
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
+          <CardContent className="space-y-6 px-4 sm:px-6">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+              <div className="space-y-2">
                 <Label>Report Type</Label>
                 <Select value={reportType} onValueChange={setReportType}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -236,18 +236,20 @@ export default function ReportsDashboard() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>From Date</Label>
                 <Input
                   type="date"
+                  className="w-full"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>To Date</Label>
                 <Input
                   type="date"
+                  className="w-full"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                 />
@@ -255,7 +257,7 @@ export default function ReportsDashboard() {
             </div>
 
             <div className="flex gap-4">
-              <Button onClick={generateReport} disabled={isGenerating}>
+              <Button onClick={generateReport} disabled={isGenerating} className="w-full sm:w-auto min-h-[44px]">
                 {isGenerating ? (
                   <>
                     <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -264,7 +266,7 @@ export default function ReportsDashboard() {
                 ) : (
                   <>
                     <Download className="mr-2 h-4 w-4" />
-                    Generate & Download
+                    Generate & Download Report
                   </>
                 )}
               </Button>

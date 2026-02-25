@@ -76,9 +76,9 @@ export default function Attendance() {
         status: status.toUpperCase(),
         isLate: status === 'late',
       });
-      
+
       await loadAttendance();
-      
+
       toast({
         title: "Success",
         description: "Attendance marked successfully",
@@ -96,7 +96,7 @@ export default function Attendance() {
   const getAttendanceStatus = (studentId: string) => {
     const record = attendance.find(a => a.student_id === studentId);
     if (!record) return null;
-    
+
     if (record.status === 'PRESENT' && record.is_late) return 'late';
     return record.status.toLowerCase();
   };
@@ -126,109 +126,110 @@ export default function Attendance() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-            <p className="text-muted-foreground">Mark and manage student attendance</p>
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Attendance</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Mark and manage student attendance</p>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <Calendar className="h-4 w-4 text-primary" />
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border rounded-md"
+              className="px-3 py-2 border rounded-md text-sm sm:text-base w-full sm:w-auto"
             />
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Total Students
-              </CardTitle>
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 px-1 sm:px-0">
+          <Card className="shadow-sm border-l-4 border-l-blue-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
+              <CardTitle className="text-xs sm:text-sm font-medium">Total Students</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{students.length}</div>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold">{students.length}</div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Present Today
-              </CardTitle>
+          <Card className="shadow-sm border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
+              <CardTitle className="text-xs sm:text-sm font-medium">Present Today</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">
                 {attendance.filter(a => a.status === 'PRESENT' || a.status === 'present').length}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Absent Today
-              </CardTitle>
+          <Card className="shadow-sm border-l-4 border-l-red-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
+              <CardTitle className="text-xs sm:text-sm font-medium">Absent Today</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold text-red-600">
                 {attendance.filter(a => a.status === 'ABSENT' || a.status === 'absent').length}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Not Marked Today
-              </CardTitle>
+          <Card className="shadow-sm border-l-4 border-l-orange-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
+              <CardTitle className="text-xs sm:text-sm font-medium text-orange-600">Not Marked</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">
                 {attendance.filter(a => a.status === 'NOT_MARKED' || a.status === 'not_marked').length}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Student Attendance</CardTitle>
+        <Card className="mx-1 sm:mx-0 shadow-sm border-muted/50">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-lg sm:text-xl">Student Attendance</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="px-4 sm:px-6">
+            <div className="space-y-3">
               {students.map((student) => {
                 const status = getAttendanceStatus(student.id);
                 return (
-                  <div key={student.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-medium">{student.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {student.program} - {student.batch}
-                      </p>
+                  <div key={student.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+                        {student.name?.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-medium truncate">{student.name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                          {student.program} - {student.batch}
+                        </p>
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(status)}
-                      
-                      <div className="flex gap-1">
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                      <div className="self-start sm:self-center">
+                        {getStatusBadge(status)}
+                      </div>
+
+                      <div className="grid grid-cols-3 sm:flex gap-1.5 w-full sm:w-auto">
                         <Button
                           size="sm"
+                          className="w-full sm:px-3 text-xs"
                           variant={status === 'present' ? 'default' : 'outline'}
                           onClick={() => markAttendance(student.id, 'present')}
                         >
-                          Present
+                          Pres
                         </Button>
                         <Button
                           size="sm"
+                          className="w-full sm:px-3 text-xs"
                           variant={status === 'late' ? 'default' : 'outline'}
                           onClick={() => markAttendance(student.id, 'late')}
                         >
@@ -236,10 +237,11 @@ export default function Attendance() {
                         </Button>
                         <Button
                           size="sm"
+                          className="w-full sm:px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                           variant={status === 'absent' ? 'destructive' : 'outline'}
                           onClick={() => markAttendance(student.id, 'absent')}
                         >
-                          Absent
+                          Abs
                         </Button>
                       </div>
                     </div>

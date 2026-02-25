@@ -54,7 +54,7 @@ export default function Profile() {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
-    
+
     try {
       // TODO: Implement profile update API call
       toast({
@@ -80,11 +80,11 @@ export default function Profile() {
         role: user?.role,
         exportDate: new Date().toISOString()
       };
-      
+
       const dataStr = JSON.stringify(userData, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(dataBlob);
-      
+
       const link = document.createElement('a');
       link.href = url;
       link.download = `profile-data-${user?.username}-${new Date().toISOString().split('T')[0]}.json`;
@@ -92,7 +92,7 @@ export default function Profile() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: "Success",
         description: "Profile data downloaded successfully"
@@ -108,10 +108,10 @@ export default function Profile() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight font-heading">Profile</h1>
-          <p className="text-muted-foreground">Manage your account settings and preferences.</p>
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Profile</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Manage your account settings and preferences.</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -168,7 +168,7 @@ export default function Profile() {
                   <p className="text-sm text-muted-foreground">{user?.id}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                 <Mail className="h-5 w-5 text-muted-foreground" />
                 <div>

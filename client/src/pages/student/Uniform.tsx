@@ -19,7 +19,7 @@ export default function StudentUniform() {
 
   const loadUniformData = async () => {
     try {
-      const profile = await studentApi.getProfile();
+      const profile = await studentApi.getProfile() as any;
       setUniformData(profile.uniform);
     } catch (error) {
       console.error('Failed to load uniform data:', error);
@@ -37,66 +37,77 @@ export default function StudentUniform() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Uniform Status</h1>
-        <p className="text-gray-600 mt-2">Check your uniform issuance status and details.</p>
+    <div className="space-y-8 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-heading">Uniform Status</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">Check your uniform issuance status and details.</p>
       </div>
 
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shirt className="h-5 w-5" />
+      <Card className="max-w-2xl mx-auto shadow-lg border-muted/50 overflow-hidden">
+        <CardHeader className="bg-muted/30 border-b border-muted/50 px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-heading">
+            <div className="p-2 bg-primary/10 rounded-lg text-primary shadow-sm">
+              <Shirt className="h-5 w-5" />
+            </div>
             Uniform Information
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="mb-6">
+        <CardContent className="px-4 sm:px-6 py-10 sm:py-16">
+          <div className="text-center max-w-md mx-auto">
+            <div className="mb-8 relative">
               {uniformData?.issued ? (
-                <div className="bg-green-100 p-6 rounded-full w-24 h-24 mx-auto flex items-center justify-center">
-                  <CheckCircle className="h-12 w-12 text-green-600" />
+                <div className="bg-green-100/50 p-8 rounded-full w-28 h-28 sm:w-32 sm:h-32 mx-auto flex items-center justify-center border-4 border-white shadow-xl">
+                  <CheckCircle className="h-14 w-14 sm:h-16 sm:w-16 text-green-600 drop-shadow-sm" />
                 </div>
               ) : (
-                <div className="bg-red-100 p-6 rounded-full w-24 h-24 mx-auto flex items-center justify-center">
-                  <XCircle className="h-12 w-12 text-red-600" />
+                <div className="bg-orange-100/50 p-8 rounded-full w-28 h-28 sm:w-32 sm:h-32 mx-auto flex items-center justify-center border-4 border-white shadow-xl">
+                  <XCircle className="h-14 w-14 sm:h-16 sm:w-16 text-orange-600 drop-shadow-sm" />
                 </div>
               )}
             </div>
-            
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+
+            <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mb-4 font-heading">
               {uniformData?.issued ? 'Uniform Issued' : 'Uniform Not Issued'}
             </h3>
-            
+
             {uniformData?.issued ? (
-              <div className="space-y-3">
-                {uniformData.issueDate && (
-                  <div className="flex items-center justify-center gap-2 text-green-600">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      Issued on: {new Date(uniformData.issueDate).toLocaleDateString('en-IN', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                )}
-                <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
-                  Uniform Collected
+              <div className="space-y-6">
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-4 py-1.5 font-bold shadow-sm">
+                  <CheckCircle className="w-3.5 h-3.5 mr-2" />
+                  COLLECTED
                 </Badge>
-                <p className="text-gray-600 mt-4">
-                  Your uniform has been issued and collected. If you have any issues, please contact the administration.
-                </p>
+
+                <div className="space-y-4 pt-4">
+                  {uniformData.issueDate && (
+                    <div className="flex items-center justify-center gap-2 p-3 bg-muted/20 rounded-xl border border-muted/50 text-gray-600 shadow-inner">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">
+                        Issued on <span className="font-bold text-gray-900">{new Date(uniformData.issueDate).toLocaleDateString('en-IN', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}</span>
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed px-4">
+                    Your academy uniform has been officially issued. If you need any assistance or have sizing concerns, please visit the administration office.
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
-                  Pending Collection
+              <div className="space-y-6">
+                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 px-4 py-1.5 font-bold shadow-sm">
+                  PENDING COLLECTION
                 </Badge>
-                <p className="text-gray-600 mt-4">
-                  Please contact the administration office for uniform collection details and availability.
-                </p>
+                <div className="space-y-4 pt-4 px-4 text-center">
+                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                    Your uniform set is currently <span className="font-bold text-orange-600">awaiting collection</span>. Please visit the reception desk during operational hours to collect your kit.
+                  </p>
+                  <div className="p-3 bg-orange-50/50 rounded-xl border border-orange-100 text-orange-700 text-xs font-medium italic">
+                    Note: Please carry your active Student ID card for verification.
+                  </div>
+                </div>
               </div>
             )}
           </div>

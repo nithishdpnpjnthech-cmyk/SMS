@@ -41,7 +41,7 @@ export default function EditStudent() {
     try {
       const studentData = await api.getStudent(studentId);
       setStudent(studentData);
-      
+
       // Set uniform state from student data
       setUniformIssued(studentData.uniform_issued || false);
       setUniformSize(studentData.uniform_size || undefined);
@@ -63,7 +63,7 @@ export default function EditStudent() {
         api.getBatches(),
         api.getPrograms()
       ]);
-      
+
       setBranches(branchesData || []);
       setBatches(batchesData || []);
       setPrograms(programsData || []);
@@ -82,7 +82,7 @@ export default function EditStudent() {
     setIsLoading(true);
     try {
       const formData = new FormData(e.target as HTMLFormElement);
-      
+
       // Validate uniform fields
       if (uniformIssued && !uniformSize) {
         toast({
@@ -93,7 +93,7 @@ export default function EditStudent() {
         setIsLoading(false);
         return;
       }
-      
+
       const updateData = {
         name: formData.get("name") as string,
         email: formData.get("email") as string,
@@ -110,7 +110,7 @@ export default function EditStudent() {
       };
 
       await api.updateStudent(student.id, updateData);
-      
+
       toast({
         title: "Success!",
         description: "Student updated successfully"
@@ -144,17 +144,17 @@ export default function EditStudent() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-2xl mx-auto space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => setLocation('/students')}>
+          <Button variant="ghost" size="icon" onClick={() => setLocation('/students')} className="h-8 w-8 sm:h-10 sm:w-10">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Edit Student</h1>
-            <p className="text-muted-foreground">Update student information</p>
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Edit Student</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Update student information</p>
           </div>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Student Information</CardTitle>
@@ -165,12 +165,12 @@ export default function EditStudent() {
                 <Label>Full Name *</Label>
                 <Input name="name" defaultValue={student.name} required />
               </div>
-              
+
               <div>
                 <Label>Email</Label>
                 <Input name="email" type="email" defaultValue={student.email || ""} />
               </div>
-              
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label>Phone *</Label>
@@ -257,7 +257,7 @@ export default function EditStudent() {
               {/* Uniform Section */}
               <div className="space-y-4 border-t pt-4">
                 <h3 className="text-lg font-medium">Uniform Information</h3>
-                
+
                 {/* Uniform Issued */}
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -272,7 +272,7 @@ export default function EditStudent() {
                   />
                   <Label htmlFor="uniformIssued">Uniform Issued</Label>
                 </div>
-                
+
                 {/* Uniform Size - Only show when uniform is issued */}
                 {uniformIssued && (
                   <div>

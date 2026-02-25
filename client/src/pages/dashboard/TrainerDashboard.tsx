@@ -1,8 +1,11 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/lib/auth";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, LogIn, LogOut } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Clock, MapPin, LogIn, LogOut, History as HistoryIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -124,113 +127,121 @@ export default function TrainerDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-2xl font-bold text-primary">{user?.name?.[0] || 'T'}</span>
+      <div className="max-w-7xl mx-auto space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        {/* Trainer Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-card p-4 rounded-xl shadow-sm border border-muted/50">
+          <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-inner">
+            <span className="text-xl sm:text-2xl font-bold text-primary">{user?.name?.[0] || 'T'}</span>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">TrainerPro</h1>
-            <p className="text-sm text-muted-foreground">{user?.name || 'Trainer'}</p>
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-heading">Trainer Portal</h1>
+            <p className="text-sm text-muted-foreground font-medium">{user?.name || 'Trainer'}</p>
+          </div>
+          <div className="sm:ml-auto">
+            <Badge variant="outline" className="px-3 py-1 bg-primary/5 text-primary border-primary/20">
+              Lead Trainer
+            </Badge>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
+          {/* Tracking Column */}
           <div className="space-y-6">
-            <Card className="border-none shadow-lg">
-              <CardContent className="p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <Clock className="h-5 w-5 text-primary" />
-                  <h2 className="text-lg font-semibold">Time Tracking</h2>
+            <Card className="border-muted/50 shadow-lg overflow-hidden">
+              <CardContent className="p-0">
+                <div className="p-4 sm:p-6 bg-muted/30 border-b border-muted/50 flex items-center gap-2">
+                  <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-lg font-semibold font-heading">Live Time Tracking</h2>
                 </div>
 
-                <div className="text-center mb-8">
-                  <p className="text-sm text-muted-foreground mb-2">CURRENT TIME</p>
-                  <div className="text-6xl font-bold mb-2">{formatTime(currentTime)}</div>
-                  <p className="text-primary font-medium">{formatDate(currentTime)}</p>
-                </div>
-
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>Location</span>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="e.g., Downtown Branch"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                <div className="p-6 sm:p-8 space-y-8">
+                  <div className="text-center py-6 bg-muted/20 rounded-2xl border border-muted/50 shadow-inner">
+                    <p className="text-[10px] sm:text-xs font-bold text-primary/70 tracking-widest mb-2 uppercase">CURRENT TIME</p>
+                    <div className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-foreground font-heading">{formatTime(currentTime)}</div>
+                    <p className="text-sm sm:text-base font-medium text-muted-foreground mt-2">{formatDate(currentTime)}</p>
                   </div>
 
-                  <div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>Specific Area</span>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold uppercase text-muted-foreground/80 flex items-center gap-1.5 ml-1">
+                        <MapPin className="h-3 w-3" />
+                        Branch / Location
+                      </Label>
+                      <Input
+                        placeholder="e.g., Downtown Branch"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        className="bg-muted/10 border-muted/50 h-11"
+                      />
                     </div>
-                    <input
-                      type="text"
-                      placeholder="e.g., Weight Room, Studio A"
-                      value={area}
-                      onChange={(e) => setArea(e.target.value)}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold uppercase text-muted-foreground/80 flex items-center gap-1.5 ml-1">
+                        <MapPin className="h-3 w-3" />
+                        Specific Area
+                      </Label>
+                      <Input
+                        placeholder="e.g., Weight Room"
+                        value={area}
+                        onChange={(e) => setArea(e.target.value)}
+                        className="bg-muted/10 border-muted/50 h-11"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                      <span>✏️</span>
-                      <span>Notes</span>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Anything to add?"
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase text-muted-foreground/80 flex items-center gap-1.5 ml-1">
+                      <span>📝</span> Notes
+                    </Label>
+                    <Input
+                      placeholder="Optional notes for this session..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="bg-muted/10 border-muted/50 h-11"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    size="lg"
-                    className="bg-green-500 hover:bg-green-600 text-white h-14"
-                    onClick={handleClockIn}
-                    disabled={loading || hasOpenSession}
-                  >
-                    <LogIn className="h-5 w-5 mr-2" />
-                    Clock In
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="destructive"
-                    className="h-14"
-                    onClick={handleClockOut}
-                    disabled={loading || !hasOpenSession}
-                  >
-                    <LogOut className="h-5 w-5 mr-2" />
-                    Clock Out
-                  </Button>
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <Button
+                      size="lg"
+                      className="bg-green-600 hover:bg-green-700 text-white h-14 shadow-md transition-all active:scale-95"
+                      onClick={handleClockIn}
+                      disabled={loading || hasOpenSession}
+                    >
+                      <LogIn className="h-5 w-5 mr-2" />
+                      Clock In
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="destructive"
+                      className="h-14 shadow-md transition-all active:scale-95"
+                      onClick={handleClockOut}
+                      disabled={loading || !hasOpenSession}
+                    >
+                      <LogOut className="h-5 w-5 mr-2" />
+                      Clock Out
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
+          {/* Activity Column */}
           <div>
-            <Card className="border-none shadow-lg">
-              <CardContent className="p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold">Recent Activity</h2>
-                  <span className="text-sm px-3 py-1 bg-primary/10 text-primary rounded-full">Today</span>
-                </div>
-
+            <Card className="border-muted/50 shadow-lg overflow-hidden h-full">
+              <CardHeader className="bg-muted/30 border-b border-muted/50 flex flex-row items-center justify-between py-4 px-6">
+                <CardTitle className="text-lg font-semibold font-heading">Recent Activity</CardTitle>
+                <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none px-3">
+                  Today
+                </Badge>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-4">
                   {recentActivity.length > 0 ? (
                     recentActivity.map((activity) => {
-                      // Calculate worked duration
                       const clockInDate = new Date(activity.clock_in);
                       const clockOutDate = activity.clock_out ? new Date(activity.clock_out) : null;
                       const workedMs = clockOutDate
@@ -240,49 +251,54 @@ export default function TrainerDashboard() {
                       const workedMins = Math.floor((workedMs % (1000 * 60 * 60)) / (1000 * 60));
 
                       return (
-                        <div key={activity.id} className="p-4 rounded-lg border space-y-3">
+                        <div key={activity.id} className="p-4 rounded-xl border border-muted/50 bg-card hover:shadow-md transition-all duration-200 space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className={`text-xs font-semibold px-2 py-1 rounded ${activity.clock_out
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-green-100 text-green-700'
-                              }`}>
-                              {activity.clock_out ? 'COMPLETED' : '● ACTIVE SESSION'}
-                            </span>
-                            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
+                            <Badge variant={activity.clock_out ? "secondary" : "default"} className={!activity.clock_out ? "bg-green-500 animate-pulse border-none" : ""}>
+                              {activity.clock_out ? 'COMPLETED' : '● ACTIVE'}
+                            </Badge>
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground bg-muted/50 px-2 py-1 rounded-full border border-muted/50">
+                              <HistoryIcon className="h-3 w-3" />
                               {workedHours > 0 ? `${workedHours}h ${workedMins}m` : `${workedMins}m`}
                               {!activity.clock_out && ' (ongoing)'}
-                            </span>
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-green-50 rounded-lg p-2.5">
-                              <p className="text-[10px] font-semibold text-green-600 uppercase mb-0.5">Clock In</p>
-                              <p className="text-sm font-bold text-green-800">{formatActivityTime(activity.clock_in)}</p>
+                            <div className="bg-green-50/50 border border-green-100 rounded-xl p-2.5">
+                              <p className="text-[10px] font-bold text-green-600 uppercase tracking-tighter mb-0.5">IN</p>
+                              <p className="text-sm font-black text-green-800 tracking-tight">{formatActivityTime(activity.clock_in)}</p>
                             </div>
-                            <div className={`rounded-lg p-2.5 ${activity.clock_out ? 'bg-red-50' : 'bg-gray-50'}`}>
-                              <p className={`text-[10px] font-semibold uppercase mb-0.5 ${activity.clock_out ? 'text-red-600' : 'text-gray-400'}`}>Clock Out</p>
-                              <p className={`text-sm font-bold ${activity.clock_out ? 'text-red-800' : 'text-gray-400'}`}>
+                            <div className={`border rounded-xl p-2.5 ${activity.clock_out ? 'bg-red-50/50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
+                              <p className={`text-[10px] font-bold uppercase tracking-tighter mb-0.5 ${activity.clock_out ? 'text-red-600' : 'text-gray-400'}`}>OUT</p>
+                              <p className={`text-sm font-black tracking-tight ${activity.clock_out ? 'text-red-800' : 'text-gray-400'}`}>
                                 {activity.clock_out ? formatActivityTime(activity.clock_out) : '—'}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div>
-                              <p className="text-sm font-medium">{activity.location}</p>
-                              {activity.area && <p className="text-xs text-muted-foreground">• {activity.area}</p>}
+                          <div className="flex items-start gap-2.5 text-muted-foreground">
+                            <MapPin className="h-4 w-4 mt-0.5 text-primary/60" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-foreground truncate">{activity.location}</p>
+                              {activity.area && <p className="text-xs font-medium truncate opacity-80">{activity.area}</p>}
                             </div>
                           </div>
                           {activity.notes && (
-                            <p className="text-xs text-muted-foreground italic">📝 {activity.notes}</p>
+                            <div className="pt-2 border-t border-muted/30">
+                              <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
+                                <span>📝</span> {activity.notes}
+                              </p>
+                            </div>
                           )}
                         </div>
                       );
                     })
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No activity today
+                    <div className="text-center py-12 text-muted-foreground space-y-3">
+                      <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center mx-auto opacity-50">
+                        <Clock className="h-6 w-6" />
+                      </div>
+                      <p className="font-medium">No sessions recorded today</p>
                     </div>
                   )}
                 </div>
@@ -291,15 +307,19 @@ export default function TrainerDashboard() {
           </div>
         </div>
 
-        <Card className="border-none shadow-lg">
+        {/* Profile Footer */}
+        <Card className="border-muted/50 shadow-sm overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                <span className="text-lg font-bold">{user?.name?.[0] || 'T'}</span>
+              <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center border border-muted/50">
+                <span className="text-lg font-bold text-primary">{user?.name?.[0] || 'T'}</span>
               </div>
               <div>
-                <p className="font-semibold">{user?.name || 'Trainer'}</p>
-                <p className="text-sm text-muted-foreground">Lead Trainer</p>
+                <p className="font-bold text-foreground">{user?.name || 'Trainer'}</p>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                  <p className="text-xs text-muted-foreground font-medium">Verified Account</p>
+                </div>
               </div>
             </div>
           </CardContent>

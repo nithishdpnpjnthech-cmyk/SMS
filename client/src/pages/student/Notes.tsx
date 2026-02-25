@@ -22,7 +22,7 @@ export default function StudentNotes() {
   const loadNotes = async () => {
     try {
       const notesData = await studentApi.getNotes();
-      setNotes(notesData || []);
+      setNotes((notesData as Note[]) || []);
     } catch (error) {
       console.error('Failed to load notes:', error);
     } finally {
@@ -61,49 +61,61 @@ export default function StudentNotes() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Notes & Remarks</h1>
-        <p className="text-gray-600 mt-2">View all notes and remarks from your teachers and administration.</p>
+    <div className="space-y-8 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-heading">Notes & Remarks</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">View all notes and remarks from your teachers and administration.</p>
       </div>
 
       {notes.length > 0 ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {notes.map((note, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="bg-white p-3 rounded-lg shadow-sm border">
-                      {getIcon(note.type)}
+            <Card key={index} className="shadow-sm border-muted/50 transition-all hover:shadow-md overflow-hidden hover:border-primary/30 group">
+              <CardContent className="p-0">
+                <div className="flex flex-col sm:flex-row items-stretch">
+                  <div className={`w-1.5 sm:w-2 ${getBadgeColor(note.type).split(' ')[2]}`}></div>
+                  <div className="flex-1 p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row items-start gap-4">
+                      <div className="flex-shrink-0 hidden sm:block">
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-muted/50 transition-transform group-hover:scale-110">
+                          {getIcon(note.type)}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 w-full min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
+                          <div className="flex items-center gap-3">
+                            <div className="sm:hidden bg-white p-2 rounded-lg shadow-sm border border-muted/50">
+                              {getIcon(note.type)}
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 truncate font-heading group-hover:text-primary transition-colors">{note.title}</h3>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`w-fit shadow-none text-[10px] sm:text-xs font-bold px-3 py-0.5 rounded-full border ${getBadgeColor(note.type)}`}
+                          >
+                            {note.type === 'attendance' ? 'ATTENDANCE' : note.type === 'fee' ? 'FEE' : 'GENERAL'}
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center gap-2 mb-4 text-[10px] sm:text-sm text-muted-foreground font-medium">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>
+                            {new Date(note.created_at).toLocaleDateString('en-IN', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+
+                        <div className="bg-muted/10 p-4 rounded-xl border border-muted/50">
+                          <p className="text-gray-800 text-sm sm:text-base leading-relaxed">{note.content}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{note.title}</h3>
-                      <Badge 
-                        variant="outline" 
-                        className={getBadgeColor(note.type)}
-                      >
-                        {note.type === 'attendance' ? 'Attendance' : note.type === 'fee' ? 'Fee' : 'General'}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-3 text-sm text-gray-500">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        {new Date(note.created_at).toLocaleDateString('en-IN', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-                    
-                    <p className="text-gray-800 leading-relaxed">{note.content}</p>
                   </div>
                 </div>
               </CardContent>
@@ -111,13 +123,13 @@ export default function StudentNotes() {
           ))}
         </div>
       ) : (
-        <Card>
-          <CardContent className="text-center py-16">
-            <div className="bg-gray-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-              <FileText className="h-12 w-12 text-gray-400" />
+        <Card className="shadow-lg border-muted/50 overflow-hidden">
+          <CardContent className="text-center py-20 px-6">
+            <div className="bg-muted/30 p-8 rounded-full w-28 h-28 mx-auto mb-6 flex items-center justify-center border-2 border-white shadow-inner">
+              <FileText className="h-14 w-14 text-muted-foreground opacity-50" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Notes Available</h3>
-            <p className="text-gray-500">There are no notes or remarks for your account yet.</p>
+            <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-2 font-heading">No Notes Available</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto">There are no notes or remarks for your account yet. Check back later for updates.</p>
           </CardContent>
         </Card>
       )}

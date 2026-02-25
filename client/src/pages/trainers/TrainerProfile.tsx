@@ -132,19 +132,23 @@ export default function TrainerProfile() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href="/trainers">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold tracking-tight">Trainer Profile</h1>
-            <p className="text-muted-foreground">View and manage trainer details</p>
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Link href="/trainers">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Trainer Profile</h1>
+            </div>
           </div>
-          <Link href={`/trainers/${trainer.id}/edit`}>
-            <Button>
+          <div className="flex-1 hidden sm:block">
+            <p className="text-muted-foreground text-sm">View and manage trainer details</p>
+          </div>
+          <Link href={`/trainers/${trainer.id}/edit`} className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto mt-2 sm:mt-0 shadow-sm">
               <Edit className="mr-2 h-4 w-4" />
               Edit Profile
             </Button>
@@ -207,32 +211,32 @@ export default function TrainerProfile() {
                     <CardDescription>Today, month-to-date, lifetime</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-6 md:grid-cols-3">
-                      <Card className="bg-primary text-primary-foreground border-none">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg opacity-90">Today</CardTitle>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <Card className="bg-primary text-primary-foreground border-none shadow-md">
+                        <CardHeader className="pb-2 px-4">
+                          <CardTitle className="text-base opacity-90">Today</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <div className="text-4xl font-bold">{summary.todayHours}h</div>
-                          <p className="text-sm opacity-80 mt-1">Worked hours</p>
+                        <CardContent className="px-4 pb-4">
+                          <div className="text-3xl sm:text-4xl font-bold">{summary.todayHours}h</div>
+                          <p className="text-xs sm:text-sm opacity-80 mt-1">Worked hours</p>
                         </CardContent>
                       </Card>
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">This Month</CardTitle>
+                      <Card className="shadow-sm">
+                        <CardHeader className="pb-2 px-4">
+                          <CardTitle className="text-base">This Month</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <div className="text-4xl font-bold">{summary.monthHours}h</div>
-                          <p className="text-sm text-muted-foreground mt-1">Total hours</p>
+                        <CardContent className="px-4 pb-4">
+                          <div className="text-3xl sm:text-4xl font-bold">{summary.monthHours}h</div>
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Total hours</p>
                         </CardContent>
                       </Card>
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">Lifetime</CardTitle>
+                      <Card className="shadow-sm">
+                        <CardHeader className="pb-2 px-4">
+                          <CardTitle className="text-base">Lifetime</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <div className="text-4xl font-bold">{summary.totalHours}h</div>
-                          <p className="text-sm text-muted-foreground mt-1">Across all sessions</p>
+                        <CardContent className="px-4 pb-4">
+                          <div className="text-3xl sm:text-4xl font-bold">{summary.totalHours}h</div>
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Across all sessions</p>
                         </CardContent>
                       </Card>
                     </div>

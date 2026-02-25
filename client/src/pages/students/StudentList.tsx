@@ -65,25 +65,25 @@ export default function StudentList() {
       console.log("Loading students with status:", statusFilter);
       console.log("User role:", user?.role);
       console.log("Branch ID from URL:", branchId);
-      
+
       const params: Record<string, string> = {};
-      
+
       if (statusFilter && statusFilter !== 'active') {
         params.status = statusFilter;
       }
-      
+
       if (user?.role === 'admin' && branchId) {
         params.branchId = branchId;
       }
-      
+
       console.log("API params:", params);
-      
+
       const data = await api.getStudents(params);
       console.log("Raw API response:", data);
-      
+
       const studentsArray: Student[] = Array.isArray(data) ? data : [];
       console.log("Processed students array:", studentsArray);
-      
+
       setStudents(studentsArray);
       console.log("Students loaded:", studentsArray.length, "students");
     } catch (error) {
@@ -103,7 +103,7 @@ export default function StudentList() {
     setActionLoading(studentId);
     try {
       let message;
-      
+
       switch (action) {
         case 'deactivate':
           await api.deactivateStudent(studentId);
@@ -118,9 +118,9 @@ export default function StudentList() {
           message = `${studentName} has been suspended`;
           break;
       }
-      
+
       await loadStudents();
-      
+
       toast({
         title: "Success",
         description: message
@@ -139,13 +139,13 @@ export default function StudentList() {
 
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
-      const matchesSearch = !searchTerm.trim() || 
+      const matchesSearch = !searchTerm.trim() ||
         (student.name && student.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (student.email && student.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (student.phone && student.phone.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesProgram =
-        programFilter === "all" || 
+        programFilter === "all" ||
         (student.program && student.program.toLowerCase().includes(programFilter.toLowerCase()));
 
       return matchesSearch && matchesProgram;
@@ -167,7 +167,7 @@ export default function StudentList() {
 
   const getActionButtons = (student: Student) => {
     const status = student.status || 'active';
-    
+
     switch (status) {
       case 'active':
         return [
@@ -220,14 +220,14 @@ export default function StudentList() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Students</h1>
-            <p className="text-muted-foreground">Manage student enrollments and profiles.</p>
+            <p className="text-muted-foreground text-sm sm:text-base">Manage student enrollments and profiles.</p>
           </div>
           <Link href="/students/add">
-            <Button className="gap-2">
+            <Button className="w-full sm:w-auto gap-2 shadow-md h-10">
               <Plus className="h-4 w-4" />
               Add Student
             </Button>
@@ -239,145 +239,152 @@ export default function StudentList() {
             <CardTitle>Student Management</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full lg:flex-1">
+                <div className="relative w-full lg:max-w-xs">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     placeholder="Search students..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full sm:w-80"
+                    className="pl-10 w-full"
                   />
                 </div>
-                <Select value={programFilter} onValueChange={setProgramFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Filter by program" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Programs</SelectItem>
-                    {programs.map((program) => (
-                      <SelectItem key={program.id} value={program.name}>
-                        {program.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                    <SelectItem value="all">All Status</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+                  <Select value={programFilter} onValueChange={setProgramFilter}>
+                    <SelectTrigger className="w-full sm:w-40 lg:w-48">
+                      <SelectValue placeholder="All Programs" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Programs</SelectItem>
+                      {programs.map((program) => (
+                        <SelectItem key={program.id} value={program.name}>
+                          {program.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-36 lg:w-44">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                      <SelectItem value="all">All Status</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
             {filteredStudents.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-muted-foreground">
+              <div className="text-center py-16">
+                <div className="bg-muted/30 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="h-8 w-8 text-muted-foreground/40" />
+                </div>
+                <div className="text-muted-foreground font-medium">
                   {students.length === 0 ? "No students found." : "No students match your search criteria."}
                 </div>
               </div>
             ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Program</TableHead>
-                      <TableHead>Batch</TableHead>
-                      <TableHead>Status</TableHead>
-                      {user?.role === 'admin' && <TableHead>Branch</TableHead>}
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredStudents.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">{student.name}</TableCell>
-                        <TableCell>{student.email || '-'}</TableCell>
-                        <TableCell>{student.phone || '-'}</TableCell>
-                        <TableCell>{student.program || '-'}</TableCell>
-                        <TableCell>{student.batch || '-'}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusBadge(student.status || 'active')}>
-                            {(student.status || 'active').charAt(0).toUpperCase() + (student.status || 'active').slice(1)}
-                          </Badge>
-                        </TableCell>
-                        {user?.role === 'admin' && (
-                          <TableCell>{student.branch_name || '-'}</TableCell>
-                        )}
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/students/${student.id}`} className="flex items-center">
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  View Details
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/students/${student.id}/edit`} className="flex items-center">
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {getActionButtons(student).map((actionBtn, index) => {
-                                const IconComponent = actionBtn.icon;
-                                return (
-                                  <AlertDialog key={index}>
-                                    <AlertDialogTrigger asChild>
-                                      <DropdownMenuItem
-                                        onSelect={(e) => e.preventDefault()}
-                                        className={actionBtn.className}
-                                        disabled={actionLoading === student.id}
-                                      >
-                                        <IconComponent className="mr-2 h-4 w-4" />
-                                        {actionBtn.label}
-                                      </DropdownMenuItem>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>{actionBtn.confirmTitle}</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          {actionBtn.confirmDesc}
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => handleStatusChange(student.id, actionBtn.action, student.name)}
+              <div className="rounded-md border overflow-x-auto">
+                <div className="min-w-[1000px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Program</TableHead>
+                        <TableHead>Batch</TableHead>
+                        <TableHead>Status</TableHead>
+                        {user?.role === 'admin' && <TableHead>Branch</TableHead>}
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredStudents.map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">{student.name}</TableCell>
+                          <TableCell>{student.email || '-'}</TableCell>
+                          <TableCell>{student.phone || '-'}</TableCell>
+                          <TableCell>{student.program || '-'}</TableCell>
+                          <TableCell>{student.batch || '-'}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusBadge(student.status || 'active')}>
+                              {(student.status || 'active').charAt(0).toUpperCase() + (student.status || 'active').slice(1)}
+                            </Badge>
+                          </TableCell>
+                          {user?.role === 'admin' && (
+                            <TableCell>{student.branch_name || '-'}</TableCell>
+                          )}
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/students/${student.id}`} className="flex items-center">
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Details
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/students/${student.id}/edit`} className="flex items-center">
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {getActionButtons(student).map((actionBtn, index) => {
+                                  const IconComponent = actionBtn.icon;
+                                  return (
+                                    <AlertDialog key={index}>
+                                      <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem
+                                          onSelect={(e) => e.preventDefault()}
+                                          className={actionBtn.className}
                                           disabled={actionLoading === student.id}
                                         >
-                                          {actionLoading === student.id ? 'Processing...' : 'Confirm'}
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                );
-                              })}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                                          <IconComponent className="mr-2 h-4 w-4" />
+                                          {actionBtn.label}
+                                        </DropdownMenuItem>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>{actionBtn.confirmTitle}</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            {actionBtn.confirmDesc}
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => handleStatusChange(student.id, actionBtn.action, student.name)}
+                                            disabled={actionLoading === student.id}
+                                          >
+                                            {actionLoading === student.id ? 'Processing...' : 'Confirm'}
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  );
+                                })}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </CardContent>

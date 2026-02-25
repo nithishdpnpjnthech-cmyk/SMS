@@ -147,10 +147,86 @@
   * {
     @apply border-border;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading tracking-tight;
+  }
+}
+
+/* ============================================
+   GLOBAL RESPONSIVE UTILITIES
+   Ensures every page works on all device sizes
+   without modifying any existing component styles.
+   ============================================ */
+
+/* Prevent horizontal overflow globally */
+#root {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Tables: horizontal scroll on small screens */
+@media (max-width: 767px) {
+  .rounded-md.border:has(table),
+  .border.rounded-lg:has(table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+  /* Ensure touch-friendly tap targets in table cells */
+  td button,
+  td a {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}
+
+/* Cards: prevent content from overflowing card boundaries */
+@layer utilities {
+  .break-words-safe {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+  }
+}
+
+/* Dialog/Modal: better mobile sizing */
+@media (max-width: 639px) {
+  [role="dialog"] > div {
+    max-height: 90vh;
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+}
+
+/* Ensure images and media don't overflow */
+img, video, svg, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Better scrollbar for mobile tables */
+@media (max-width: 767px) {
+  .rounded-md.border::-webkit-scrollbar,
+  .border.rounded-lg::-webkit-scrollbar {
+    height: 4px;
+  }
+  .rounded-md.border::-webkit-scrollbar-thumb,
+  .border.rounded-lg::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
   }
 }

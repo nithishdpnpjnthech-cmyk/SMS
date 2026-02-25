@@ -26,10 +26,10 @@ export default function TrainerAttendancePage() {
   };
 
   const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      hour12: true 
+    return new Date(timestamp).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
     });
   };
 
@@ -41,64 +41,69 @@ export default function TrainerAttendancePage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Trainer Attendance</h1>
-          <p className="text-muted-foreground">Monitor trainer clock-in/out activity</p>
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Trainer Attendance</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Monitor trainer clock-in/out activity</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Today's Activity</CardTitle>
+        <Card className="mx-1 sm:mx-0 shadow-sm border-muted/50 transition-shadow hover:shadow-md">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-lg sm:text-xl">Today's Activity</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             {loading ? (
-              <div className="text-center py-8">Loading...</div>
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
             ) : attendance.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No trainer activity today
+              <div className="text-center py-12 text-muted-foreground">
+                <Clock className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                <p>No trainer activity today</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {attendance.map((record) => (
-                  <div key={record.id} className="flex items-start justify-between p-4 border rounded-lg">
-                    <div className="flex-1 space-y-2">
+                  <div key={record.id} className="flex flex-col sm:flex-row sm:items-start justify-between p-4 border rounded-lg gap-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex-1 space-y-3">
                       <div className="flex items-center gap-3">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="font-semibold">{record.trainer_name}</p>
-                          <p className="text-sm text-muted-foreground">{record.branch_name}</p>
+                        <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <User className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate text-gray-900">{record.trainer_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{record.branch_name}</p>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-3">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm font-medium">{record.location}</p>
+
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-700">{record.location}</p>
                           {record.area && (
-                            <p className="text-sm text-muted-foreground">• {record.area}</p>
+                            <p className="text-xs text-muted-foreground truncate">• {record.area}</p>
                           )}
                         </div>
                       </div>
 
                       {record.notes && (
-                        <p className="text-sm text-muted-foreground pl-7">
+                        <div className="bg-muted/50 p-2 rounded text-xs text-muted-foreground italic border-l-2 border-primary/30">
                           Note: {record.notes}
-                        </p>
+                        </div>
                       )}
 
-                      <div className="flex items-center gap-4 pl-7 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-3 w-3" />
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm pt-1">
+                        <div className="flex items-center gap-1.5 text-green-600 font-medium whitespace-nowrap">
+                          <Clock className="h-3.5 w-3.5" />
                           <span>In: {formatTime(record.clock_in)}</span>
                         </div>
                         {record.clock_out && (
                           <>
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-3 w-3" />
+                            <div className="flex items-center gap-1.5 text-red-600 font-medium whitespace-nowrap">
+                              <Clock className="h-3.5 w-3.5" />
                               <span>Out: {formatTime(record.clock_out)}</span>
                             </div>
-                            <Badge variant="secondary">
+                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shadow-none">
                               {formatDuration(record.minutes_worked)}
                             </Badge>
                           </>
@@ -106,9 +111,11 @@ export default function TrainerAttendancePage() {
                       </div>
                     </div>
 
-                    <Badge className={record.clock_out ? "bg-gray-500" : "bg-green-500"}>
-                      {record.clock_out ? "Completed" : "Active"}
-                    </Badge>
+                    <div className="self-start">
+                      <Badge className={`${record.clock_out ? "bg-gray-500 hover:bg-gray-600" : "bg-green-500 hover:bg-green-600"} shadow-sm px-2 py-0.5 text-[10px]`}>
+                        {record.clock_out ? "Completed" : "Active"}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </div>

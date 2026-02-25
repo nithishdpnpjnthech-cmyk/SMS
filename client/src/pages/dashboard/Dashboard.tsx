@@ -88,25 +88,25 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
         {/* Header with Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-heading">Dashboard</h1>
-            <p className="text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Dashboard</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               Overview of today's academy operations.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setLocation("/branches")}>
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none shadow-sm" onClick={() => setLocation("/branches")}>
               <Settings className="mr-2 h-4 w-4" />
-              Manage Branches
+              Branches
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setLocation("/reports")}>
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none shadow-sm" onClick={() => setLocation("/reports")}>
               <Download className="mr-2 h-4 w-4" />
-              Download Report
+              Reports
             </Button>
-            <Button size="sm" onClick={() => setLocation("/students?add=true")}>
+            <Button size="sm" className="w-full sm:w-auto shadow-sm" onClick={() => setLocation("/students?add=true")}>
               <Plus className="mr-2 h-4 w-4" />
               Add Student
             </Button>
@@ -114,7 +114,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <Card className="border-l-4 border-l-blue-500 shadow-sm transition-all hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Students</CardTitle>

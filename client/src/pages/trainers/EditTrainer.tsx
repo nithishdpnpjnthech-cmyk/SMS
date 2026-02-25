@@ -18,12 +18,12 @@ export default function EditTrainer() {
   const [location, setLocation] = useLocation();
   // Fallback to extracting ID from location if params are missing (wouter issue workaround)
   const trainerId = params?.id || location.split('/')[2];
-  
+
   const [trainer, setTrainer] = useState<any>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -41,17 +41,17 @@ export default function EditTrainer() {
 
   const loadData = async () => {
     if (!trainerId) return;
-    
+
     setIsLoading(true);
     try {
       const [trainerData, branchesData] = await Promise.all([
         api.getTrainer(trainerId),
         api.getBranches()
       ]);
-      
+
       setTrainer(trainerData);
       setBranches(branchesData || []);
-      
+
       // Initialize form data
       if (trainerData) {
         setFormData({
@@ -60,7 +60,7 @@ export default function EditTrainer() {
           phone: trainerData.phone || "",
           specialization: trainerData.specialization || "",
           // Handle both snake_case and camelCase just in case
-          branchId: trainerData.branchId || trainerData.branch_id || "" 
+          branchId: trainerData.branchId || trainerData.branch_id || ""
         });
       }
     } catch (error) {
@@ -87,7 +87,7 @@ export default function EditTrainer() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!trainerId) return;
-    
+
     setIsSaving(true);
     try {
       await api.updateTrainer(trainerId, formData);
@@ -138,16 +138,16 @@ export default function EditTrainer() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-2xl mx-auto space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center gap-4">
           <Link href={`/trainers/${trainerId}`}>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Edit Trainer</h1>
-            <p className="text-muted-foreground">Update trainer information</p>
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Edit Trainer</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Update trainer information</p>
           </div>
         </div>
 
@@ -162,35 +162,35 @@ export default function EditTrainer() {
             <CardContent className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name" 
-                  name="name" 
-                  value={formData.name} 
-                  onChange={handleInputChange} 
-                  required 
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    name="email" 
-                    type="email" 
-                    value={formData.email} 
-                    onChange={handleInputChange} 
-                    required 
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="phone">Phone Number</Label>
-                  <Input 
-                    id="phone" 
-                    name="phone" 
-                    value={formData.phone} 
-                    onChange={handleInputChange} 
-                    required 
+                  <Input
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
                   />
                 </div>
               </div>
@@ -198,9 +198,9 @@ export default function EditTrainer() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="specialization">Specialization</Label>
-                  <Select 
-                    name="specialization" 
-                    value={formData.specialization} 
+                  <Select
+                    name="specialization"
+                    value={formData.specialization}
                     onValueChange={(val) => handleSelectChange("specialization", val)}
                   >
                     <SelectTrigger>
@@ -214,13 +214,13 @@ export default function EditTrainer() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 {user?.role === 'admin' && (
                   <div className="grid gap-2">
                     <Label htmlFor="branchId">Branch</Label>
-                    <Select 
-                      name="branchId" 
-                      value={formData.branchId} 
+                    <Select
+                      name="branchId"
+                      value={formData.branchId}
                       onValueChange={(val) => handleSelectChange("branchId", val)}
                     >
                       <SelectTrigger>

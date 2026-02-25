@@ -42,11 +42,11 @@ export default function AddStudent() {
         api.getBatches(),
         api.getPrograms()
       ]);
-      
+
       setBranches(branchesData || []);
       setBatches(batchesData || []);
       setPrograms(programsData || []);
-      
+
       // Set defaults only if data exists
       if (branchesData && branchesData.length > 0) {
         setSelectedBranch(branchesData[0].id);
@@ -68,14 +68,14 @@ export default function AddStudent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // IMMEDIATE: Prevent any double submission
     if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
       const formData = new FormData(e.target as HTMLFormElement);
-      
+
       // Validate required fields
       if (!selectedBranch) {
         toast({
@@ -85,7 +85,7 @@ export default function AddStudent() {
         });
         return;
       }
-      
+
       if (!selectedPrograms || selectedPrograms.length === 0) {
         toast({
           title: "Validation Error",
@@ -94,7 +94,7 @@ export default function AddStudent() {
         });
         return;
       }
-      
+
       if (!selectedBatch) {
         toast({
           title: "Validation Error",
@@ -103,7 +103,7 @@ export default function AddStudent() {
         });
         return;
       }
-      
+
       // Validate uniform fields
       if (uniformIssued && !uniformSize) {
         toast({
@@ -113,7 +113,7 @@ export default function AddStudent() {
         });
         return;
       }
-      
+
       const studentData = {
         name: formData.get("name") as string,
         email: formData.get("email") as string,
@@ -147,7 +147,7 @@ export default function AddStudent() {
           console.log("Generating ID card for student:", student.id);
           const idCard = await api.generateIdCard(student.id);
           console.log("ID card generated:", idCard);
-          
+
           // Show ID card modal
           setIdCardData({
             ...student,
@@ -164,7 +164,7 @@ export default function AddStudent() {
         // Navigate to students list if no ID card needed
         setLocation("/students");
       }
-      
+
     } catch (error: any) {
       console.error("Failed to add student:", error);
       toast({
@@ -214,9 +214,12 @@ export default function AddStudent() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold">Add New Student</h1>
-        
+      <div className="max-w-2xl mx-auto space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Add New Student</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Enroll a new student into the academy programs.</p>
+        </div>
+
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -225,13 +228,13 @@ export default function AddStudent() {
                 <Label>Full Name *</Label>
                 <Input name="name" required placeholder="Enter student's full name" />
               </div>
-              
+
               {/* Email */}
               <div>
                 <Label>Email</Label>
                 <Input name="email" type="email" placeholder="student@example.com" />
               </div>
-              
+
               {/* Phone */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
@@ -351,7 +354,7 @@ export default function AddStudent() {
               {/* Uniform Section */}
               <div className="space-y-4 border-t pt-4">
                 <h3 className="text-lg font-medium">Uniform Information</h3>
-                
+
                 {/* Uniform Issued */}
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -366,7 +369,7 @@ export default function AddStudent() {
                   />
                   <Label htmlFor="uniformIssued">Uniform Issued</Label>
                 </div>
-                
+
                 {/* Uniform Size - Only show when uniform is issued */}
                 {uniformIssued && (
                   <div>
@@ -393,8 +396,8 @@ export default function AddStudent() {
                 <Button type="button" variant="outline" onClick={() => setLocation("/students")}>
                   Cancel
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={isSubmitting || branches.length === 0 || programs.length === 0 || batches.length === 0 || selectedPrograms.length === 0 || !selectedBatch || !selectedBranch}
                   className={isSubmitting ? "opacity-50 cursor-not-allowed" : ""}
                 >
@@ -416,7 +419,7 @@ export default function AddStudent() {
               Student ID Card Generated
             </DialogTitle>
           </DialogHeader>
-          
+
           {idCardData && (
             <div className="space-y-4">
               {/* ID Card Preview */}
@@ -435,7 +438,7 @@ export default function AddStudent() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex gap-2">
                 <Button onClick={handleCloseIdCard} className="flex-1">
                   Continue

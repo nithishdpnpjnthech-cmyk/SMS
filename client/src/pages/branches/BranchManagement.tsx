@@ -112,11 +112,11 @@ export default function BranchManagement() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Branch Management</h1>
-            <p className="text-muted-foreground">Manage academy branches and view performance metrics.</p>
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Branch Management</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Manage academy branches and view performance metrics.</p>
           </div>
 
           {user?.role === 'admin' && (
@@ -168,7 +168,7 @@ export default function BranchManagement() {
           )}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 px-1 sm:px-0">
           {branches.map((branch) => (
             <Card key={branch.id} className="overflow-hidden border-none shadow-md transition-all hover:shadow-lg bg-card">
               <CardHeader className="pb-3 border-b border-muted/50">
