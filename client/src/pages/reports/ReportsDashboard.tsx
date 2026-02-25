@@ -5,13 +5,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { Download, FileText, Users, CreditCard, CalendarCheck, TrendingUp } from "lucide-react";
+import { Download, FileText, Users, CreditCard, CalendarCheck, TrendingUp, IndianRupee, PieChart, BarChart3, ShieldCheck, Clock, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { formatAmount } from "@/lib/currency";
+import { useAcademyBranding } from "@/hooks/use-academy-branding";
+import { cn } from "@/lib/utils";
 
 export default function ReportsDashboard() {
+  const { branding } = useAcademyBranding();
   const [reportType, setReportType] = useState("students");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -104,51 +107,64 @@ export default function ReportsDashboard() {
   const convertToCSV = (data: any[], type: string) => {
     if (data.length === 0) return "";
 
+    // Build CSV with Professional Header
+    const academyNameStr = branding.academyName || "Academy Management System";
+    const reportTitle = type === 'students' ? 'Student Enrollment Report'
+      : type === 'fees' ? 'Financial Collections Report'
+        : 'Attendance Engagement Report';
+
     let headers: string[] = [];
     let rows: string[][] = [];
 
     switch (type) {
       case "students":
-        headers = ["ID", "Name", "Email", "Phone", "Program", "Batch", "Status", "Joining Date"];
-        rows = data.map(item => [
-          item.id || "",
-          item.name || "",
-          item.email || "",
-          item.phone || "",
-          item.program || "",
-          item.batch || item.batch_name || "",
-          item.status || "",
-          item.joining_date || item.created_at ? new Date(item.joining_date || item.created_at).toLocaleDateString() : ""
+        headers = ["Identity Name", "Contact Email", "Primary Phone", "Enrolled Program", "Assigned Batch", "Academic Status", "Registration Date"];
+        rows = data.map((item: any) => [
+          item.name || "N/A",
+          item.email || "N/A",
+          item.phone || "N/A",
+          item.program || "N/A",
+          item.batch || item.batch_name || "N/A",
+          item.status ? item.status.toUpperCase() : "N/A",
+          item.joining_date || item.created_at ? new Date(item.joining_date || item.created_at).toLocaleDateString() : "N/A"
         ]);
         break;
       case "fees":
-        headers = ["ID", "Student", "Batch", "Amount", "Date", "Method", "Notes"];
-        rows = data.map(item => [
-          item.id || "",
-          item.student_name || "",
-          item.batch || "",
-          item.amount || "0",
-          item.payment_date ? new Date(item.payment_date).toLocaleDateString() : "",
-          item.payment_method || "",
-          item.notes || ""
+        headers = ["Student Name", "Course Batch", "Transaction Amount", "Authorization Date", "Disbursement Method", "Administrative Notes"];
+        rows = data.map((item: any) => [
+          item.student_name || "N/A",
+          item.batch || "N/A",
+          `₹${(item.amount || 0).toLocaleString('en-IN')}`,
+          item.payment_date ? new Date(item.payment_date).toLocaleDateString() : "N/A",
+          item.payment_method ? item.payment_method.toUpperCase() : "N/A",
+          item.notes || "No remarks"
         ]);
         break;
       case "attendance":
-        headers = ["Date", "Student", "Batch", "Status", "Check In", "Check Out", "Notes"];
-        rows = data.map(item => [
-          item.date ? new Date(item.date).toLocaleDateString() : "",
-          item.student_name || "",
-          item.batch || "",
-          item.status || "",
-          item.check_in ? new Date(item.check_in).toLocaleTimeString() : "-",
-          item.check_out ? new Date(item.check_out).toLocaleTimeString() : "-",
-          item.notes || ""
+        headers = ["Session Date", "Student Identity", "Assigned Batch", "Engagement Status", "Check-In Timestamp", "Check-Out Timestamp", "Log Notes"];
+        rows = data.map((item: any) => [
+          item.date ? new Date(item.date).toLocaleDateString() : "N/A",
+          item.student_name || "N/A",
+          item.batch || "N/A",
+          item.status ? item.status.toUpperCase() : "N/A",
+          item.check_in ? new Date(item.check_in).toLocaleTimeString() : "PENDING",
+          item.check_out ? new Date(item.check_out).toLocaleTimeString() : "PENDING",
+          item.notes || "Standard log"
         ]);
         break;
     }
 
-    const csvRows = [headers, ...rows];
-    return csvRows.map(row => row.map(field => `"${field}"`).join(",")).join("\n");
+    const reportHeader = [
+      [academyNameStr.toUpperCase()],
+      [reportTitle.toUpperCase()],
+      [`PERIOD: ${dateFrom} TO ${dateTo}`],
+      [`GENERATED ON: ${new Date().toLocaleString()}`],
+      [], // Empty row for spacing
+      headers,
+      ...rows
+    ];
+
+    return reportHeader.map(row => row.map(field => `"${field}"`).join(",")).join("\n");
   };
 
   const downloadCSV = (csvContent: string, filename: string) => {
@@ -165,115 +181,156 @@ export default function ReportsDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Reports</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Generate and download academy reports</p>
+      <div className="space-y-8 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
+        <div className="bg-white/50 p-4 sm:p-6 rounded-2xl border border-muted/50 backdrop-blur-sm shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-200">
+                <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8" />
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight font-heading">Analytics & Reports</h1>
+                <p className="text-muted-foreground text-sm font-medium">Extract actionable intelligence from academy operations.</p>
+              </div>
+            </div>
+            <div className="hidden lg:flex items-center gap-2 text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Verified Financial Reporting
+            </div>
           </div>
         </div>
 
         {/* Stats Overview */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 px-1 sm:px-0">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
-              <CardTitle className="text-xs sm:text-sm font-medium">Total Students</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground hidden sm:block" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="text-xl sm:text-2xl font-bold">{stats.totalStudents}</div>
+        <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+          <Card className="shadow-lg border-muted/50 overflow-hidden group hover:scale-[1.02] transition-transform">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                  <Users className="h-5 w-5" />
+                </div>
+                <PieChart className="h-4 w-4 text-muted-foreground opacity-30" />
+              </div>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">TOTAL ENROLLMENTS</p>
+              <div className="text-3xl font-black text-gray-900 font-heading tracking-tighter">{stats.totalStudents}</div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
-              <CardTitle className="text-xs sm:text-sm font-medium">Total Revenue</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground hidden sm:block" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="text-xl sm:text-2xl font-bold text-green-600">{formatAmount(stats.totalRevenue)}</div>
+
+          <Card className="shadow-lg border-muted/50 overflow-hidden group hover:scale-[1.02] transition-transform border-t-4 border-t-green-500">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-green-50 rounded-lg text-green-600">
+                  <IndianRupee className="h-5 w-5" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-green-400 opacity-50" />
+              </div>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">TOTAL REVENUE</p>
+              <div className="text-3xl font-black text-green-700 font-heading tracking-tighter">₹{stats.totalRevenue.toLocaleString('en-IN')}</div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-orange-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
-              <CardTitle className="text-xs sm:text-sm font-medium">Pending Dues</CardTitle>
-              <CalendarCheck className="h-4 w-4 text-muted-foreground hidden sm:block" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="text-xl sm:text-2xl font-bold text-orange-600">{formatAmount(stats.pendingDues)}</div>
+
+          <Card className="shadow-lg border-muted/50 overflow-hidden group hover:scale-[1.02] transition-transform border-t-4 border-t-orange-500">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-orange-50 rounded-lg text-orange-600">
+                  <CalendarCheck className="h-5 w-5" />
+                </div>
+                <Clock className="h-4 w-4 text-orange-400 opacity-50" />
+              </div>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">UNSETTLED DUES</p>
+              <div className="text-3xl font-black text-orange-700 font-heading tracking-tighter">₹{stats.pendingDues.toLocaleString('en-IN')}</div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-red-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
-              <CardTitle className="text-xs sm:text-sm font-medium">Overdue Amount</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground hidden sm:block" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="text-xl sm:text-2xl font-bold text-red-600">{formatAmount(stats.overdueAmount)}</div>
+
+          <Card className="shadow-lg border-muted/50 overflow-hidden group hover:scale-[1.02] transition-transform border-t-4 border-t-red-500">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-red-50 rounded-lg text-red-600">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <BarChart3 className="h-4 w-4 text-red-400 opacity-50 rotate-180" />
+              </div>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">CRITICAL ARREARS</p>
+              <div className="text-3xl font-black text-red-700 font-heading tracking-tighter">₹{stats.overdueAmount.toLocaleString('en-IN')}</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Report Generator */}
-        <Card className="mx-1 sm:mx-0 shadow-sm border-muted/50">
-          <CardHeader className="px-4 sm:px-6">
-            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              <FileText className="h-5 w-5" />
-              Generate Report
+        <Card className="shadow-2xl border-muted/50 overflow-hidden bg-white/80 backdrop-blur-md">
+          <CardHeader className="bg-muted/30 border-b border-muted/50 p-6">
+            <CardTitle className="flex items-center gap-3 text-xl font-black font-heading tracking-tight">
+              <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
+                <FileText className="h-5 w-5" />
+              </div>
+              DISBURSEMENT RECONCILIATION & LOGS
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6 px-4 sm:px-6">
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Report Type</Label>
+          <CardContent className="p-8 space-y-10">
+            <div className="grid gap-8 grid-cols-1 md:grid-cols-3">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">REPORT TYPE CLASSIFICATION</Label>
                 <Select value={reportType} onValueChange={setReportType}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
+                  <SelectTrigger className="h-14 rounded-2xl border-muted/50 bg-white font-bold text-gray-900 focus:ring-indigo-500/20 shadow-sm transition-all text-sm">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-indigo-500" />
+                      <SelectValue />
+                    </div>
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="students">Students Report</SelectItem>
-                    <SelectItem value="fees">Fees Report</SelectItem>
-                    <SelectItem value="attendance">Attendance Report</SelectItem>
+                  <SelectContent className="rounded-2xl shadow-2xl border-muted/50 font-bold p-2">
+                    <SelectItem value="students" className="rounded-xl py-3 cursor-pointer">STUDENT ENROLLMENT LOGS</SelectItem>
+                    <SelectItem value="fees" className="rounded-xl py-3 cursor-pointer">FINANCIAL REVENUE REPORTS</SelectItem>
+                    <SelectItem value="attendance" className="rounded-xl py-3 cursor-pointer">ACADEMIC ENGAGEMENT LOGS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>From Date</Label>
-                <Input
-                  type="date"
-                  className="w-full"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                />
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">STARTING AUDIT DATE</Label>
+                <div className="relative group">
+                  <CalendarCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-indigo-500 transition-colors" />
+                  <Input
+                    type="date"
+                    className="h-14 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-indigo-500/20 shadow-sm"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>To Date</Label>
-                <Input
-                  type="date"
-                  className="w-full"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                />
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">ENDING AUDIT DATE</Label>
+                <div className="relative group">
+                  <CalendarCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-indigo-500 transition-colors" />
+                  <Input
+                    type="date"
+                    className="h-14 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-indigo-500/20 shadow-sm"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-4">
-              <Button onClick={generateReport} disabled={isGenerating} className="w-full sm:w-auto min-h-[44px]">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-dashed border-muted/50">
+              <div className="space-y-1 max-w-md">
+                <p className="text-xs font-black text-indigo-600 uppercase tracking-widest">Administrative Notice</p>
+                <p className="text-sm font-medium text-muted-foreground">Internal reports are generated as strictly formatted CSV archives compatible with industry-standard spreadsheet software like Microsoft Excel or Apple Numbers.</p>
+              </div>
+              <Button
+                onClick={generateReport}
+                disabled={isGenerating}
+                className="w-full sm:w-auto h-16 px-10 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
                 {isGenerating ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Generating...
-                  </>
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>SYNTHESIZING...</span>
+                  </div>
                 ) : (
-                  <>
-                    <Download className="mr-2 h-4 w-4" />
-                    Generate & Download Report
-                  </>
+                  <div className="flex items-center gap-3">
+                    <Download className="h-5 w-5" />
+                    <span>GENERATE & DOWNLOAD ARCHIVE</span>
+                  </div>
                 )}
               </Button>
-            </div>
-
-            <div className="text-sm text-muted-foreground">
-              <p>Reports will be downloaded as CSV files that can be opened in Excel or Google Sheets.</p>
             </div>
           </CardContent>
         </Card>

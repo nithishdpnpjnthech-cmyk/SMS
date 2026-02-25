@@ -221,16 +221,16 @@ export default function StudentProfile() {
                 </div>
               </div>
 
-              <div className="w-full mt-8 flex flex-wrap gap-2">
-                <Button className="flex-1 shadow-md hover:shadow-lg transition-all font-bold h-11 rounded-xl" variant="default" onClick={() => setIsEditOpen(true)}>
+              <div className="w-full mt-8 grid grid-cols-2 gap-2">
+                <Button className="shadow-md hover:shadow-lg transition-all font-bold h-11 rounded-xl" variant="default" onClick={() => setIsEditOpen(true)}>
                   <Edit className="mr-2 h-4 w-4" /> Edit
                 </Button>
-                <Button className="flex-1 shadow-sm font-bold h-11 rounded-xl" variant="outline" onClick={handleDeactivate}>
+                <Button className="shadow-sm font-bold h-11 rounded-xl" variant="outline" onClick={handleDeactivate}>
                   Deactivate
                 </Button>
-                <Button className="w-full sm:w-auto px-4 shadow-sm font-bold h-11 rounded-xl text-red-600 border-red-100 hover:bg-red-50" variant="outline" onClick={handleSuspend}>
-                  <Trash2 className="h-4 w-4 sm:hidden" />
-                  <span className="hidden sm:inline">Suspend</span>
+                <Button className="col-span-2 shadow-sm font-bold h-11 rounded-xl text-red-600 border-red-100 hover:bg-red-50 group/suspend" variant="outline" onClick={handleSuspend}>
+                  <Trash2 className="mr-2 h-4 w-4 text-red-500 group-hover/suspend:scale-110 transition-transform" />
+                  Suspend Profile
                 </Button>
               </div>
             </CardContent>
