@@ -24,7 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const ROLE_PERMISSIONS = {
   admin: ['*'], // Full access
   manager: ['students.read', 'students.write', 'fees.read', 'attendance.read', 'trainers.read', 'reports.read'],
-  receptionist: ['students.write', 'fees.write', 'attendance.read'],
+  receptionist: ['students.read', 'students.write', 'fees.read', 'fees.write', 'attendance.read'],
   trainer: ['attendance.write', 'students.read']
 };
 
@@ -60,12 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { user: userData } = await api.login(credentials);
       console.log("Auth: Login API response:", userData);
-      
+
       // ✅ Validate user data structure before setting
       if (!userData || !userData.id || !userData.role) {
         throw new Error('Invalid user data received from server');
       }
-      
+
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('userId', userData.id);
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const canAccess = (resource: string): boolean => {
     if (!user) return false;
-    
+
     switch (user.role) {
       case 'admin':
         return true;

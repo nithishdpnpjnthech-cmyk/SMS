@@ -119,6 +119,14 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const studentRemarks = pgTable("student_remarks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentId: varchar("student_id").notNull(),
+  authorId: varchar("author_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Schema exports
 export const insertUserSchema = createInsertSchema(users);
 export const insertBranchSchema = createInsertSchema(branches);
@@ -133,6 +141,7 @@ export const insertFeeStructureSchema = createInsertSchema(feeStructures);
 export const insertStudentEnrollmentSchema = createInsertSchema(studentEnrollments);
 export const insertStudentFeeSchema = createInsertSchema(studentFees);
 export const insertPaymentSchema = createInsertSchema(payments);
+export const insertStudentRemarkSchema = createInsertSchema(studentRemarks);
 
 // Type exports
 export type User = typeof users.$inferSelect;
@@ -152,3 +161,5 @@ export type FeeStructure = typeof feeStructures.$inferSelect;
 export type StudentEnrollment = typeof studentEnrollments.$inferSelect;
 export type StudentFee = typeof studentFees.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
+export type StudentRemark = typeof studentRemarks.$inferSelect;
+export type InsertStudentRemark = z.infer<typeof insertStudentRemarkSchema>;

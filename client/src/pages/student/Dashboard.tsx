@@ -142,7 +142,7 @@ export default function StudentDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -186,16 +186,16 @@ export default function StudentDashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Attendance Card */}
-        <Card className="shadow-sm border-muted/50 transition-all hover:shadow-md hover:border-blue-300 border-l-4 border-l-blue-500 group overflow-hidden">
+        <Card className="shadow-sm border-muted/50 transition-all hover:shadow-md hover:border-primary/30 border-l-4 border-l-primary group overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
             <CardTitle className="text-xs font-black text-muted-foreground uppercase tracking-widest">Attendance Status</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
+            <Calendar className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="p-4 pt-2 pb-5">
             <div className="text-2xl sm:text-3xl font-black text-gray-900 mb-2 font-heading tracking-tight">
               {dashboardData.attendance.percentage}%
             </div>
-            <Progress value={dashboardData.attendance.percentage} className="h-2 mb-3 bg-blue-50" />
+            <Progress value={dashboardData.attendance.percentage} className="h-2 mb-3 bg-orange-50" />
             <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-tighter">
               {dashboardData.attendance.presentDays} OF {dashboardData.attendance.totalDays} SESSIONS
             </p>
@@ -223,10 +223,10 @@ export default function StudentDashboard() {
         </Card>
 
         {/* Uniform Status Card */}
-        <Card className="shadow-sm border-muted/50 transition-all hover:shadow-md hover:border-purple-300 border-l-4 border-l-purple-500 group overflow-hidden">
+        <Card className="shadow-sm border-muted/50 transition-all hover:shadow-md hover:border-accent/30 border-l-4 border-l-accent group overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
             <CardTitle className="text-xs font-black text-muted-foreground uppercase tracking-widest">Kits & Gear</CardTitle>
-            <Shirt className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
+            <Shirt className="h-4 w-4 text-accent group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="p-4 pt-2 pb-5">
             <div className="flex items-center gap-2 mb-2">
@@ -263,7 +263,7 @@ export default function StudentDashboard() {
         <Card className="lg:col-span-2 shadow-sm border-muted/50 overflow-hidden">
           <CardHeader className="bg-muted/30 border-b border-muted/50 px-4 sm:px-6">
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-heading">
-              <div className="p-2 bg-blue-100 rounded-lg text-blue-600 shadow-sm">
+              <div className="p-2 bg-orange-100 rounded-lg text-orange-600 shadow-sm">
                 <Clock className="h-5 w-5" />
               </div>
               Recent Activity

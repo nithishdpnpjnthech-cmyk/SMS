@@ -57,13 +57,14 @@ export default function StudentProfile() {
   };
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    if (!name) return 'S';
+    return name.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -95,14 +96,14 @@ export default function StudentProfile() {
 
               <div className="relative px-6 pb-8">
                 <Avatar className="h-32 w-32 mx-auto mb-4 border-8 border-white shadow-2xl relative z-10 transition-transform hover:scale-105">
-                  <AvatarFallback className="bg-blue-50 text-primary text-3xl font-black font-heading">
+                  <AvatarFallback className="bg-orange-50 text-primary text-3xl font-black font-heading">
                     {getInitials(profile.name)}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="space-y-1">
                   <h2 className="text-2xl font-black text-gray-900 font-heading tracking-tight">{profile.name}</h2>
-                  <div className="inline-flex items-center gap-1 bg-blue-50 text-primary px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border border-blue-100 shadow-sm">
+                  <div className="inline-flex items-center gap-1 bg-orange-50 text-primary px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border border-orange-100 shadow-sm">
                     ID: {profile.id}
                   </div>
                 </div>
@@ -146,7 +147,7 @@ export default function StudentProfile() {
           <Card className="shadow-lg border-muted/50 overflow-hidden">
             <CardHeader className="bg-muted/30 border-b border-muted/50 px-4 sm:px-6">
               <CardTitle className="flex items-center gap-3 text-lg font-heading">
-                <div className="p-2 bg-blue-100 rounded-lg text-primary shadow-sm">
+                <div className="p-2 bg-orange-100 rounded-lg text-primary shadow-sm">
                   <GraduationCap className="h-5 w-5" />
                 </div>
                 Enrollment Details
@@ -190,7 +191,7 @@ export default function StudentProfile() {
           <Card className="shadow-lg border-muted/50 overflow-hidden">
             <CardHeader className="bg-muted/30 border-b border-muted/50 px-4 sm:px-6">
               <CardTitle className="flex items-center gap-3 text-lg font-heading">
-                <div className="p-2 bg-purple-100 rounded-lg text-purple-600 shadow-sm">
+                <div className="p-2 bg-yellow-100 rounded-lg text-orange-600 shadow-sm">
                   <Users className="h-5 w-5" />
                 </div>
                 Guardian Information
@@ -211,7 +212,7 @@ export default function StudentProfile() {
                     PRIMARY CONTACT
                   </label>
                   <div className="flex items-center gap-2 text-lg font-black text-gray-900 font-heading">
-                    <Phone className="h-4 w-4 text-purple-500" />
+                    <Phone className="h-4 w-4 text-orange-500" />
                     {profile.parentPhone || 'NOT PROVIDED'}
                   </div>
                 </div>
@@ -260,7 +261,7 @@ export default function StudentProfile() {
           <Card className="shadow-lg border-muted/50 overflow-hidden">
             <CardHeader className="bg-muted/30 border-b border-muted/50 px-4 sm:px-6">
               <CardTitle className="flex items-center gap-3 text-lg font-heading">
-                <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600 shadow-sm">
+                <div className="p-2 bg-yellow-100 rounded-lg text-orange-600 shadow-sm">
                   <Building className="h-5 w-5" />
                 </div>
                 Organization Details
@@ -300,7 +301,7 @@ export default function StudentProfile() {
                         CENTRAL SUPPORT
                       </label>
                       <p className="text-base font-bold text-gray-900 flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-indigo-500" />
+                        <Phone className="h-4 w-4 text-orange-500" />
                         {profile.academy.phone}
                       </p>
                     </div>
@@ -312,7 +313,7 @@ export default function StudentProfile() {
                         HEADQUARTERS
                       </label>
                       <p className="text-sm font-bold text-gray-900 flex items-start gap-2 leading-relaxed">
-                        <MapPin className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                        <MapPin className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
                         {profile.academy.address}
                       </p>
                     </div>

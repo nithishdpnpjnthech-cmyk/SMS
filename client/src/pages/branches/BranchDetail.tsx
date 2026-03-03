@@ -125,12 +125,12 @@ export default function BranchDetail() {
               <div>
                 <h3 className="font-semibold mb-2">Performance Metrics</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="flex items-center justify-center gap-1 text-blue-600 mb-1">
+                  <div className="text-center p-3 bg-orange-50 rounded-lg">
+                    <div className="flex items-center justify-center gap-1 text-orange-600 mb-1">
                       <Users className="h-4 w-4" />
                       <span className="text-xs font-medium">Students</span>
                     </div>
-                    <div className="text-2xl font-bold text-blue-700">{branch.studentCount}</div>
+                    <div className="text-2xl font-bold text-orange-700">{branch.studentCount}</div>
                   </div>
 
                   <div className="text-center p-3 bg-green-50 rounded-lg">

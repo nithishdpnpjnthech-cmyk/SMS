@@ -423,11 +423,11 @@ export default function AddStudent() {
           {idCardData && (
             <div className="space-y-4">
               {/* ID Card Preview */}
-              <div ref={cardRef} className="bg-gradient-to-br from-blue-600 to-purple-700 text-white p-6 rounded-lg shadow-lg">
+              <div ref={cardRef} className="bg-gradient-to-br from-orange-500 to-yellow-600 text-white p-6 rounded-lg shadow-lg">
                 <div className="text-center space-y-2">
-                  <h3 className="font-bold text-lg">ACADEMY MASTER</h3>
-                  <div className="bg-white/20 rounded-full w-16 h-16 mx-auto flex items-center justify-center text-2xl font-bold">
-                    {idCardData.name?.charAt(0) || 'S'}
+                  <h3 className="font-bold text-lg">HUURA ACADEMY</h3>
+                  <div className="rounded-xl w-24 h-24 mx-auto flex items-center justify-center overflow-hidden">
+                    <img src="/logo.png" alt="HUURA" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
                   </div>
                   <h4 className="font-semibold text-lg">{idCardData.name}</h4>
                   <div className="text-sm space-y-1">

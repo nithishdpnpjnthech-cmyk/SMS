@@ -58,7 +58,7 @@ function Router() {
 
       <ProtectedRoute path="/students" component={StudentList} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
       <ProtectedRoute path="/students/add" component={AddStudent} allowedRoles={["admin", "receptionist"]} />
-      <ProtectedRoute path="/students/:id/edit" component={EditStudent} allowedRoles={["admin", "receptionist"]} />
+      <ProtectedRoute path="/students/:id/edit" component={EditStudent} allowedRoles={["admin", "manager", "receptionist"]} />
       <ProtectedRoute path="/students/:id" component={StudentProfile} allowedRoles={["admin", "manager", "receptionist", "trainer"]} />
 
       <ProtectedRoute path="/attendance" component={AttendanceDashboard} allowedRoles={["admin", "manager", "trainer"]} />

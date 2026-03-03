@@ -145,7 +145,7 @@ export default function Attendance() {
         </div>
 
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 px-1 sm:px-0">
-          <Card className="shadow-sm border-l-4 border-l-blue-500">
+          <Card className="shadow-sm border-l-4 border-l-primary">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
               <CardTitle className="text-xs sm:text-sm font-medium">Total Students</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground hidden sm:block" />

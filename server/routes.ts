@@ -1057,6 +1057,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             FROM students s 
             LEFT JOIN batches b ON s.batch_id = b.id
             WHERE s.created_at BETWEEN ? AND ? ${branchFilter}
+            ORDER BY s.created_at ASC
           `, params);
           break;
 
@@ -1066,15 +1067,65 @@ export async function registerRoutes(app: Express): Promise<void> {
             FROM payments p
             JOIN students s ON p.student_id = s.id
             WHERE p.payment_date BETWEEN ? AND ? ${branchFilter}
+            ORDER BY p.payment_date ASC
           `, params);
           break;
 
         case "attendance":
           data = await storage.query(`
-            SELECT a.*, s.name as student_name, s.batch 
+            SELECT a.*, s.name as student_name, s.batch, s.program 
             FROM attendance a
             JOIN students s ON a.student_id = s.id
             WHERE a.date BETWEEN ? AND ? ${branchFilter}
+            ORDER BY a.date ASC
+          `, params);
+          break;
+
+        case "attendance_summary":
+          data = await storage.query(`
+            SELECT 
+              s.name as student_name,
+              s.program,
+              s.batch,
+              COUNT(a.id) as total_days,
+              SUM(CASE WHEN a.status = 'PRESENT' THEN 1 ELSE 0 END) as present_days,
+              SUM(CASE WHEN a.status = 'ABSENT' THEN 1 ELSE 0 END) as absent_days,
+              SUM(CASE WHEN a.is_late = 1 THEN 1 ELSE 0 END) as late_days
+            FROM students s
+            LEFT JOIN attendance a ON s.id = a.student_id AND a.date BETWEEN ? AND ?
+            WHERE 1=1 ${branchFilter}
+            GROUP BY s.id
+            ORDER BY s.name ASC
+          `, params);
+          break;
+
+        case "monthly_attendance_summary":
+          data = await storage.query(`
+            SELECT 
+              s.name as student_name,
+              s.program,
+              s.batch,
+              DATE_FORMAT(a.date, '%Y-%m') as month,
+              COUNT(a.id) as sessions,
+              SUM(CASE WHEN a.status = 'PRESENT' THEN 1 ELSE 0 END) as present,
+              SUM(CASE WHEN a.status = 'ABSENT' THEN 1 ELSE 0 END) as absent,
+              SUM(CASE WHEN a.is_late = 1 THEN 1 ELSE 0 END) as late
+            FROM students s
+            JOIN attendance a ON s.id = a.student_id
+            WHERE a.date BETWEEN ? AND ? ${branchFilter}
+            GROUP BY s.id, DATE_FORMAT(a.date, '%Y-%m')
+            ORDER BY month DESC, s.name ASC
+          `, params);
+          break;
+
+        case "trainers":
+          data = await storage.query(`
+            SELECT ta.*, t.name as trainer_name, t.branch_id
+            FROM trainer_attendance ta
+            JOIN trainers t ON ta.trainer_id = t.id
+            WHERE ta.clock_in_time BETWEEN ? AND ? 
+            ${branchFilter.replace('s.branch_id', 't.branch_id')}
+            ORDER BY ta.clock_in_time ASC
           `, params);
           break;
 
@@ -1481,11 +1532,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.patch("/api/students/:id/deactivate", requireAuth(), async (req, res) => {
     try {
       const studentId = req.params.id;
-
-      const student = await storage.query(
-        "UPDATE students SET status = 'inactive' WHERE id = ?",
-        [studentId]
-      );
+      const student = await storage.updateStudent(studentId, { status: 'inactive' });
 
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
@@ -1501,11 +1548,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.patch("/api/students/:id/activate", requireAuth(), async (req, res) => {
     try {
       const studentId = req.params.id;
-
-      const student = await storage.query(
-        "UPDATE students SET status = 'active' WHERE id = ?",
-        [studentId]
-      );
+      const student = await storage.updateStudent(studentId, { status: 'active' });
 
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
@@ -1521,11 +1564,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.patch("/api/students/:id/suspend", requireAuth(), async (req, res) => {
     try {
       const studentId = req.params.id;
-
-      const student = await storage.query(
-        "UPDATE students SET status = 'suspended' WHERE id = ?",
-        [studentId]
-      );
+      const student = await storage.updateStudent(studentId, { status: 'suspended' });
 
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
@@ -1535,6 +1574,41 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Suspend student error:", error);
       res.status(500).json({ error: "Failed to suspend student" });
+    }
+  });
+
+  // Student Remarks
+  app.get("/api/students/:id/remarks", requireAuth(), async (req, res) => {
+    try {
+      const studentId = req.params.id;
+      const remarks = await storage.getStudentRemarks(studentId);
+      res.json(remarks);
+    } catch (error) {
+      console.error("Get student remarks error:", error);
+      res.status(500).json({ error: "Failed to fetch remarks" });
+    }
+  });
+
+  app.post("/api/students/:id/remarks", requireAuth(), async (req, res) => {
+    try {
+      const studentId = req.params.id;
+      const { content } = req.body;
+      const authorId = req.user.id;
+
+      if (!content) {
+        return res.status(400).json({ error: "Content is required" });
+      }
+
+      const remark = await storage.createStudentRemark({
+        studentId,
+        authorId,
+        content
+      });
+
+      res.json(remark);
+    } catch (error) {
+      console.error("Create student remark error:", error);
+      res.status(500).json({ error: "Failed to create remark" });
     }
   });
 

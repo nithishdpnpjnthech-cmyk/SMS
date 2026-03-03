@@ -1,13 +1,13 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { 
-  LayoutDashboard, 
-  Users, 
-  CalendarCheck, 
-  CreditCard, 
-  GraduationCap, 
-  Building2, 
-  FileBarChart, 
+import {
+  LayoutDashboard,
+  Users,
+  CalendarCheck,
+  CreditCard,
+  GraduationCap,
+  Building2,
+  FileBarChart,
   LogOut,
   Menu,
   Settings
@@ -63,11 +63,11 @@ export function Sidebar() {
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
       <div className="flex h-16 items-center px-6 border-b border-sidebar-border/50">
-        <div className="flex items-center gap-2 font-heading font-bold text-xl text-sidebar-primary-foreground">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            A
+        <div className="flex items-center gap-3 font-heading font-black text-lg text-sidebar-foreground">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full overflow-hidden">
+            <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain filter drop-shadow-sm" />
           </div>
-          AcademyMaster
+          <span className="tracking-tight">HUURA <span className="text-primary font-black">ACADEMY</span></span>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto py-6 px-3">
@@ -98,9 +98,9 @@ export function Sidebar() {
         </nav>
       </div>
       <div className="border-t border-sidebar-border/50 p-4">
-        <Button 
+        <Button
           onClick={handleLogout}
-          variant="ghost" 
+          variant="ghost"
           className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
         >
           <LogOut className="h-4 w-4" />
@@ -134,11 +134,11 @@ export function MobileSidebar() {
       <SheetContent side="left" className="p-0 bg-sidebar text-sidebar-foreground w-72 border-r-sidebar-border">
         <div className="flex h-full flex-col">
           <div className="flex h-16 items-center px-6 border-b border-sidebar-border/50">
-            <div className="flex items-center gap-2 font-heading font-bold text-xl text-sidebar-primary-foreground">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                A
+            <div className="flex items-center gap-3 font-heading font-black text-lg text-sidebar-foreground">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full overflow-hidden">
+                <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain filter drop-shadow-sm" />
               </div>
-              AcademyMaster
+              <span className="tracking-tight">HUURA <span className="text-primary font-black">ACADEMY</span></span>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto py-6 px-3">
@@ -149,8 +149,8 @@ export function MobileSidebar() {
             </div>
             <nav className="space-y-1">
               {navItems.map((item: any) => {
-                 const isActive = location === item.href || location.startsWith(item.href + "/");
-                 return (
+                const isActive = location === item.href || location.startsWith(item.href + "/");
+                return (
                   <Link key={item.href} href={item.href} onClick={() => setOpen(false)}>
                     <a
                       className={cn(
@@ -169,9 +169,9 @@ export function MobileSidebar() {
             </nav>
           </div>
           <div className="border-t border-sidebar-border/50 p-4">
-            <Button 
+            <Button
               onClick={() => { handleLogout(); setOpen(false); }}
-              variant="ghost" 
+              variant="ghost"
               className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
             >
               <LogOut className="h-4 w-4" />

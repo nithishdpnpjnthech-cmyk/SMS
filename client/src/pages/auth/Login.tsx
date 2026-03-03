@@ -108,10 +108,10 @@ export default function Login() {
               Sign In
             </Button>
           </form>
-          
+
           <div className="mt-6 text-center">
-            <Button 
-              variant="link" 
+            <Button
+              variant="link"
               onClick={() => setLocation('/student/login')}
               className="text-sm text-muted-foreground"
             >
@@ -120,8 +120,8 @@ export default function Login() {
           </div>
         </CardContent>
 
-        <CardFooter className="text-xs text-center">
-          AcademyMaster Security
+        <CardFooter className="text-xs text-center flex justify-center w-full">
+          HUURA ACADEMY Security
         </CardFooter>
       </Card>
     </div>

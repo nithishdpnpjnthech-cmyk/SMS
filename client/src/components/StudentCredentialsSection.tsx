@@ -74,12 +74,12 @@ export default function StudentCredentialsSection({
         username: studentData.email || studentData.phone || studentData.id, // Fallback username for admin reference
         password: generatedPassword,
       });
-      
+
       toast({
         title: 'Success',
         description: 'Student portal access enabled successfully',
       });
-      
+
       setIsCreateDialogOpen(false);
       loadCredentials();
       onUpdate();
@@ -97,17 +97,17 @@ export default function StudentCredentialsSection({
 
   const toggleCredentialStatus = async () => {
     if (!credentials) return;
-    
+
     try {
       await api.patch(`/api/admin/student-credentials/${credentials.id}`, {
         isActive: !credentials.isActive,
       });
-      
+
       toast({
         title: 'Success',
         description: `Credentials ${!credentials.isActive ? 'enabled' : 'disabled'} successfully`,
       });
-      
+
       loadCredentials();
     } catch (error: any) {
       console.error('Toggle credentials error:', error);
@@ -121,18 +121,18 @@ export default function StudentCredentialsSection({
 
   const resetPassword = async () => {
     if (!credentials) return;
-    
+
     setIsLoading(true);
     try {
       await api.patch(`/api/admin/student-credentials/${credentials.id}/reset-password`, {
         password: generatedPassword,
       });
-      
+
       toast({
         title: 'Success',
         description: 'Password reset successfully',
       });
-      
+
       setIsResetDialogOpen(false);
       loadCredentials();
     } catch (error: any) {
@@ -159,27 +159,27 @@ export default function StudentCredentialsSection({
         {credentials ? (
           <div className="space-y-6">
             {/* Login Information Section */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <h4 className="font-semibold text-orange-900 mb-3 flex items-center gap-2">
                 <Key className="h-4 w-4" />
                 Student Login Username Options
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-blue-800">Email:</span>
-                  <code className="bg-blue-100 px-2 py-1 rounded text-blue-900">
+                  <span className="text-orange-800">Email:</span>
+                  <code className="bg-orange-100 px-2 py-1 rounded text-orange-900">
                     {studentData?.email || 'Not provided'}
                   </code>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-blue-800">Phone:</span>
-                  <code className="bg-blue-100 px-2 py-1 rounded text-blue-900">
+                  <span className="text-orange-800">Phone:</span>
+                  <code className="bg-orange-100 px-2 py-1 rounded text-orange-900">
                     {studentData?.phone || 'Not provided'}
                   </code>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-blue-800">Full Student ID:</span>
-                  <code className="bg-blue-100 px-2 py-1 rounded text-blue-900 text-xs">
+                  <span className="text-orange-800">Full Student ID:</span>
+                  <code className="bg-orange-100 px-2 py-1 rounded text-orange-900 text-xs">
                     {studentData?.id}
                   </code>
                 </div>
@@ -224,7 +224,7 @@ export default function StudentCredentialsSection({
                     </>
                   )}
                 </Button>
-                
+
                 <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -239,7 +239,7 @@ export default function StudentCredentialsSection({
                         This will reset the student's password to the default generated password.
                       </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="space-y-4">
                       <div>
                         <Label>New Password</Label>
@@ -260,14 +260,14 @@ export default function StudentCredentialsSection({
                           </Button>
                         </div>
                       </div>
-                      
+
                       <Alert>
                         <Key className="h-4 w-4" />
                         <AlertDescription>
                           Share this new password with the student securely.
                         </AlertDescription>
                       </Alert>
-                      
+
                       <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isLoading}>
                           Cancel
@@ -285,7 +285,7 @@ export default function StudentCredentialsSection({
         ) : (
           <div className="text-center py-6">
             <p className="text-muted-foreground mb-4">Student portal access is not enabled</p>
-            
+
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -300,27 +300,27 @@ export default function StudentCredentialsSection({
                     Enable portal access for the student. They can login using email, phone, or full student ID.
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-4">
                   {/* Login Username Information */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-blue-900 mb-3">Valid Login Usernames</h4>
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-orange-900 mb-3">Valid Login Usernames</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between items-center">
-                        <span className="text-blue-800">Email:</span>
-                        <code className="bg-blue-100 px-2 py-1 rounded text-blue-900">
+                        <span className="text-orange-800">Email:</span>
+                        <code className="bg-orange-100 px-2 py-1 rounded text-orange-900">
                           {studentData?.email || 'Not provided'}
                         </code>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-blue-800">Phone:</span>
-                        <code className="bg-blue-100 px-2 py-1 rounded text-blue-900">
+                        <span className="text-orange-800">Phone:</span>
+                        <code className="bg-orange-100 px-2 py-1 rounded text-orange-900">
                           {studentData?.phone || 'Not provided'}
                         </code>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-blue-800">Full Student ID:</span>
-                        <code className="bg-blue-100 px-2 py-1 rounded text-blue-900 text-xs">
+                        <span className="text-orange-800">Full Student ID:</span>
+                        <code className="bg-orange-100 px-2 py-1 rounded text-orange-900 text-xs">
                           {studentData?.id}
                         </code>
                       </div>
@@ -331,7 +331,7 @@ export default function StudentCredentialsSection({
                       </p>
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label>Generated Password</Label>
                     <div className="relative">
@@ -354,14 +354,14 @@ export default function StudentCredentialsSection({
                       Password is generated from first 5 letters of student name
                     </p>
                   </div>
-                  
+
                   <Alert>
                     <Key className="h-4 w-4" />
                     <AlertDescription>
                       Students can login using any of the valid usernames above with this password.
                     </AlertDescription>
                   </Alert>
-                  
+
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isLoading}>
                       Cancel

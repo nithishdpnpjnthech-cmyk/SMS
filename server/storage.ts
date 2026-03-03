@@ -72,8 +72,11 @@ export interface IStorage {
   createStudentFee(fee: any): Promise<any>;
   updateStudentFee(id: string, updates: any): Promise<any | undefined>;
 
-  createPayment(payment: any): Promise<any>;
   getPayments(studentId: string): Promise<any[]>;
+
+  // Student Remarks
+  getStudentRemarks(studentId: string): Promise<any[]>;
+  createStudentRemark(remark: any): Promise<any>;
 }
 
 /**

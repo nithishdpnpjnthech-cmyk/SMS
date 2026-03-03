@@ -102,10 +102,10 @@ export default function StudentLayout() {
   const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
     <div className="flex h-full flex-col bg-white border-r border-muted/50">
       {/* Logo & Academy Name */}
-      <div className="p-6 border-b border-muted/50 bg-gradient-to-br from-blue-50/50 to-transparent">
+      <div className="p-6 border-b border-muted/50 bg-gradient-to-br from-orange-50/50 to-transparent">
         <div className="flex items-center gap-3">
-          <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/20 transition-transform hover:scale-105 active:scale-95 duration-200 cursor-pointer">
-            <GraduationCap className="h-6 w-6 text-white" />
+          <div className="h-12 w-12 flex items-center justify-center rounded-full overflow-hidden transition-transform hover:scale-105 active:scale-95 duration-200 cursor-pointer">
+            <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain filter drop-shadow-sm" />
           </div>
           <div className="min-w-0">
             <h1 className="font-black text-lg text-gray-900 truncate font-heading leading-tight">{getPortalName()}</h1>
@@ -130,7 +130,7 @@ export default function StudentLayout() {
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-300 group relative",
                   isActive
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                    ? "bg-primary text-white shadow-md shadow-primary/20"
                     : "text-gray-600 hover:bg-muted/50 hover:text-gray-900"
                 )}
               >

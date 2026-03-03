@@ -42,18 +42,18 @@ export default function StudentLogin({ onLogin }: StudentLoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0F172A] relative overflow-hidden font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden font-sans">
       {/* Dynamic Background Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full animate-pulse"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/20 blur-[120px] rounded-full animate-pulse [animation-delay:2s]"></div>
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/20 blur-[120px] rounded-full animate-pulse [animation-delay:2s]"></div>
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none"></div>
 
       <div className="w-full max-w-md px-4 relative z-10 animate-in fade-in zoom-in duration-700">
         <div className="text-center mb-8">
-          <div className="inline-flex p-4 rounded-3xl bg-blue-600 shadow-2xl shadow-blue-500/40 mb-6 group hover:scale-110 transition-transform duration-500">
-            <GraduationCap className="h-10 w-10 text-white" />
+          <div className="inline-flex p-1 rounded-full mb-6 group hover:scale-110 transition-transform duration-500 overflow-hidden w-32 h-32 items-center justify-center">
+            <img src="/logo.png" alt="HUURA" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight font-heading leading-tight mb-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-heading leading-tight mb-2">
             {getPortalName()}
           </h1>
           <p className="text-slate-400 font-medium tracking-wide uppercase text-[10px] bg-slate-800/50 inline-block px-4 py-1.5 rounded-full border border-slate-700/50">
@@ -88,16 +88,16 @@ export default function StudentLogin({ onLogin }: StudentLoginProps) {
                     onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
                     required
                     disabled={isLoading}
-                    className="h-14 bg-slate-800/50 border-slate-700 text-white rounded-2xl pl-12 pr-4 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder:text-slate-500 text-base"
+                    className="h-14 bg-slate-800/50 border-slate-700 text-white rounded-2xl pl-12 pr-4 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-slate-500 text-base"
                   />
-                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-primary transition-colors" />
                 </div>
               </div>
 
               <div className="space-y-2.5">
                 <div className="flex justify-between items-center ml-1">
                   <Label htmlFor="password" className="text-slate-300 font-bold text-xs uppercase tracking-widest">Secret Key / Password</Label>
-                  <Button variant="link" className="text-[10px] text-blue-400 font-black p-0 h-auto uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity">Forgot?</Button>
+                  <Button variant="link" className="text-[10px] text-primary font-black p-0 h-auto uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity">Forgot?</Button>
                 </div>
                 <div className="relative group">
                   <Input
@@ -108,15 +108,15 @@ export default function StudentLogin({ onLogin }: StudentLoginProps) {
                     onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
                     required
                     disabled={isLoading}
-                    className="h-14 bg-slate-800/50 border-slate-700 text-white rounded-2xl pl-12 pr-4 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder:text-slate-500 text-base"
+                    className="h-14 bg-slate-800/50 border-slate-700 text-white rounded-2xl pl-12 pr-4 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all placeholder:text-slate-500 text-base"
                   />
-                  <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-blue-500 transition-colors opacity-50" />
+                  <LogIn className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-primary transition-colors opacity-50" />
                 </div>
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white text-base font-black rounded-2xl shadow-xl shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
+                className="w-full h-14 bg-primary hover:bg-primary/90 text-white text-base font-black rounded-2xl shadow-xl shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
                 disabled={isLoading}
               >
                 {isLoading ? (

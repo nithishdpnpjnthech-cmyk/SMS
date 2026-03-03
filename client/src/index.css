@@ -8,41 +8,41 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-  
+
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
-  
+
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
-  
+
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
-  
+
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-  
+
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
-  
+
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
-  
+
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
-  
+
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  
+
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
-  
+
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
   --color-sidebar-primary: hsl(var(--sidebar-primary));
@@ -67,8 +67,9 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
 
-  --primary: 221 83% 53%; /* Modern Blue */
-  --primary-foreground: 210 40% 98%;
+  --primary: 25 100% 50%;
+  /* Vibrant Orange */
+  --primary-foreground: 0 0% 100%;
 
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222 47% 11.2%;
@@ -76,21 +77,23 @@
   --muted: 210 40% 96.1%;
   --muted-foreground: 215.4 16.3% 46.9%;
 
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --accent: 48 100% 67%;
+  /* Soft Yellow */
+  --accent-foreground: 25 100% 10%;
 
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
 
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 221 83% 53%;
+  --ring: 25 100% 50%;
 
   --radius: 0.5rem;
 
-  --sidebar: 222 47% 11%; /* Dark Sidebar */
+  --sidebar: 222 47% 11%;
+  /* Dark Sidebar */
   --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 221 83% 53%;
+  --sidebar-primary: 25 100% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 217 33% 17%;
   --sidebar-accent-foreground: 210 40% 98%;
@@ -147,16 +150,24 @@
   * {
     @apply border-border;
   }
+
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
   }
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-heading tracking-tight;
   }
 }
@@ -175,6 +186,7 @@
 
 /* Tables: horizontal scroll on small screens */
 @media (max-width: 767px) {
+
   .rounded-md.border:has(table),
   .border.rounded-lg:has(table) {
     overflow-x: auto;
@@ -205,7 +217,7 @@
 
 /* Dialog/Modal: better mobile sizing */
 @media (max-width: 639px) {
-  [role="dialog"] > div {
+  [role="dialog"]>div {
     max-height: 90vh;
     max-height: 90dvh;
     overflow-y: auto;
@@ -213,17 +225,22 @@
 }
 
 /* Ensure images and media don't overflow */
-img, video, svg, canvas {
+img,
+video,
+svg,
+canvas {
   max-width: 100%;
   height: auto;
 }
 
 /* Better scrollbar for mobile tables */
 @media (max-width: 767px) {
+
   .rounded-md.border::-webkit-scrollbar,
   .border.rounded-lg::-webkit-scrollbar {
     height: 4px;
   }
+
   .rounded-md.border::-webkit-scrollbar-thumb,
   .border.rounded-lg::-webkit-scrollbar-thumb {
     background-color: hsl(var(--muted-foreground) / 0.3);

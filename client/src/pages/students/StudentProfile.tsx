@@ -4,50 +4,92 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, BookOpen, Clock, FileText, Download, Edit, IndianRupee, Trash2, GraduationCap } from "lucide-react";
-import { Link, useRoute } from "wouter";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, BookOpen, Clock, FileText, Download, Edit, IndianRupee, Trash2, GraduationCap, Plus, Loader2 } from "lucide-react";
+import { Link, useParams, useRoute } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import StudentCredentialsSection from "@/components/StudentCredentialsSection";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useAcademyBranding } from "@/hooks/use-academy-branding";
 
-export default function StudentProfile() {
+export default function StudentProfile({ params: propParams }: any) {
   const { toast } = useToast();
-  const [, params] = useRoute("/students/:id");
-  const studentId = params?.id;
+  const hookParams = useParams();
+  const studentId = propParams?.id || hookParams?.id;
 
   // Fix: Fetch student data directly instead of depending on store
   const [student, setStudent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const [newNote, setNewNote] = useState("");
+  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [fees, setFees] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [remarks, setRemarks] = useState<any[]>([]);
+  const { branding } = useAcademyBranding();
 
-  // Fix: Load student data on component mount and when studentId changes
-  useEffect(() => {
-    if (studentId) {
-      loadStudentData();
+  // Defensive calculations for attendance stats
+  const { presentCount, attendanceRate, absentCount, lateCount } = useMemo(() => {
+    if (!Array.isArray(attendance) || attendance.length === 0) {
+      return { presentCount: 0, attendanceRate: 0, absentCount: 0, lateCount: 0 };
     }
-  }, [studentId]);
+    const pCount = attendance.filter((a: any) => (a?.status || '').toLowerCase() === 'present').length;
+    const aCount = attendance.filter((a: any) => (a?.status || '').toLowerCase() === 'absent').length;
+    const lCount = attendance.filter((a: any) => a?.is_late || a?.isLate).length;
+    const rate = Math.round((pCount / attendance.length) * 100);
+    return { presentCount: pCount, attendanceRate: rate, absentCount: aCount, lateCount: lCount };
+  }, [attendance]);
 
-  const loadStudentData = async () => {
-    if (!studentId) return;
+  // Fix: Improved student ID extraction from window location as a fail-safe
+  const getSafeStudentId = () => {
+    if (studentId) return studentId;
+    // Fallback: extract from URL path /students/:id
+    const pathParts = window.location.pathname.split('/');
+    const idFromPath = pathParts[pathParts.indexOf('students') + 1];
+    return idFromPath && idFromPath.length > 20 ? idFromPath : null;
+  };
 
+  const activeStudentId = getSafeStudentId();
+
+  // Fix: Load student data on component mount and when id changes
+  useEffect(() => {
+    if (activeStudentId) {
+      loadStudentData(activeStudentId);
+    } else {
+      setIsLoading(false);
+    }
+  }, [activeStudentId]);
+
+  const loadStudentData = async (id: string) => {
     setIsLoading(true);
     try {
-      const [studentData, feesData, attendanceData] = await Promise.all([
-        api.getStudent(studentId),
-        api.getFees(undefined, studentId).catch(() => []),
-        api.getAttendance({ studentId }).catch(() => [])
+      const [studentData, feesData, attendanceData, remarksData] = await Promise.all([
+        api.getStudent(id),
+        api.getFees(undefined, id).catch(() => []),
+        api.getAttendance({ studentId: id }).catch(() => []),
+        api.getStudentRemarks(id).catch(() => [])
       ]);
 
       setStudent(studentData);
       setFees(Array.isArray(feesData) ? feesData : []);
       setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
+      setRemarks(Array.isArray(remarksData) ? remarksData : []);
     } catch (error) {
       console.error("Failed to load student data:", error);
       toast({
@@ -67,32 +109,121 @@ export default function StudentProfile() {
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading student profile...</p>
+            <p className="font-bold text-muted-foreground uppercase tracking-widest text-xs animate-pulse">Establishing Secure Connection...</p>
           </div>
         </div>
       </DashboardLayout>
     );
   }
 
-  // Fix: Show "Student not found" if no data
+  // Fix: Show "Student not found" ONLY if we tried to load and got nothing
   if (!student) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-64">
-          <h2 className="text-xl font-bold mb-2">Student Not Found</h2>
-          <p className="text-muted-foreground mb-4">The student profile you're looking for doesn't exist.</p>
-          <Link href="/students">
-            <Button variant="outline">Return to Student List</Button>
-          </Link>
+          <div className="bg-orange-50 p-8 rounded-3xl border border-orange-100 text-center max-w-md shadow-sm">
+            <h2 className="text-2xl font-black font-heading text-orange-600 mb-2 mt-4 uppercase tracking-tight">Profile Not Found</h2>
+            <p className="text-muted-foreground mb-8 text-sm font-medium">The student details could not be retrieved. This happens if the link is broken or the record was removed.</p>
+            <div className="flex gap-3 justify-center">
+              <Link href="/students">
+                <Button variant="default" className="font-bold rounded-xl shadow-lg">Back to List</Button>
+              </Link>
+              <Button variant="outline" className="font-bold rounded-xl" onClick={() => window.location.reload()}>Try Again</Button>
+            </div>
+          </div>
         </div>
       </DashboardLayout>
     );
   }
 
-  const studentFees = fees.filter(f => f.student_id === student.id || f.studentId === student.id || f.studentName === student.name);
-  const studentAttendance = attendance.filter(a => a.student_id === student.id || a.studentId === student.id);
-  const presentCount = studentAttendance.filter(a => a.status === 'present' || a.status === 'PRESENT').length;
-  const attendanceRate = studentAttendance.length > 0 ? Math.round((presentCount / studentAttendance.length) * 100) : 0;
+  // Ensure we have arrays for rendering
+  const studentFees = Array.isArray(fees) ? fees : [];
+  const studentAttendance = Array.isArray(attendance) ? attendance : [];
+
+  const safeFormat = (date: any, formatStr: string = 'dd/MM/yyyy') => {
+    if (!date) return 'N/A';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return 'N/A';
+      return format(d, formatStr);
+    } catch (e) {
+      return 'N/A';
+    }
+  };
+
+  const safeCurrency = (amount: any) => {
+    try {
+      const num = Number(amount);
+      if (isNaN(num)) return '0';
+      return num.toLocaleString('en-IN');
+    } catch (e) {
+      return '0';
+    }
+  };
+
+  const safeText = (text: any, fallback: string = '-') => {
+    if (text === null || text === undefined) return fallback;
+    return String(text);
+  };
+
+  const downloadIndividualAttendance = () => {
+    if (studentAttendance.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No attendance records found to download.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const academyName = branding?.academyName || "Academy Management System";
+    const headers = ["Session Date", "Status", "Check-In", "Check-Out", "Late", "Notes"];
+    const rows = studentAttendance.map((a: any) => {
+      let formattedDate = "N/A";
+      try {
+        if (a.date) {
+          const d = new Date(a.date);
+          if (!isNaN(d.getTime())) {
+            formattedDate = format(d, 'dd/MM/yyyy');
+          }
+        }
+      } catch (e) {
+        console.error("Date formatting error:", e);
+      }
+      return [
+        formattedDate,
+        (a.status || "N/A").toUpperCase(),
+        a.check_in || "N/A",
+        a.check_out || "N/A",
+        a.is_late || a.isLate ? "YES" : "NO",
+        a.notes || ""
+      ];
+    });
+
+    const csvContent = [
+      [academyName.toUpperCase()],
+      [`ATTENDANCE REPORT: ${(student?.name || "STUDENT").toUpperCase()}`],
+      [`GENERATED ON: ${safeFormat(new Date(), 'dd/MM/yyyy HH:mm')}`],
+      [],
+      headers,
+      ...rows
+    ].map(row => row.map(field => `"${String(field || '').replace(/"/g, '""')}"`).join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `attendance_${student.name.replace(/\s+/g, '_').toLowerCase()}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Success",
+      description: "Attendance report downloaded successfully"
+    });
+  };
 
   const handleDeactivate = async () => {
     try {
@@ -101,7 +232,7 @@ export default function StudentProfile() {
         title: "Success",
         description: "Student deactivated successfully",
       });
-      loadStudentData();
+      loadStudentData(student.id);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -118,7 +249,7 @@ export default function StudentProfile() {
         title: "Success",
         description: "Student suspended successfully",
       });
-      loadStudentData();
+      loadStudentData(student.id);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -151,7 +282,7 @@ export default function StudentProfile() {
       });
 
       // Reload student data
-      loadStudentData();
+      loadStudentData(student.id);
     } catch (error: any) {
       console.error("Update error:", error);
       toast({
@@ -161,6 +292,32 @@ export default function StudentProfile() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAddRemark = async () => {
+    if (!newNote.trim()) return;
+
+    setIsSubmittingNote(true);
+    try {
+      await api.addStudentRemark(student.id, newNote);
+      toast({
+        title: "Success",
+        description: "Administrative remark added successfully",
+      });
+      setNewNote("");
+      setIsNoteOpen(false);
+      // Fetch fresh remarks
+      const remarksData = await api.getStudentRemarks(student.id);
+      setRemarks(remarksData);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add remark",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmittingNote(false);
     }
   };
 
@@ -182,19 +339,19 @@ export default function StudentProfile() {
               <div className="-mt-12 mb-4">
                 <Avatar className="h-32 w-32 border-8 border-white shadow-xl hover:scale-105 transition-transform duration-300">
                   <AvatarFallback className="text-4xl bg-primary text-white font-black font-heading">
-                    {student.name.charAt(0)}
+                    {(student?.name || 'S').charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <h2 className="text-2xl font-black font-heading text-gray-900 tracking-tight leading-tight mb-1">{student.name}</h2>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4 px-3 py-1 bg-muted/50 rounded-full border border-muted/50 shadow-inner">REG ID: {student.id}</p>
+              <h2 className="text-2xl font-black font-heading text-gray-900 tracking-tight leading-tight mb-1 capitalize">{student.name}</h2>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4 px-3 py-1 bg-muted/50 rounded-full border border-muted/50 shadow-inner">REG ID: {String(student.id || "").toUpperCase()}</p>
 
               <div className="flex flex-wrap justify-center gap-2 mb-8">
-                <Badge variant={student.status === 'active' ? 'default' : 'secondary'} className={`font-bold px-3 py-1 shadow-sm border-none ${student.status === 'active' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'}`}>
-                  {student.status.toUpperCase()}
+                <Badge variant={(student.status || 'active') === 'active' ? 'default' : 'secondary'} className={`font-bold px-3 py-1 shadow-sm border-none ${(student.status || 'active') === 'active' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'}`}>
+                  {(student.status || 'ACTIVE').toUpperCase()}
                 </Badge>
                 {student.uniform_issued && (
-                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 font-bold px-3 py-1 shadow-sm">
+                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 font-bold px-3 py-1 shadow-sm">
                     KITTED
                   </Badge>
                 )}
@@ -205,19 +362,19 @@ export default function StudentProfile() {
                   <div className="p-2 bg-white rounded-lg shadow-sm border border-muted/50 text-muted-foreground group-hover/item:text-primary transition-colors">
                     <Mail className="h-4 w-4" />
                   </div>
-                  <span className="truncate text-sm font-bold text-gray-700">{student.email || 'No email provided'}</span>
+                  <span className="truncate text-sm font-bold text-gray-700">{safeText(student.email, 'No email provided')}</span>
                 </div>
                 <div className="flex items-center gap-4 group/item">
                   <div className="p-2 bg-white rounded-lg shadow-sm border border-muted/50 text-muted-foreground group-hover/item:text-primary transition-colors">
                     <Phone className="h-4 w-4" />
                   </div>
-                  <span className="text-sm font-bold text-gray-700">{student.phone || 'No phone provided'}</span>
+                  <span className="text-sm font-bold text-gray-700">{safeText(student.phone, 'No phone provided')}</span>
                 </div>
                 <div className="flex items-center gap-4 group/item">
                   <div className="p-2 bg-white rounded-lg shadow-sm border border-muted/50 text-muted-foreground group-hover/item:text-primary transition-colors">
                     <MapPin className="h-4 w-4" />
                   </div>
-                  <span className="text-sm font-bold text-gray-700 leading-tight">{student.address || 'No address provided'}</span>
+                  <span className="text-sm font-bold text-gray-700 leading-tight">{safeText(student.address, 'No address provided')}</span>
                 </div>
               </div>
 
@@ -228,9 +385,14 @@ export default function StudentProfile() {
                 <Button className="shadow-sm font-bold h-11 rounded-xl" variant="outline" onClick={handleDeactivate}>
                   Deactivate
                 </Button>
-                <Button className="col-span-2 shadow-sm font-bold h-11 rounded-xl text-red-600 border-red-100 hover:bg-red-50 group/suspend" variant="outline" onClick={handleSuspend}>
+                <Button
+                  className="col-span-2 shadow-sm font-bold h-11 rounded-xl text-red-600 border-red-100 hover:bg-red-50 group/suspend"
+                  variant="outline"
+                  onClick={handleSuspend}
+                  disabled={student.status === 'suspended'}
+                >
                   <Trash2 className="mr-2 h-4 w-4 text-red-500 group-hover/suspend:scale-110 transition-transform" />
-                  Suspend Profile
+                  {student.status === 'suspended' ? 'Profile Suspended' : 'Suspend Profile'}
                 </Button>
               </div>
             </CardContent>
@@ -258,6 +420,12 @@ export default function StudentProfile() {
                 >
                   Fees & Invoices
                 </TabsTrigger>
+                <TabsTrigger
+                  value="credentials"
+                  className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm px-6 py-2.5 font-bold transition-all text-sm uppercase tracking-wider"
+                >
+                  Credentials
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="mt-6 space-y-6">
@@ -274,16 +442,16 @@ export default function StudentProfile() {
                     <CardContent className="grid gap-6 pt-6 uppercase">
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-muted-foreground tracking-widest leading-none">PROGRAM ENROLLED</p>
-                        <p className="font-bold text-gray-900 group-hover:text-primary transition-colors">{student.program}</p>
+                        <p className="font-bold text-gray-900 group-hover:text-primary transition-colors">{safeText(student.program)}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-muted-foreground tracking-widest leading-none">CURRENT BATCH</p>
-                        <p className="font-bold text-gray-900">{student.batch}</p>
+                        <p className="font-bold text-gray-900">{safeText(student.batch)}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-muted-foreground tracking-widest leading-none">ENROLLMENT DATE</p>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-gray-900">{student.joining_date ? new Date(student.joining_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'NOT RECORDED'}</span>
+                          <span className="font-bold text-gray-900">{safeFormat(student.joining_date, 'dd MMM yyyy')}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -292,7 +460,7 @@ export default function StudentProfile() {
                   <Card className="shadow-sm hover:shadow-md transition-shadow duration-300 border-muted/50 overflow-hidden group">
                     <CardHeader className="bg-muted/10 border-b border-muted/30 py-4">
                       <CardTitle className="text-lg font-black font-heading flex items-center gap-2">
-                        <div className="p-1.5 bg-purple-100 rounded-lg text-purple-600">
+                        <div className="p-1.5 bg-orange-100 rounded-lg text-orange-600">
                           <GraduationCap className="h-4 w-4" />
                         </div>
                         Institutional Tracking
@@ -313,8 +481,8 @@ export default function StudentProfile() {
                       )}
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-muted-foreground tracking-widest leading-none">GUARDIAN CONTACT</p>
-                        <p className="font-bold text-gray-900">{student.parent_phone || 'NOT PROVIDED'}</p>
-                        {student.guardian_name && <p className="text-[9px] font-black text-muted-foreground -mt-1">{student.guardian_name.toUpperCase()}</p>}
+                        <p className="font-bold text-gray-900">{safeText(student.parent_phone, 'NOT PROVIDED')}</p>
+                        {student.guardian_name && <p className="text-[9px] font-black text-muted-foreground -mt-1">{(student.guardian_name || '').toUpperCase()}</p>}
                       </div>
                     </CardContent>
                   </Card>
@@ -328,27 +496,49 @@ export default function StudentProfile() {
                       </div>
                       Recent Admin Remarks
                     </CardTitle>
-                    <Button variant="outline" size="sm" className="h-8 font-bold text-[10px] uppercase tracking-wider">Add Note</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 font-bold text-[10px] uppercase tracking-wider"
+                      onClick={() => setIsNoteOpen(true)}
+                    >
+                      <Plus className="h-3 w-3 mr-1" /> Add Note
+                    </Button>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="text-center text-muted-foreground py-16 px-6 bg-gradient-to-b from-transparent to-muted/10">
-                      <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner border border-muted/20 opacity-40">
-                        <FileText className="h-6 w-6" />
+                    {remarks.length > 0 ? (
+                      <div className="divide-y divide-muted/30 max-h-80 overflow-y-auto">
+                        {remarks.map((remark) => (
+                          <div key={remark.id} className="p-4 bg-white/50 hover:bg-white/80 transition-colors">
+                            <div className="flex justify-between items-start mb-2">
+                              <p className="text-[10px] font-black text-primary uppercase tracking-widest">{remark.author_name || 'Admin'}</p>
+                              <p className="text-[10px] font-bold text-muted-foreground">{safeFormat(remark.created_at, 'dd MMM yyyy, hh:mm a')}</p>
+                            </div>
+                            <p className="text-sm text-gray-700 font-medium leading-relaxed">{remark.content}</p>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-sm font-bold uppercase tracking-widest opacity-40">No remarks found for this profile</p>
-                    </div>
+                    ) : (
+                      <div className="text-center text-muted-foreground py-16 px-6 bg-gradient-to-b from-transparent to-muted/10">
+                        <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner border border-muted/20 opacity-40">
+                          <FileText className="h-6 w-6" />
+                        </div>
+                        <p className="text-sm font-bold uppercase tracking-widest opacity-40">No remarks found for this profile</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
+              </TabsContent>
 
-                {/* Student Login Credentials Section */}
-                <StudentCredentialsSection studentId={student.id} studentData={student} onUpdate={loadStudentData} />
+              <TabsContent value="credentials" className="mt-6">
+                <StudentCredentialsSection studentId={student.id} studentData={student} onUpdate={() => activeStudentId && loadStudentData(activeStudentId)} />
               </TabsContent>
 
               <TabsContent value="attendance" className="mt-6">
                 <Card className="shadow-lg border-muted/50 overflow-hidden">
                   <CardHeader className="bg-muted/10 border-b border-muted/30">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg text-primary shadow-sm">
+                      <div className="p-2 bg-orange-100 rounded-lg text-primary shadow-sm">
                         <Calendar className="h-5 w-5" />
                       </div>
                       <div>
@@ -356,10 +546,19 @@ export default function StudentProfile() {
                         <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60">Complete tracking and statistics</CardDescription>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="font-bold uppercase tracking-wider text-[10px] h-8 rounded-xl shadow-sm border-orange-200 text-primary hover:bg-orange-50"
+                      onClick={downloadIndividualAttendance}
+                    >
+                      <Download className="h-3 w-3 mr-1.5" />
+                      Download Full Report
+                    </Button>
                   </CardHeader>
                   <CardContent className="pt-8">
                     <div className="grid md:grid-cols-2 gap-12 sm:gap-16">
-                      <div className="flex flex-col items-center justify-center p-8 bg-blue-50/50 rounded-3xl border border-blue-100 shadow-inner group">
+                      <div className="flex flex-col items-center justify-center p-8 bg-orange-50/50 rounded-3xl border border-orange-100 shadow-inner group">
                         <p className="mb-2 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] leading-none">OVERALL PRESENCE</p>
                         <div className="relative">
                           <span className="text-6xl font-black text-primary font-heading tracking-tighter transition-transform group-hover:scale-110 duration-500 block">{attendanceRate}%</span>
@@ -376,11 +575,11 @@ export default function StudentProfile() {
                         </div>
                         <div className="flex justify-between items-center bg-muted/20 p-3 rounded-xl border border-muted/30 group hover:border-muted-foreground/30 transition-all">
                           <span className="text-[10px] font-black text-muted-foreground tracking-widest">Marked Absent</span>
-                          <span className="font-black text-red-600 font-heading text-lg">{studentAttendance.filter(a => a.status === 'absent' || a.status === 'ABSENT').length}</span>
+                          <span className="font-black text-red-600 font-heading text-lg">{absentCount}</span>
                         </div>
                         <div className="flex justify-between items-center bg-muted/20 p-3 rounded-xl border border-muted/30 group hover:border-muted-foreground/30 transition-all">
                           <span className="text-[10px] font-black text-muted-foreground tracking-widest">Delayed / Late</span>
-                          <span className="font-black text-orange-600 font-heading text-lg">{studentAttendance.filter(a => a.is_late || a.isLate).length}</span>
+                          <span className="font-black text-orange-600 font-heading text-lg">{lateCount}</span>
                         </div>
                         <div className="flex justify-between items-center bg-muted/20 p-3 rounded-xl border border-muted/30 group hover:border-muted-foreground/30 transition-all">
                           <span className="text-[10px] font-black text-muted-foreground tracking-widest">Total Engagements</span>
@@ -388,6 +587,53 @@ export default function StudentProfile() {
                         </div>
                       </div>
                     </div>
+
+                    {studentAttendance.length > 0 && (
+                      <div className="mt-12 space-y-4">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Recent Activity Logs</p>
+                        <div className="border border-muted/50 rounded-2xl overflow-hidden shadow-sm">
+                          <Table>
+                            <TableHeader className="bg-muted/30">
+                              <TableRow>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Date</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Status</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Check-In</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Check-Out</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Notes</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {studentAttendance
+                                .filter(a => a.date)
+                                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                .slice(0, 30)
+                                .map((record, idx) => (
+                                  <TableRow key={idx} className="hover:bg-muted/10 transition-colors uppercase font-bold text-[11px]">
+                                    <TableCell className="py-4">
+                                      {safeFormat(record.date)}
+                                    </TableCell>
+                                    <TableCell className="py-4">
+                                      <Badge variant="outline" className={cn(
+                                        "text-[9px] font-black px-2 shadow-sm border-none",
+                                        ((record.status || '').toLowerCase() === 'present') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                      )}>
+                                        {(record.status || 'N/A').toUpperCase()}
+                                      </Badge>
+                                      {(record.is_late || record.isLate) && (
+                                        <Badge variant="outline" className="ml-1 bg-orange-100 text-orange-700 border-none text-[9px] font-black">LATE</Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="py-4">{record.check_in || '--:--'}</TableCell>
+                                    <TableCell className="py-4">{record.check_out || '--:--'}</TableCell>
+                                    <TableCell className="py-4 text-muted-foreground normal-case font-medium max-w-[150px] truncate">{record.notes || '-'}</TableCell>
+                                  </TableRow>
+                                ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
+
                     {studentAttendance.length === 0 && (
                       <div className="text-center py-16 bg-muted/5 rounded-3xl mt-8 border border-dashed border-muted/30">
                         <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-muted/20 opacity-30">
@@ -405,7 +651,7 @@ export default function StudentProfile() {
                   <CardHeader className="bg-muted/10 border-b border-muted/30">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600 shadow-sm">
+                        <div className="p-2 bg-yellow-100 rounded-lg text-orange-600 shadow-sm">
                           <IndianRupee className="h-5 w-5" />
                         </div>
                         <div>
@@ -434,7 +680,7 @@ export default function StudentProfile() {
                               <div className="text-right">
                                 <p className="text-xl font-black text-gray-900 font-heading flex items-center tracking-tighter">
                                   <IndianRupee className="h-4 w-4 mr-0.5 text-muted-foreground/60" />
-                                  {fee.amount.toLocaleString('en-IN')}
+                                  {safeCurrency(fee.amount)}
                                 </p>
                                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 text-[9px] font-black px-2 -mt-1 leading-none">VERIFIED PAID</Badge>
                               </div>
@@ -460,6 +706,49 @@ export default function StudentProfile() {
         </div>
 
         {/* Edit Dialog */}
+        <Dialog open={isNoteOpen} onOpenChange={setIsNoteOpen}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="font-heading font-black text-xl flex items-center gap-2">
+                <div className="p-1.5 bg-orange-100 rounded-lg text-orange-600">
+                  <FileText className="h-4 w-4" />
+                </div>
+                ADD ADMINISTRATIVE NOTE
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="note" className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Remark Details</Label>
+                <Textarea
+                  id="note"
+                  placeholder="Specify academic concerns, behavior notes, or administrative reminders..."
+                  className="min-h-[120px] bg-muted/20 border-muted/50 focus:bg-white transition-all text-sm font-medium"
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                className="font-bold rounded-xl"
+                onClick={() => setIsNoteOpen(false)}
+                disabled={isSubmittingNote}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="font-bold rounded-xl bg-orange-600 hover:bg-orange-700 shadow-lg shadow-orange-200"
+                onClick={handleAddRemark}
+                disabled={isSubmittingNote}
+              >
+                {isSubmittingNote ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Save Remarks
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogContent>
             <DialogHeader>

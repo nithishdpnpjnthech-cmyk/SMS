@@ -47,7 +47,7 @@ export default function CollectFee() {
     const userId = localStorage.getItem('userId') || '';
     const userRole = localStorage.getItem('userRole') || '';
     const userBranch = localStorage.getItem('userBranch') || '';
-    
+
     return {
       'x-user-id': userId,
       'x-user-role': userRole,
@@ -70,10 +70,10 @@ export default function CollectFee() {
 
   const searchStudents = async () => {
     if (!searchQuery.trim()) return;
-    
+
     setIsSearching(true);
     setError('');
-    
+
     try {
       const results = await api.get(
         `/api/students/search?q=${encodeURIComponent(searchQuery)}`,
@@ -114,7 +114,7 @@ export default function CollectFee() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedStudent || !amount || !paymentMethod) {
       setError('Please fill in all required fields');
       return;
@@ -137,7 +137,7 @@ export default function CollectFee() {
       );
 
       setSuccess(`Fee collected successfully! Amount: ₹${amount}`);
-      
+
       // Reset form
       setSelectedStudent(null);
       setFeeCalculation(null);
@@ -236,7 +236,7 @@ export default function CollectFee() {
             )}
 
             {selectedStudent && (
-              <Card className="bg-blue-50 border-blue-200">
+              <Card className="bg-orange-50 border-orange-200">
                 <CardContent className="pt-4">
                   <h4 className="font-semibold">{selectedStudent.name}</h4>
                   <p className="text-sm text-muted-foreground">

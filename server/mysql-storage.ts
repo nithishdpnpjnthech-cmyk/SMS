@@ -817,4 +817,25 @@ export class MySQLStorage implements IStorage {
     const trainers = rows.map((r: any) => r.name);
     return { count: trainers.length, trainers };
   }
+
+  // ============= STUDENT REMARKS =============
+  async getStudentRemarks(studentId: string): Promise<any[]> {
+    return await db.query(`
+      SELECT sr.*, u.name as author_name
+      FROM student_remarks sr
+      JOIN users u ON sr.author_id = u.id
+      WHERE sr.student_id = ?
+      ORDER BY sr.created_at DESC
+    `, [studentId]);
+  }
+
+  async createStudentRemark(remark: any): Promise<any> {
+    const id = randomUUID();
+    const now = new Date();
+    await db.query(`
+      INSERT INTO student_remarks (id, student_id, author_id, content, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `, [id, remark.studentId, remark.authorId, remark.content, now]);
+    return { id, ...remark, created_at: now };
+  }
 }

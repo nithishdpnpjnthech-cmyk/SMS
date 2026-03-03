@@ -267,6 +267,10 @@ export const api = {
   suspendStudent: async (id: string) =>
     api.patch(`/api/students/${id}/suspend`, {}),
 
+  getStudentRemarks: async (id: string) => api.get(`/api/students/${id}/remarks`),
+  addStudentRemark: async (id: string, content: string) =>
+    api.post(`/api/students/${id}/remarks`, { content }),
+
   // ================= PROGRAMS =================
   getPrograms: async () => api.get('/api/programs'),
   getBatches: async () => api.get('/api/batches'),

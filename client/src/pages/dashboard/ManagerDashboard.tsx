@@ -50,7 +50,7 @@ export default function ManagerDashboard() {
         api.getBranches()
       ]);
 
-      const userBranch = branches.find(b => b.id === user.branchId);
+      const userBranch = branches.find((b: any) => b.id === user.branchId);
 
       setStats(dashboardStats || {
         totalStudents: 0,
@@ -136,13 +136,13 @@ export default function ManagerDashboard() {
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Total collected</p>
             </CardContent>
           </Card>
-          <Card className="shadow-sm border-muted/50 transition-all hover:shadow-md border-l-4 border-l-blue-500">
+          <Card className="shadow-sm border-muted/50 transition-all hover:shadow-md border-l-4 border-l-primary">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
               <CardTitle className="text-xs sm:text-sm font-medium">Today's Collection</CardTitle>
-              <TrendingUp className="h-4 w-4 text-blue-500/80" />
+              <TrendingUp className="h-4 w-4 text-primary/80" />
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="text-xl sm:text-2xl font-bold mt-2 text-blue-600">{formatAmount(stats.feesCollectedToday)}</div>
+              <div className="text-xl sm:text-2xl font-bold mt-2 text-primary">{formatAmount(stats.feesCollectedToday)}</div>
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Recorded today</p>
             </CardContent>
           </Card>
@@ -196,9 +196,9 @@ export default function ManagerDashboard() {
                   </div>
                 </div>
                 <div className="pt-6 border-t border-muted/50">
-                  <div className="flex justify-between items-center p-3 bg-blue-50/50 rounded-xl border border-blue-100/50">
-                    <span className="font-bold text-blue-900/70">Overall Attendance Rate</span>
-                    <span className="text-lg font-black text-blue-700">
+                  <div className="flex justify-between items-center p-3 bg-orange-50/50 rounded-xl border border-orange-100/50">
+                    <span className="font-bold text-orange-900/70">Overall Attendance Rate</span>
+                    <span className="text-lg font-black text-orange-700">
                       {stats.presentToday + stats.absentToday > 0
                         ? Math.round((stats.presentToday / (stats.presentToday + stats.absentToday)) * 100)
                         : 0}%

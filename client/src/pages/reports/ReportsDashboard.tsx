@@ -111,7 +111,10 @@ export default function ReportsDashboard() {
     const academyNameStr = branding.academyName || "Academy Management System";
     const reportTitle = type === 'students' ? 'Student Enrollment Report'
       : type === 'fees' ? 'Financial Collections Report'
-        : 'Attendance Engagement Report';
+        : type === 'attendance' ? 'Daily Attendance Activity Logs'
+          : type === 'attendance_summary' ? 'Student Attendance Performance Summary'
+            : type === 'monthly_attendance_summary' ? 'Student Monthly Attendance Tracking'
+              : 'Trainer Performance & Attendance Report';
 
     let headers: string[] = [];
     let rows: string[][] = [];
@@ -141,16 +144,89 @@ export default function ReportsDashboard() {
         ]);
         break;
       case "attendance":
-        headers = ["Session Date", "Student Identity", "Assigned Batch", "Engagement Status", "Check-In Timestamp", "Check-Out Timestamp", "Log Notes"];
+        headers = ["Session Date", "Student Identity", "Enrolled Program", "Assigned Batch", "Engagement Status", "Check-In Timestamp", "Check-Out Timestamp", "Log Notes"];
         rows = data.map((item: any) => [
           item.date ? new Date(item.date).toLocaleDateString() : "N/A",
           item.student_name || "N/A",
+          item.program || "N/A",
           item.batch || "N/A",
           item.status ? item.status.toUpperCase() : "N/A",
-          item.check_in ? new Date(item.check_in).toLocaleTimeString() : "PENDING",
-          item.check_out ? new Date(item.check_out).toLocaleTimeString() : "PENDING",
+          item.check_in ? item.check_in : "PENDING",
+          item.check_out ? item.check_out : "PENDING",
           item.notes || "Standard log"
         ]);
+        break;
+      case "attendance_summary":
+        headers = ["Student Name", "Course/Program", "Batch Info", "Total Sessions", "Present Days", "Absent Days", "Late Arrivals", "Attendance Rate (%)"];
+        rows = data.map((item: any) => {
+          const total = parseInt(item.total_days || 0);
+          const present = parseInt(item.present_days || 0);
+          const rate = total > 0 ? ((present / total) * 100).toFixed(2) : "0.00";
+          return [
+            item.student_name || "N/A",
+            item.program || "N/A",
+            item.batch || "N/A",
+            total.toString(),
+            present.toString(),
+            item.absent_days || "0",
+            item.late_days || "0",
+            `${rate}%`
+          ];
+        });
+        break;
+      case "monthly_attendance_summary":
+        headers = ["Target Month", "Student Name", "Course/Program", "Batch Timings", "Total Sessions", "Present", "Absent", "Late", "Monthly Rate (%)"];
+        rows = data.map((item: any) => {
+          const total = parseInt(item.sessions || 0);
+          const present = parseInt(item.present || 0);
+          const rate = total > 0 ? ((present / total) * 100).toFixed(2) : "0.00";
+          return [
+            item.month || "N/A",
+            item.student_name || "N/A",
+            item.program || "N/A",
+            item.batch || "N/A",
+            total.toString(),
+            present.toString(),
+            item.absent || "0",
+            item.late || "0",
+            `${rate}%`
+          ];
+        });
+        break;
+      case "trainers":
+        headers = ["Log Date", "Trainer Identity", "Engagement Status", "Clock-In Time", "Clock-Out Time", "Total Hours", "Location Type", "Internal Remarks"];
+        rows = data.map((item: any) => {
+          let logDate = "N/A";
+          let clockIn = "N/A";
+          let clockOut = "PENDING";
+
+          try {
+            if (item.clock_in_time) {
+              const d = new Date(item.clock_in_time);
+              if (!isNaN(d.getTime())) {
+                logDate = d.toLocaleDateString();
+                clockIn = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              }
+            }
+            if (item.clock_out_time) {
+              const d = new Date(item.clock_out_time);
+              if (!isNaN(d.getTime())) {
+                clockOut = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              }
+            }
+          } catch (e) { console.error("CSV Date Error", e); }
+
+          return [
+            logDate,
+            item.trainer_name || "N/A",
+            (item.status || "N/A").toUpperCase(),
+            clockIn,
+            clockOut,
+            item.worked_minutes ? (item.worked_minutes / 60).toFixed(2) : "0.00",
+            item.location_name || item.location_type || "N/A",
+            item.notes || "System log"
+          ];
+        });
         break;
     }
 
@@ -164,7 +240,9 @@ export default function ReportsDashboard() {
       ...rows
     ];
 
-    return reportHeader.map(row => row.map(field => `"${field}"`).join(",")).join("\n");
+    return reportHeader.map(row =>
+      row.map(field => `"${String(field || '').replace(/"/g, '""')}"`).join(",")
+    ).join("\n");
   };
 
   const downloadCSV = (csvContent: string, filename: string) => {
@@ -185,7 +263,7 @@ export default function ReportsDashboard() {
         <div className="bg-white/50 p-4 sm:p-6 rounded-2xl border border-muted/50 backdrop-blur-sm shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-200">
+              <div className="p-3 bg-primary rounded-xl text-white shadow-lg shadow-primary/20">
                 <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8" />
               </div>
               <div className="space-y-1">
@@ -193,7 +271,7 @@ export default function ReportsDashboard() {
                 <p className="text-muted-foreground text-sm font-medium">Extract actionable intelligence from academy operations.</p>
               </div>
             </div>
-            <div className="hidden lg:flex items-center gap-2 text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100">
+            <div className="hidden lg:flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest bg-orange-50 px-4 py-2 rounded-full border border-orange-100">
               <ShieldCheck className="h-3.5 w-3.5" />
               Verified Financial Reporting
             </div>
@@ -205,7 +283,7 @@ export default function ReportsDashboard() {
           <Card className="shadow-lg border-muted/50 overflow-hidden group hover:scale-[1.02] transition-transform">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                <div className="p-2 bg-orange-50 rounded-lg text-primary">
                   <Users className="h-5 w-5" />
                 </div>
                 <PieChart className="h-4 w-4 text-muted-foreground opacity-30" />
@@ -259,7 +337,7 @@ export default function ReportsDashboard() {
         <Card className="shadow-2xl border-muted/50 overflow-hidden bg-white/80 backdrop-blur-md">
           <CardHeader className="bg-muted/30 border-b border-muted/50 p-6">
             <CardTitle className="flex items-center gap-3 text-xl font-black font-heading tracking-tight">
-              <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
+              <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-md">
                 <FileText className="h-5 w-5" />
               </div>
               DISBURSEMENT RECONCILIATION & LOGS
@@ -270,26 +348,29 @@ export default function ReportsDashboard() {
               <div className="space-y-3">
                 <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">REPORT TYPE CLASSIFICATION</Label>
                 <Select value={reportType} onValueChange={setReportType}>
-                  <SelectTrigger className="h-14 rounded-2xl border-muted/50 bg-white font-bold text-gray-900 focus:ring-indigo-500/20 shadow-sm transition-all text-sm">
+                  <SelectTrigger className="h-14 rounded-2xl border-muted/50 bg-white font-bold text-gray-900 focus:ring-primary/20 shadow-sm transition-all text-sm">
                     <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-indigo-500" />
+                      <BarChart3 className="h-4 w-4 text-primary" />
                       <SelectValue />
                     </div>
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl shadow-2xl border-muted/50 font-bold p-2">
                     <SelectItem value="students" className="rounded-xl py-3 cursor-pointer">STUDENT ENROLLMENT LOGS</SelectItem>
                     <SelectItem value="fees" className="rounded-xl py-3 cursor-pointer">FINANCIAL REVENUE REPORTS</SelectItem>
-                    <SelectItem value="attendance" className="rounded-xl py-3 cursor-pointer">ACADEMIC ENGAGEMENT LOGS</SelectItem>
+                    <SelectItem value="attendance" className="rounded-xl py-3 cursor-pointer">STUDENT ATTENDANCE LOGS (DAILY)</SelectItem>
+                    <SelectItem value="attendance_summary" className="rounded-xl py-3 cursor-pointer">STUDENT ATTENDANCE PERFORMANCE (TOTAL)</SelectItem>
+                    <SelectItem value="monthly_attendance_summary" className="rounded-xl py-3 cursor-pointer">STUDENT MONTHLY PERFORMANCE (MONTHLY)</SelectItem>
+                    <SelectItem value="trainers" className="rounded-xl py-3 cursor-pointer">TRAINER PERFORMANCE LOGS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-3">
                 <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">STARTING AUDIT DATE</Label>
                 <div className="relative group">
-                  <CalendarCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-indigo-500 transition-colors" />
+                  <CalendarCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
                   <Input
                     type="date"
-                    className="h-14 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-indigo-500/20 shadow-sm"
+                    className="h-14 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-primary/20 shadow-sm"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
                   />
@@ -298,10 +379,10 @@ export default function ReportsDashboard() {
               <div className="space-y-3">
                 <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">ENDING AUDIT DATE</Label>
                 <div className="relative group">
-                  <CalendarCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-indigo-500 transition-colors" />
+                  <CalendarCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
                   <Input
                     type="date"
-                    className="h-14 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-indigo-500/20 shadow-sm"
+                    className="h-14 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-primary/20 shadow-sm"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
                   />
@@ -311,13 +392,13 @@ export default function ReportsDashboard() {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-dashed border-muted/50">
               <div className="space-y-1 max-w-md">
-                <p className="text-xs font-black text-indigo-600 uppercase tracking-widest">Administrative Notice</p>
+                <p className="text-xs font-black text-primary uppercase tracking-widest">Administrative Notice</p>
                 <p className="text-sm font-medium text-muted-foreground">Internal reports are generated as strictly formatted CSV archives compatible with industry-standard spreadsheet software like Microsoft Excel or Apple Numbers.</p>
               </div>
               <Button
                 onClick={generateReport}
                 disabled={isGenerating}
-                className="w-full sm:w-auto h-16 px-10 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                className="w-full sm:w-auto h-16 px-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-50"
               >
                 {isGenerating ? (
                   <div className="flex items-center gap-3">

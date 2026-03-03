@@ -100,7 +100,7 @@ export default function StudentFees() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -120,13 +120,13 @@ export default function StudentFees() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-heading">Fees & Payments</h1>
           <p className="text-muted-foreground text-sm sm:text-base">Manage your tuition and other institutional fees.</p>
         </div>
-        <div className="flex items-center gap-3 bg-blue-50/50 p-3 rounded-xl border border-blue-100/50">
-          <div className="p-2 bg-blue-100 rounded-lg text-blue-600 shadow-sm">
+        <div className="flex items-center gap-3 bg-orange-50/50 p-3 rounded-xl border border-orange-100/50">
+          <div className="p-2 bg-orange-100 rounded-lg text-orange-600 shadow-sm">
             <IndianRupee className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-blue-700/70 uppercase tracking-widest">PENDING DUES</p>
-            <p className="text-xl font-black text-blue-900 font-heading">₹{feesData.summary.pendingAmount.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] font-black text-orange-700/70 uppercase tracking-widest">PENDING DUES</p>
+            <p className="text-xl font-black text-orange-900 font-heading">₹{feesData.summary.pendingAmount.toLocaleString('en-IN')}</p>
           </div>
         </div>
       </div>
@@ -221,7 +221,7 @@ export default function StudentFees() {
                         {fee.status === 'pending' && (
                           <Button
                             onClick={() => openPaymentDialog(fee)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-95 transition-all px-6 py-5 rounded-xl text-sm font-bold"
+                            className="bg-primary hover:bg-primary/90 text-white shadow-md active:scale-95 transition-all px-6 py-5 rounded-xl text-sm font-bold"
                           >
                             Pay Now
                           </Button>
@@ -249,25 +249,25 @@ export default function StudentFees() {
       {/* Payment Dialog */}
       <Dialog open={paymentDialog} onOpenChange={setPaymentDialog}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
-          <DialogHeader className="p-6 bg-blue-600 text-white">
+          <DialogHeader className="p-6 bg-primary text-white">
             <DialogTitle className="flex items-center gap-2 text-xl font-heading">
               <CreditCard className="h-6 w-6" />
               Pay Fee Online
             </DialogTitle>
-            <DialogDescription className="text-blue-100 pt-1">
+            <DialogDescription className="text-white/80 pt-1">
               Complete your payment for ₹{selectedFee?.amount.toLocaleString('en-IN')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="p-6 space-y-6">
-            <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-6 shadow-inner text-center">
-              <p className="text-[10px] font-black text-blue-700 uppercase tracking-[0.2em] mb-2">Total Payable Amount</p>
-              <div className="text-4xl font-black text-blue-900 font-heading tracking-tight">
+            <div className="bg-orange-50/80 border border-orange-200 rounded-2xl p-6 shadow-inner text-center">
+              <p className="text-[10px] font-black text-orange-700 uppercase tracking-[0.2em] mb-2">Total Payable Amount</p>
+              <div className="text-4xl font-black text-orange-900 font-heading tracking-tight">
                 <span className="text-2xl mr-1 opacity-60">₹</span>
                 {selectedFee?.amount.toLocaleString('en-IN')}
               </div>
               {selectedFee && (
-                <p className="text-xs font-bold text-blue-700/60 mt-2 uppercase">
+                <p className="text-xs font-bold text-orange-700/60 mt-2 uppercase">
                   Due by: {new Date(selectedFee.dueDate).toLocaleDateString('en-IN')}
                 </p>
               )}
@@ -280,12 +280,12 @@ export default function StudentFees() {
                 <button
                   onClick={() => setPaymentMethod('upi')}
                   className={`group p-4 border-2 rounded-2xl text-left transition-all duration-200 ${paymentMethod === 'upi'
-                    ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500/20'
-                    : 'border-muted/50 hover:border-blue-200 hover:bg-muted/10'
+                    ? 'border-primary bg-orange-50 shadow-md ring-2 ring-primary/20'
+                    : 'border-muted/50 hover:border-orange-200 hover:bg-muted/10'
                     }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-colors ${paymentMethod === 'upi' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                    <div className={`p-3 rounded-xl transition-colors ${paymentMethod === 'upi' ? 'bg-orange-100 text-orange-600' : 'bg-orange-100 text-orange-600'}`}>
                       <Smartphone className="h-5 w-5" />
                     </div>
                     <div>
@@ -298,12 +298,12 @@ export default function StudentFees() {
                 <button
                   onClick={() => setPaymentMethod('card')}
                   className={`group p-4 border-2 rounded-2xl text-left transition-all duration-200 ${paymentMethod === 'card'
-                    ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500/20'
-                    : 'border-muted/50 hover:border-blue-200 hover:bg-muted/10'
+                    ? 'border-primary bg-orange-50 shadow-md ring-2 ring-primary/20'
+                    : 'border-muted/50 hover:border-orange-200 hover:bg-muted/10'
                     }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-colors ${paymentMethod === 'card' ? 'bg-blue-100 text-blue-600' : 'bg-blue-100 text-blue-600'}`}>
+                    <div className={`p-3 rounded-xl transition-colors ${paymentMethod === 'card' ? 'bg-orange-100 text-orange-600' : 'bg-orange-100 text-orange-600'}`}>
                       <CreditCard className="h-5 w-5" />
                     </div>
                     <div>
@@ -316,12 +316,12 @@ export default function StudentFees() {
                 <button
                   onClick={() => setPaymentMethod('netbanking')}
                   className={`group p-4 border-2 rounded-2xl text-left transition-all duration-200 ${paymentMethod === 'netbanking'
-                    ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500/20'
-                    : 'border-muted/50 hover:border-blue-200 hover:bg-muted/10'
+                    ? 'border-primary bg-orange-50 shadow-md ring-2 ring-primary/20'
+                    : 'border-muted/50 hover:border-orange-200 hover:bg-muted/10'
                     }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-colors ${paymentMethod === 'netbanking' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                    <div className={`p-3 rounded-xl transition-colors ${paymentMethod === 'netbanking' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
                       <Building2 className="h-5 w-5" />
                     </div>
                     <div>
@@ -334,7 +334,7 @@ export default function StudentFees() {
             </div>
 
             <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-2xl border border-muted/50">
-              <AlertCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed font-medium">
                 Your payment is secured with industry-standard encryption. Redirecting to payment gateway...
               </p>
@@ -356,7 +356,7 @@ export default function StudentFees() {
               <Button
                 onClick={handlePayment}
                 disabled={!paymentMethod || paymentLoading}
-                className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all active:scale-95"
+                className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition-all active:scale-95"
               >
                 {paymentLoading ? 'Processing...' : 'Complete Payment'}
               </Button>

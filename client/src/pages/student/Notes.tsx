@@ -33,7 +33,7 @@ export default function StudentNotes() {
   const getIcon = (type: string) => {
     switch (type) {
       case 'attendance':
-        return <Calendar className="h-5 w-5 text-blue-600" />;
+        return <Calendar className="h-5 w-5 text-orange-600" />;
       case 'fee':
         return <CreditCard className="h-5 w-5 text-green-600" />;
       default:
@@ -44,7 +44,7 @@ export default function StudentNotes() {
   const getBadgeColor = (type: string) => {
     switch (type) {
       case 'attendance':
-        return 'border-blue-200 text-blue-700 bg-blue-50';
+        return 'border-orange-200 text-orange-700 bg-orange-50';
       case 'fee':
         return 'border-green-200 text-green-700 bg-green-50';
       default:
@@ -55,7 +55,7 @@ export default function StudentNotes() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }

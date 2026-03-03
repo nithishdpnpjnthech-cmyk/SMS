@@ -115,7 +115,7 @@ export default function Dashboard() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-          <Card className="border-l-4 border-l-blue-500 shadow-sm transition-all hover:shadow-md">
+          <Card className="border-l-4 border-l-primary shadow-sm transition-all hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Students</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
@@ -137,7 +137,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-blue-600 shadow-sm transition-all hover:shadow-md">
+          <Card className="border-l-4 border-l-primary shadow-sm transition-all hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Fees Collected</CardTitle>
               <Coins className="h-4 w-4 text-muted-foreground" />
@@ -159,7 +159,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-purple-500 shadow-sm transition-all hover:shadow-md">
+          <Card className="border-l-4 border-l-yellow-500 shadow-sm transition-all hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Trainers</CardTitle>
               <UserCheck className="h-4 w-4 text-muted-foreground" />

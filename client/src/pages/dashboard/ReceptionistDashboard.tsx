@@ -41,7 +41,7 @@ export default function ReceptionistDashboard() {
         api.getBranches()
       ]);
 
-      const userBranch = branches.find(b => b.id === user.branchId);
+      const userBranch = branches.find((b: any) => b.id === user.branchId);
 
       setStats(dashboardStats || {
         totalStudents: 0,
@@ -142,13 +142,13 @@ export default function ReceptionistDashboard() {
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Outstanding</p>
             </CardContent>
           </Card>
-          <Card className="shadow-sm border-muted/50 transition-all hover:shadow-md border-l-4 border-l-blue-500">
+          <Card className="shadow-sm border-muted/50 transition-all hover:shadow-md border-l-4 border-l-primary">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 shadow-sm">
               <CardTitle className="text-xs sm:text-sm font-medium">Present Today</CardTitle>
-              <CalendarCheck className="h-4 w-4 text-blue-500/80" />
+              <CalendarCheck className="h-4 w-4 text-primary/80" />
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="text-xl sm:text-2xl font-bold mt-2 text-blue-600">{stats.presentToday}</div>
+              <div className="text-xl sm:text-2xl font-bold mt-2 text-primary">{stats.presentToday}</div>
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Students</p>
             </CardContent>
           </Card>
@@ -209,7 +209,7 @@ export default function ReceptionistDashboard() {
           <Link href="/students" className="contents">
             <Card className="hover:border-primary/50 cursor-pointer transition-all hover:shadow-md hover:bg-muted/30 group">
               <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                <div className="h-14 w-14 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                <div className="h-14 w-14 rounded-2xl bg-yellow-100 text-yellow-600 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm">
                   <Users className="h-7 w-7" />
                 </div>
                 <div className="space-y-1">
@@ -223,7 +223,7 @@ export default function ReceptionistDashboard() {
           <Link href="/attendance" className="contents">
             <Card className="hover:border-primary/50 cursor-pointer transition-all hover:shadow-md hover:bg-muted/30 group">
               <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                <div className="h-14 w-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                <div className="h-14 w-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm">
                   <CalendarCheck className="h-7 w-7" />
                 </div>
                 <div className="space-y-1">

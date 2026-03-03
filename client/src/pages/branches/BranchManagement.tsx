@@ -198,12 +198,12 @@ export default function BranchManagement() {
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-xl flex flex-col items-center justify-center gap-1">
-                    <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                  <div className="bg-orange-50/50 dark:bg-orange-900/10 p-3 rounded-xl flex flex-col items-center justify-center gap-1">
+                    <div className="flex items-center gap-1.5 text-orange-600 dark:text-orange-400">
                       <Users className="h-4 w-4" />
                       <span className="text-xs font-semibold uppercase tracking-wider">Students</span>
                     </div>
-                    <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">{branch.studentCount}</span>
+                    <span className="text-2xl font-bold text-orange-700 dark:text-orange-300">{branch.studentCount}</span>
                   </div>
                   <div className="bg-green-50/50 dark:bg-green-900/10 p-3 rounded-xl flex flex-col items-center justify-center gap-1">
                     <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">

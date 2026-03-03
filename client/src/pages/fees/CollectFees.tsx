@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Search, CreditCard, IndianRupee, History, Receipt, Wallet } from "lucide-react";
+import { Loader2, Search, CreditCard, IndianRupee, History, Receipt, Wallet, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -82,10 +82,15 @@ export default function CollectFees() {
 
         const data = await res.json();
         console.log("DEBUG: Search Data:", data);
-        setAllStudents(Array.isArray(data) ? data : []);
+        const results = Array.isArray(data) ? data : [];
+        setAllStudents(results);
+
+        // ✅ AUTO-SELECT: If exactly one result matches perfectly or is the only one, select it
+        if (results.length === 1 && !selectedStudentId) {
+          handleStudentChange(results[0].id);
+        }
       } catch (err) {
         console.error("DEBUG: Search Error", err);
-        // Only show toast on actual errors, not empty results
         toast({
           title: "Error",
           description: "Failed to search students",
@@ -96,7 +101,7 @@ export default function CollectFees() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, user]);
+  }, [searchTerm, user, selectedStudentId]);
 
   // 📊 Load fee calculation
   const loadStudentDues = async (studentId: string) => {
@@ -211,7 +216,7 @@ export default function CollectFees() {
       <div className="max-w-2xl mx-auto space-y-8 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
         <div className="bg-white/50 p-4 sm:p-6 rounded-2xl border border-muted/50 backdrop-blur-sm shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600 shadow-sm group hover:scale-105 transition-transform">
+            <div className="p-3 bg-orange-100 rounded-xl text-orange-600 shadow-sm group hover:scale-105 transition-transform">
               <CreditCard className="h-6 w-6 sm:h-8 sm:w-8" />
             </div>
             <div className="space-y-1">
@@ -246,15 +251,21 @@ export default function CollectFees() {
                   value={selectedStudentId}
                   onValueChange={handleStudentChange}
                 >
-                  <SelectTrigger className="h-12 rounded-xl border-muted/50 bg-muted/20 font-bold focus:ring-primary/20 transition-all">
-                    <SelectValue placeholder="Select from verified results" />
+                  <SelectTrigger className={cn(
+                    "h-12 rounded-xl border-muted/50 bg-muted/20 font-bold focus:ring-primary/20 transition-all",
+                    selectedStudentId ? "bg-green-50/50 border-green-200 text-green-700" : ""
+                  )}>
+                    <SelectValue placeholder="Confirm student selection" />
                   </SelectTrigger>
 
                   <SelectContent className="rounded-xl shadow-xl border-muted/50">
                     {/* 1. PERSISTED STUDENT: Always show if selected */}
                     {persistedStudent && (
                       <SelectItem key={persistedStudent.id} value={persistedStudent.id} className="font-bold py-3">
-                        {persistedStudent.name} – {persistedStudent.program} ({persistedStudent.batch})
+                        <div className="flex items-center gap-2 text-green-700">
+                          <UserCheck className="h-4 w-4" />
+                          {persistedStudent.name} – {persistedStudent.program} ({persistedStudent.batch})
+                        </div>
                       </SelectItem>
                     )}
 
@@ -275,20 +286,37 @@ export default function CollectFees() {
                     )}
                   </SelectContent>
                 </Select>
+
+                {/* ✅ QUICK SELECTION HINT: Show results directly below if not selected */}
+                {!selectedStudentId && allStudents.length > 0 && (
+                  <div className="mt-2 p-2 bg-orange-50/50 rounded-xl border border-orange-100 flex flex-wrap gap-2">
+                    <p className="w-full text-[9px] font-black text-orange-400 uppercase tracking-widest mb-1 ml-1">Matching Identities (Click to Select):</p>
+                    {allStudents.map(student => (
+                      <button
+                        key={student.id}
+                        type="button"
+                        onClick={() => handleStudentChange(student.id)}
+                        className="px-3 py-1.5 bg-white border border-orange-200 rounded-lg text-[10px] font-bold text-orange-700 hover:bg-orange-600 hover:text-white transition-all shadow-sm"
+                      >
+                        {student.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {selectedStudentData && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-500">
-                  <div className="bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-6 rounded-2xl border border-indigo-100/50 flex flex-col sm:flex-row justify-between items-start gap-4 shadow-sm">
+                  <div className="bg-gradient-to-br from-orange-50 via-white to-yellow-50 p-6 rounded-2xl border border-orange-100/50 flex flex-col sm:flex-row justify-between items-start gap-4 shadow-sm">
                     <div className="space-y-1 w-full sm:w-auto">
-                      <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none mb-1.5">Selected Identity</p>
+                      <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest leading-none mb-1.5">Selected Identity</p>
                       <p className="text-xl font-black font-heading text-gray-900 truncate leading-none mb-1">{selectedStudentData.name}</p>
                       <p className="text-xs font-bold text-muted-foreground truncate uppercase tracking-tight">
                         {selectedStudentData.program} • {selectedStudentData.batch}
                       </p>
                     </div>
                     {studentDues && (
-                      <div className="text-left sm:text-right space-y-2 text-sm w-full sm:w-auto border-t sm:border-t-0 pt-4 sm:pt-0 border-indigo-100/50 sm:pl-6 sm:border-l">
+                      <div className="text-left sm:text-right space-y-2 text-sm w-full sm:w-auto border-t sm:border-t-0 pt-4 sm:pt-0 border-orange-100/50 sm:pl-6 sm:border-l">
                         <div className="flex sm:flex-col justify-between items-center sm:items-end">
                           <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Base Subscription</p>
                           <p className="font-black text-gray-900">₹{studentDues.monthlyFee.toLocaleString('en-IN')}</p>
@@ -417,7 +445,7 @@ export default function CollectFees() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full sm:flex-1 h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-[0.2em] rounded-xl shadow-lg shadow-indigo-600/20 active:scale-[0.99] transition-all disabled:opacity-50"
+                  className="w-full sm:flex-1 h-14 bg-primary hover:bg-primary/90 text-white font-black uppercase text-xs tracking-[0.2em] rounded-xl shadow-lg shadow-primary/20 active:scale-[0.99] transition-all disabled:opacity-50"
                 >
                   {isLoading ? (
                     <div className="flex items-center gap-2">
