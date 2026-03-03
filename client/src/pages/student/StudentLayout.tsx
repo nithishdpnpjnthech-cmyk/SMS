@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useRoute } from 'wouter';
+import { useLocation, useRoute, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -103,15 +103,17 @@ export default function StudentLayout() {
     <div className="flex h-full flex-col bg-white border-r border-muted/50">
       {/* Logo & Academy Name */}
       <div className="p-6 border-b border-muted/50 bg-gradient-to-br from-orange-50/50 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 flex items-center justify-center rounded-full overflow-hidden transition-transform hover:scale-105 active:scale-95 duration-200 cursor-pointer">
-            <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain filter drop-shadow-sm" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-black text-lg text-gray-900 truncate font-heading leading-tight">{getPortalName()}</h1>
-            <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest mt-0.5">Student Portal</p>
-          </div>
-        </div>
+        <Link href="/student/dashboard">
+          <a className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="h-12 w-12 flex items-center justify-center rounded-full overflow-hidden transition-transform hover:scale-105 active:scale-95 duration-200">
+              <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain filter drop-shadow-sm" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-black text-lg text-gray-900 truncate font-heading leading-tight">{getPortalName()}</h1>
+              <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest mt-0.5">Student Portal</p>
+            </div>
+          </a>
+        </Link>
       </div>
 
       {/* Navigation */}

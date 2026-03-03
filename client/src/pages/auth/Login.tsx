@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
@@ -62,7 +62,14 @@ export default function Login() {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center pb-2">
+          <div className="flex justify-center mb-4">
+            <Link href="/">
+              <div className="h-20 w-20 flex items-center justify-center rounded-full overflow-hidden cursor-pointer hover:scale-105 transition-transform">
+                <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain" />
+              </div>
+            </Link>
+          </div>
           <CardTitle>Welcome back</CardTitle>
           <CardDescription>Login to continue</CardDescription>
         </CardHeader>

@@ -63,12 +63,14 @@ export function Sidebar() {
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
       <div className="flex h-16 items-center px-6 border-b border-sidebar-border/50">
-        <div className="flex items-center gap-3 font-heading font-black text-lg text-sidebar-foreground">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full overflow-hidden">
-            <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain filter drop-shadow-sm" />
-          </div>
-          <span className="tracking-tight">HUURA <span className="text-primary font-black">ACADEMY</span></span>
-        </div>
+        <Link href={navItems[0]?.href || "/dashboard"}>
+          <a className="flex items-center gap-3 font-heading font-black text-lg text-sidebar-foreground cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full overflow-hidden">
+              <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain filter drop-shadow-sm" />
+            </div>
+            <span className="tracking-tight">HUURA <span className="text-primary font-black">ACADEMY</span></span>
+          </a>
+        </Link>
       </div>
       <div className="flex-1 overflow-y-auto py-6 px-3">
         <div className="mb-4 px-3">
@@ -134,12 +136,14 @@ export function MobileSidebar() {
       <SheetContent side="left" className="p-0 bg-sidebar text-sidebar-foreground w-72 border-r-sidebar-border">
         <div className="flex h-full flex-col">
           <div className="flex h-16 items-center px-6 border-b border-sidebar-border/50">
-            <div className="flex items-center gap-3 font-heading font-black text-lg text-sidebar-foreground">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full overflow-hidden">
-                <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain filter drop-shadow-sm" />
-              </div>
-              <span className="tracking-tight">HUURA <span className="text-primary font-black">ACADEMY</span></span>
-            </div>
+            <Link href={navItems[0]?.href || "/dashboard"}>
+              <a className="flex items-center gap-3 font-heading font-black text-lg text-sidebar-foreground cursor-pointer hover:opacity-80 transition-opacity">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full overflow-hidden">
+                  <img src="/logo.png" alt="HUURA" className="h-full w-full object-contain filter drop-shadow-sm" />
+                </div>
+                <span className="tracking-tight">HUURA <span className="text-primary font-black">ACADEMY</span></span>
+              </a>
+            </Link>
           </div>
           <div className="flex-1 overflow-y-auto py-6 px-3">
             <div className="mb-4 px-3">

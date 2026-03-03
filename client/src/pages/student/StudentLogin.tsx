@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,9 +50,11 @@ export default function StudentLogin({ onLogin }: StudentLoginProps) {
 
       <div className="w-full max-w-md px-4 relative z-10 animate-in fade-in zoom-in duration-700">
         <div className="text-center mb-8">
-          <div className="inline-flex p-1 rounded-full mb-6 group hover:scale-110 transition-transform duration-500 overflow-hidden w-32 h-32 items-center justify-center">
-            <img src="/logo.png" alt="HUURA" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
-          </div>
+          <Link href="/">
+            <div className="inline-flex p-1 rounded-full mb-6 group hover:scale-110 transition-transform duration-500 overflow-hidden w-32 h-32 items-center justify-center cursor-pointer">
+              <img src="/logo.png" alt="HUURA" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
+            </div>
+          </Link>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-heading leading-tight mb-2">
             {getPortalName()}
           </h1>
