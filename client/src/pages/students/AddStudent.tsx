@@ -187,20 +187,27 @@ export default function AddStudent() {
 
     try {
       const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        backgroundColor: null,
+        scale: 3, // Higher resolution
+        backgroundColor: "#f97316", // Force solid orange background
         useCORS: true,
         allowTaint: true,
-        ignoreElements: (element) => {
-          // Skip elements that might cause CSS parsing issues
-          return element.tagName === 'STYLE' || element.tagName === 'SCRIPT';
+        logging: false,
+        onclone: (clonedDoc) => {
+          // Robust selector for the card during capture
+          const card = clonedDoc.querySelector('[data-card="id-card"]') as HTMLElement;
+          if (card) {
+            card.style.width = "480px";
+            card.style.height = "300px";
+            card.style.borderRadius = "24px";
+            card.style.transform = "none"; // Avoid issues with 3D transforms
+          }
         }
       });
 
-      const image = canvas.toDataURL("image/png");
+      const image = canvas.toDataURL("image/png", 1.0);
       const link = document.createElement("a");
       link.href = image;
-      link.download = `student-id-${idCardData?.studentId || 'unknown'}.png`;
+      link.download = `student-id-${idCardData?.name || 'student'}.png`;
       link.click();
     } catch (error) {
       console.error('Download failed:', error);
@@ -412,40 +419,100 @@ export default function AddStudent() {
 
       {/* ID Card Modal */}
       <Dialog open={showIdCard} onOpenChange={setShowIdCard}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
+        <DialogContent className="max-w-md bg-white border-0 shadow-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="flex items-center gap-3 text-xl font-black font-heading tracking-tight">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+                <CreditCard className="h-6 w-6" />
+              </div>
               Student ID Card Generated
             </DialogTitle>
           </DialogHeader>
 
           {idCardData && (
-            <div className="space-y-4">
-              {/* ID Card Preview */}
-              <div ref={cardRef} className="bg-gradient-to-br from-orange-500 to-yellow-600 text-white p-6 rounded-lg shadow-lg">
-                <div className="text-center space-y-2">
-                  <h3 className="font-bold text-lg">HUURA ACADEMY</h3>
-                  <div className="rounded-xl w-24 h-24 mx-auto flex items-center justify-center overflow-hidden">
-                    <img src="/logo.png" alt="HUURA" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
+            <div className="p-6 space-y-6">
+              {/* ID Card Preview - Premium Identity Card Design */}
+              <div
+                ref={cardRef}
+                data-card="id-card"
+                className="relative w-full aspect-[1.6/1] bg-[#f97316] text-white rounded-2xl shadow-2xl overflow-hidden flex flex-col justify-between"
+                style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
+              >
+                {/* Decorative Pattern Overlay */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+                <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-black/10 rounded-full blur-3xl"></div>
+
+                {/* Card Header */}
+                <div className="relative z-10 p-6 flex justify-between items-start">
+                  <div className="space-y-0.5">
+                    <h3 className="font-black text-sm tracking-[0.2em] uppercase opacity-90">STUDENT IDENTITY</h3>
+                    <div className="h-0.5 w-8 bg-white/50 rounded-full"></div>
                   </div>
-                  <h4 className="font-semibold text-lg">{idCardData.name}</h4>
-                  <div className="text-sm space-y-1">
-                    <p>ID: {idCardData.studentId?.slice(0, 8)}</p>
-                    <p>Program: {selectedPrograms.map(id => programs.find(p => p.id === id)?.name).join(', ')}</p>
-                    <p>Batch: {batches.find(b => b.id === selectedBatch)?.name}</p>
-                    <p>Joined: {idCardData.joiningDate}</p>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-md">ACADEMY PASS</span>
+                  </div>
+                </div>
+
+                {/* Card Center Body */}
+                <div className="relative z-10 px-6 flex items-center gap-5">
+                  <div className="relative">
+                    <div className="w-20 h-20 bg-white rounded-2xl p-3 shadow-xl transform rotate-3 flex items-center justify-center">
+                      <img
+                        src="/logo.png"
+                        alt="Logo"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg">
+                      <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-0.5 flex-1 min-w-0">
+                    <h4 className="text-2xl font-black font-heading tracking-tight truncate leading-none mb-1 uppercase">{idCardData.name}</h4>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/70">ID: {idCardData.studentId?.slice(0, 8)}</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {selectedPrograms.slice(0, 2).map(id => (
+                        <span key={id} className="text-[8px] font-black uppercase tracking-wider bg-black/20 px-1.5 py-0.5 rounded leading-none">
+                          {programs.find(p => p.id === id)?.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Footer Details */}
+                <div className="relative z-10 bg-black/20 backdrop-blur-md p-4 flex justify-between items-center border-t border-white/10">
+                  <div className="flex gap-4">
+                    <div className="space-y-0.5">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-white/50">BATCH</p>
+                      <p className="text-[10px] font-bold">{batches.find(b => b.id === selectedBatch)?.name || 'N/A'}</p>
+                    </div>
+                    <div className="space-y-0.5 border-l border-white/10 pl-4">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-white/50">JOINED</p>
+                      <p className="text-[10px] font-bold">{idCardData.joiningDate}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black tracking-tighter opacity-80 uppercase">HUURA ACADEMY</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button onClick={handleCloseIdCard} className="flex-1">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Button
+                  onClick={handleCloseIdCard}
+                  className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 text-gray-900 font-black uppercase text-xs tracking-widest rounded-xl transition-all"
+                >
                   Continue
                 </Button>
-                <Button variant="outline" onClick={handleDownload} className="flex items-center gap-2">
+                <Button
+                  onClick={handleDownload}
+                  className="flex-1 h-12 bg-primary hover:bg-primary/90 text-white font-black uppercase text-xs tracking-widest rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
+                >
                   <Download className="h-4 w-4" />
-                  Download
+                  Download PNG
                 </Button>
               </div>
             </div>
