@@ -411,9 +411,7 @@ export default function CollectFees() {
                     </SelectTrigger>
                     <SelectContent className="rounded-xl shadow-xl">
                       <SelectItem value="cash" className="font-bold py-3"><div className="flex items-center gap-2">CASH SETTLEMENT</div></SelectItem>
-                      <SelectItem value="card" className="font-bold py-3"><div className="flex items-center gap-2">CARD TERMINAL</div></SelectItem>
                       <SelectItem value="online" className="font-bold py-3"><div className="flex items-center gap-2">UPI / NET BANKING</div></SelectItem>
-                      <SelectItem value="cheque" className="font-bold py-3"><div className="flex items-center gap-2">PAPER CHEQUE</div></SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
