@@ -35,8 +35,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // Poll every minute
+    const interval = setInterval(fetchNotifications, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
+  }, []);
+
+  // Refresh notifications when window gains focus
+  useEffect(() => {
+    const handleFocus = () => fetchNotifications();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const handleMarkAsRead = async (id: string) => {

@@ -91,6 +91,13 @@ export default function FeesDashboard() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Auto-refresh when navigating back to this page
+  useEffect(() => {
+    const handleFocus = () => loadData(true);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadData]);
+
   const filteredPayments = payments.filter(p => {
     const matchSearch = !searchTerm ||
       p.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||

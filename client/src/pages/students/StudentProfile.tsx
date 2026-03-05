@@ -255,7 +255,9 @@ export default function StudentProfile({ params: propParams }: any) {
         title: "Success",
         description: "Student deactivated successfully",
       });
-      loadStudentData(student.id);
+      
+      // Reload student data immediately
+      await loadStudentData(student.id);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -272,7 +274,9 @@ export default function StudentProfile({ params: propParams }: any) {
         title: "Success",
         description: "Student suspended successfully",
       });
-      loadStudentData(student.id);
+      
+      // Reload student data immediately
+      await loadStudentData(student.id);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -304,8 +308,8 @@ export default function StudentProfile({ params: propParams }: any) {
         description: "Student profile updated successfully",
       });
 
-      // Reload student data
-      loadStudentData(student.id);
+      // Reload student data immediately
+      await loadStudentData(student.id);
     } catch (error: any) {
       console.error("Update error:", error);
       toast({
@@ -330,7 +334,8 @@ export default function StudentProfile({ params: propParams }: any) {
       });
       setNewNote("");
       setIsNoteOpen(false);
-      // Fetch fresh remarks
+      
+      // Reload remarks immediately
       const remarksData = await api.getStudentRemarks(student.id);
       setRemarks(remarksData);
     } catch (error: any) {

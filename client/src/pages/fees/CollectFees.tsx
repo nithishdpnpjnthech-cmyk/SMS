@@ -155,7 +155,15 @@ export default function CollectFees() {
           description: `Fee collected successfully${result.remainingCredit > 0 ? `. Credit remaining: ₹${result.remainingCredit}` : ''}`,
         });
 
-        navigate("/fees");
+        // Reset form immediately
+        setSelectedStudentId("");
+        setPersistedStudent(null);
+        setAmount("");
+        setNotes("");
+        setStudentDues(null);
+
+        // Navigate after short delay
+        setTimeout(() => navigate("/fees"), 500);
       } catch (err: any) {
         toast({
           title: "Error",
@@ -212,7 +220,16 @@ export default function CollectFees() {
                 title: "Success",
                 description: "Payment collected via UPI successfully",
               });
-              navigate("/fees");
+              
+              // Reset form immediately
+              setSelectedStudentId("");
+              setPersistedStudent(null);
+              setAmount("");
+              setNotes("");
+              setStudentDues(null);
+              
+              // Navigate after short delay
+              setTimeout(() => navigate("/fees"), 500);
             } catch (err: any) {
               toast({
                 title: "Verification Failed",

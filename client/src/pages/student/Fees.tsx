@@ -134,6 +134,7 @@ export default function StudentFees() {
               description: `₹${type === 'monthly' ? enrollment.monthlyAmount : (enrollment.monthlyAmount * 3 - 500)} paid via UPI successfully.`,
             });
 
+            // Reload data immediately
             await loadAll();
           } catch (err: any) {
             toast({

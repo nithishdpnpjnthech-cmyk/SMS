@@ -50,6 +50,15 @@ export default function StudentList() {
     loadPrograms();
   }, [branchId, statusFilter, user]);
 
+  // Auto-refresh when window gains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      loadStudents();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [branchId, statusFilter, user]);
+
   const loadPrograms = async () => {
     try {
       const programsData = await api.getPrograms();
