@@ -183,36 +183,56 @@ export default function AddStudent() {
   };
 
   const handleDownload = async () => {
-    if (!cardRef.current) return;
+    if (!cardRef.current) {
+      toast({
+        title: "Error",
+        description: "ID card not ready. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // Use a small timeout to ensure everything is rendered
-    setTimeout(async () => {
-      try {
-        const canvas = await html2canvas(cardRef.current!, {
-          scale: 2,
-          backgroundColor: "#f97316",
-          useCORS: true,
-          logging: false,
-          width: cardRef.current!.offsetWidth,
-          height: cardRef.current!.offsetHeight
-        });
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3,
+        backgroundColor: "#f97316",
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
 
-        const image = canvas.toDataURL("image/png");
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          toast({
+            title: "Download Failed",
+            description: "Could not generate PNG. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = image;
+        link.href = url;
         link.download = `id-card-${idCardData?.name?.replace(/\s+/g, '-').toLowerCase() || 'student'}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      } catch (error) {
-        console.error('Download failed:', error);
+        URL.revokeObjectURL(url);
+
         toast({
-          title: "Download Failed",
-          description: "Could not generate PNG. Please try again.",
-          variant: "destructive"
+          title: "Success",
+          description: "ID card downloaded successfully"
         });
-      }
-    }, 100);
+      }, 'image/png');
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({
+        title: "Download Failed",
+        description: "Could not generate PNG. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -241,19 +261,19 @@ export default function AddStudent() {
               {/* Phone */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Student Phone Number *</Label>
-                  <Input name="phone" required placeholder="Student phone" />
+                  <Label>Parent/Guardian Phone Number *</Label>
+                  <Input name="parentPhone" required placeholder="Parent/Guardian phone" />
                 </div>
                 <div>
-                  <Label>Parent Phone Number</Label>
-                  <Input name="parentPhone" placeholder="Parent/Guardian phone" />
+                  <Label>Student Phone Number</Label>
+                  <Input name="phone" placeholder="Student phone (optional)" />
                 </div>
               </div>
 
               {/* Guardian Name */}
               <div>
-                <Label>Parent/Guardian Name</Label>
-                <Input name="guardianName" placeholder="Guardian/Parent name" />
+                <Label>Parent/Guardian Name *</Label>
+                <Input name="guardianName" required placeholder="Parent/Guardian name" />
               </div>
 
               {/* Address */}
