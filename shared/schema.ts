@@ -127,6 +127,17 @@ export const studentRemarks = pgTable("student_remarks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"), // Can be null if studentId is present
+  studentId: varchar("student_id"), // Can be null if userId is present
+  type: text("type").notNull(), // payment, attendance, general
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Schema exports
 export const insertUserSchema = createInsertSchema(users);
 export const insertBranchSchema = createInsertSchema(branches);
@@ -142,6 +153,8 @@ export const insertStudentEnrollmentSchema = createInsertSchema(studentEnrollmen
 export const insertStudentFeeSchema = createInsertSchema(studentFees);
 export const insertPaymentSchema = createInsertSchema(payments);
 export const insertStudentRemarkSchema = createInsertSchema(studentRemarks);
+
+export const insertNotificationSchema = createInsertSchema(notifications);
 
 // Type exports
 export type User = typeof users.$inferSelect;
@@ -163,3 +176,5 @@ export type StudentFee = typeof studentFees.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type StudentRemark = typeof studentRemarks.$inferSelect;
 export type InsertStudentRemark = z.infer<typeof insertStudentRemarkSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

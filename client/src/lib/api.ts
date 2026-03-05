@@ -271,6 +271,9 @@ export const api = {
   addStudentRemark: async (id: string, content: string) =>
     api.post(`/api/students/${id}/remarks`, { content }),
 
+  getStudentAttendanceHistory: async (id: string) => api.get(`/api/students/${id}/attendance-history`),
+  getStudentMonthlyFees: async (id: string) => api.get(`/api/students/${id}/monthly-fees`),
+
   // ================= PROGRAMS =================
   getPrograms: async () => api.get('/api/programs'),
   getBatches: async () => api.get('/api/batches'),
@@ -282,4 +285,8 @@ export const api = {
   // ================= REPORTS =================
   getReportData: async (type: string, from: string, to: string) =>
     api.get(`/api/reports/data?type=${type}&from=${from}&to=${to}`),
+
+  // ================= NOTIFICATIONS =================
+  getNotifications: async () => api.get('/api/notifications'),
+  markNotificationAsRead: async (id: string) => api.patch(`/api/notifications/${id}/read`, {}),
 };

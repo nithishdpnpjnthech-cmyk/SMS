@@ -77,6 +77,9 @@ export interface IStorage {
   // Student Remarks
   getStudentRemarks(studentId: string): Promise<any[]>;
   createStudentRemark(remark: any): Promise<any>;
+
+  // Notifications
+  ensureNotificationsTable(): Promise<void>;
 }
 
 /**

@@ -10,6 +10,8 @@ import { BackButton } from "@/components/ui/back-button";
 import { useAuth } from "@/lib/auth";
 import { Link, useLocation } from "wouter";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from "@/components/ui/command";
+import { api } from "@/lib/api";
+import { NotificationPopover } from "@/components/NotificationPopover";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -18,8 +20,33 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [, setLocation] = useLocation();
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await api.getNotifications();
+      setNotifications(data);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000); // Poll every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await api.markNotificationAsRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
 
   const handleNavigate = (path: string) => {
     setIsSearchOpen(false);
@@ -98,10 +125,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <BackButton className="flex-shrink-0" />
             <div className="relative w-full max-w-sm hidden sm:block">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input 
-                type="search" 
-                placeholder="Search anything..." 
-                className="pl-9 h-9 bg-muted/50 border-none focus-visible:ring-1 cursor-pointer" 
+              <Input
+                type="search"
+                placeholder="Search anything..."
+                className="pl-9 h-9 bg-muted/50 border-none focus-visible:ring-1 cursor-pointer"
                 readOnly
                 onClick={() => setIsSearchOpen(true)}
               />
@@ -109,11 +136,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px]">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-card" />
-            </Button>
-            
+            <NotificationPopover
+              notifications={notifications}
+              onMarkAsRead={handleMarkAsRead}
+            />
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full min-h-[44px] min-w-[44px]">

@@ -225,31 +225,31 @@ export default function AddStudent() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name */}
               <div>
-                <Label>Full Name *</Label>
+                <Label>Student Name *</Label>
                 <Input name="name" required placeholder="Enter student's full name" />
               </div>
 
               {/* Email */}
               <div>
-                <Label>Email</Label>
-                <Input name="email" type="email" placeholder="student@example.com" />
+                <Label>Parent Email</Label>
+                <Input name="email" type="email" placeholder="parent@example.com" />
               </div>
 
               {/* Phone */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Phone *</Label>
+                  <Label>Student Phone Number *</Label>
                   <Input name="phone" required placeholder="Student phone" />
                 </div>
                 <div>
-                  <Label>Parent Phone</Label>
+                  <Label>Parent Phone Number</Label>
                   <Input name="parentPhone" placeholder="Parent/Guardian phone" />
                 </div>
               </div>
 
               {/* Guardian Name */}
               <div>
-                <Label>Guardian Name</Label>
+                <Label>Parent/Guardian Name</Label>
                 <Input name="guardianName" placeholder="Guardian/Parent name" />
               </div>
 
@@ -284,7 +284,7 @@ export default function AddStudent() {
 
               {/* Programs */}
               <div>
-                <Label>Programs * (Select one or more)</Label>
+                <Label>Program Name * (Select one or more)</Label>
                 {programs.length > 0 ? (
                   <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-3">
                     {programs.map((program) => (

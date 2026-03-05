@@ -162,28 +162,28 @@ export default function EditStudent() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label>Full Name *</Label>
+                <Label>Student Name *</Label>
                 <Input name="name" defaultValue={student.name} required />
               </div>
 
               <div>
-                <Label>Email</Label>
+                <Label>Parent Email</Label>
                 <Input name="email" type="email" defaultValue={student.email || ""} />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Phone *</Label>
+                  <Label>Student Phone Number *</Label>
                   <Input name="phone" defaultValue={student.phone || ""} required />
                 </div>
                 <div>
-                  <Label>Parent Phone</Label>
+                  <Label>Parent Phone Number</Label>
                   <Input name="parentPhone" defaultValue={student.parent_phone || ""} />
                 </div>
               </div>
 
               <div>
-                <Label>Guardian Name</Label>
+                <Label>Parent/Guardian Name</Label>
                 <Input name="guardianName" defaultValue={student.guardian_name || ""} />
               </div>
 
@@ -209,7 +209,7 @@ export default function EditStudent() {
               </div>
 
               <div>
-                <Label>Program *</Label>
+                <Label>Program Name *</Label>
                 <Select name="program" defaultValue={student.program}>
                   <SelectTrigger>
                     <SelectValue />

@@ -579,7 +579,7 @@ export class MySQLStorage implements IStorage {
 
   async getStudentEnrollments(studentId: string): Promise<any[]> {
     return await db.query(`
-      SELECT se.*, fs.name as fee_structure_name, fs.amount as monthly_amount
+      SELECT se.*, fs.name as program_name, fs.amount as monthly_amount
       FROM student_enrollments se
       JOIN fee_structures fs ON se.fee_structure_id = fs.id
       WHERE se.student_id = ? AND se.status = 'active'
@@ -816,6 +816,25 @@ export class MySQLStorage implements IStorage {
     const rows = await db.query(query, params);
     const trainers = rows.map((r: any) => r.name);
     return { count: trainers.length, trainers };
+  }
+
+  // ============= NOTIFICATIONS =============
+  async ensureNotificationsTable(): Promise<void> {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) DEFAULT NULL,
+        student_id VARCHAR(36) DEFAULT NULL,
+        type VARCHAR(20) NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX (user_id),
+        INDEX (student_id),
+        INDEX (created_at)
+      )
+    `);
   }
 
   // ============= STUDENT REMARKS =============

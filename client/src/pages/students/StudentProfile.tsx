@@ -40,20 +40,38 @@ export default function StudentProfile({ params: propParams }: any) {
   const [newNote, setNewNote] = useState("");
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [fees, setFees] = useState<any[]>([]);
+  const [monthlyFees, setMonthlyFees] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [remarks, setRemarks] = useState<any[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const { branding } = useAcademyBranding();
 
   // Defensive calculations for attendance stats
   const { presentCount, attendanceRate, absentCount, lateCount } = useMemo(() => {
-    if (!Array.isArray(attendance) || attendance.length === 0) {
+    // Filter attendance for the selected month visualization
+    const monthFiltered = attendance.filter((a: any) => {
+      const d = new Date(a.date);
+      return d.getMonth() === selectedMonth.getMonth() && d.getFullYear() === selectedMonth.getFullYear();
+    });
+
+    if (!Array.isArray(monthFiltered) || monthFiltered.length === 0) {
       return { presentCount: 0, attendanceRate: 0, absentCount: 0, lateCount: 0 };
     }
-    const pCount = attendance.filter((a: any) => (a?.status || '').toLowerCase() === 'present').length;
-    const aCount = attendance.filter((a: any) => (a?.status || '').toLowerCase() === 'absent').length;
-    const lCount = attendance.filter((a: any) => a?.is_late || a?.isLate).length;
-    const rate = Math.round((pCount / attendance.length) * 100);
+    const pCount = monthFiltered.filter((a: any) => (a?.status || '').toLowerCase() === 'present').length;
+    const aCount = monthFiltered.filter((a: any) => (a?.status || '').toLowerCase() === 'absent').length;
+    const lCount = monthFiltered.filter((a: any) => a?.is_late || a?.isLate).length;
+    const rate = Math.round((pCount / monthFiltered.length) * 100);
     return { presentCount: pCount, attendanceRate: rate, absentCount: aCount, lateCount: lCount };
+  }, [attendance, selectedMonth]);
+
+  // Map attendance to dates for calendar
+  const attendanceMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    attendance.forEach(a => {
+      const dateKey = format(new Date(a.date), 'yyyy-MM-dd');
+      map[dateKey] = a;
+    });
+    return map;
   }, [attendance]);
 
   // Fix: Improved student ID extraction from window location as a fail-safe
@@ -79,15 +97,17 @@ export default function StudentProfile({ params: propParams }: any) {
   const loadStudentData = async (id: string) => {
     setIsLoading(true);
     try {
-      const [studentData, feesData, attendanceData, remarksData] = await Promise.all([
+      const [studentData, feesData, monthlyFeesData, attendanceData, remarksData] = await Promise.all([
         api.getStudent(id),
         api.getFees(undefined, id).catch(() => []),
-        api.getAttendance({ studentId: id }).catch(() => []),
+        api.getStudentMonthlyFees(id).catch(() => []),
+        api.getStudentAttendanceHistory(id).catch(() => []),
         api.getStudentRemarks(id).catch(() => [])
       ]);
 
       setStudent(studentData);
       setFees(Array.isArray(feesData) ? feesData : []);
+      setMonthlyFees(Array.isArray(monthlyFeesData) ? monthlyFeesData : []);
       setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
       setRemarks(Array.isArray(remarksData) ? remarksData : []);
     } catch (error) {
@@ -535,115 +555,187 @@ export default function StudentProfile({ params: propParams }: any) {
               </TabsContent>
 
               <TabsContent value="attendance" className="mt-6">
-                <Card className="shadow-lg border-muted/50 overflow-hidden">
-                  <CardHeader className="bg-muted/10 border-b border-muted/30">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-orange-100 rounded-lg text-primary shadow-sm">
-                        <Calendar className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <CardTitle className="font-heading text-xl">Attendance Summary</CardTitle>
-                        <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60">Complete tracking and statistics</CardDescription>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="font-bold uppercase tracking-wider text-[10px] h-8 rounded-xl shadow-sm border-orange-200 text-primary hover:bg-orange-50"
-                      onClick={downloadIndividualAttendance}
-                    >
-                      <Download className="h-3 w-3 mr-1.5" />
-                      Download Full Report
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="pt-8">
-                    <div className="grid md:grid-cols-2 gap-12 sm:gap-16">
-                      <div className="flex flex-col items-center justify-center p-8 bg-orange-50/50 rounded-3xl border border-orange-100 shadow-inner group">
-                        <p className="mb-2 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] leading-none">OVERALL PRESENCE</p>
-                        <div className="relative">
-                          <span className="text-6xl font-black text-primary font-heading tracking-tighter transition-transform group-hover:scale-110 duration-500 block">{attendanceRate}%</span>
-                        </div>
-                        <p className="text-xs font-bold text-primary/80 mt-4 uppercase bg-white px-4 py-1.5 rounded-full border border-primary/10 shadow-sm">
-                          {presentCount} OF {studentAttendance.length} SESSIONS RECORDED
-                        </p>
-                      </div>
-
-                      <div className="space-y-4 py-4 uppercase">
-                        <div className="flex justify-between items-center bg-muted/20 p-3 rounded-xl border border-muted/30 group hover:border-muted-foreground/30 transition-all">
-                          <span className="text-[10px] font-black text-muted-foreground tracking-widest">Marked Present</span>
-                          <span className="font-black text-green-600 font-heading text-lg">{presentCount}</span>
-                        </div>
-                        <div className="flex justify-between items-center bg-muted/20 p-3 rounded-xl border border-muted/30 group hover:border-muted-foreground/30 transition-all">
-                          <span className="text-[10px] font-black text-muted-foreground tracking-widest">Marked Absent</span>
-                          <span className="font-black text-red-600 font-heading text-lg">{absentCount}</span>
-                        </div>
-                        <div className="flex justify-between items-center bg-muted/20 p-3 rounded-xl border border-muted/30 group hover:border-muted-foreground/30 transition-all">
-                          <span className="text-[10px] font-black text-muted-foreground tracking-widest">Delayed / Late</span>
-                          <span className="font-black text-orange-600 font-heading text-lg">{lateCount}</span>
-                        </div>
-                        <div className="flex justify-between items-center bg-muted/20 p-3 rounded-xl border border-muted/30 group hover:border-muted-foreground/30 transition-all">
-                          <span className="text-[10px] font-black text-muted-foreground tracking-widest">Total Engagements</span>
-                          <span className="font-black text-gray-900 font-heading text-lg">{studentAttendance.length}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {studentAttendance.length > 0 && (
-                      <div className="mt-12 space-y-4">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Recent Activity Logs</p>
-                        <div className="border border-muted/50 rounded-2xl overflow-hidden shadow-sm">
-                          <Table>
-                            <TableHeader className="bg-muted/30">
-                              <TableRow>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Date</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Status</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Check-In</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Check-Out</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Notes</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {studentAttendance
-                                .filter(a => a.date)
-                                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                .slice(0, 30)
-                                .map((record, idx) => (
-                                  <TableRow key={idx} className="hover:bg-muted/10 transition-colors uppercase font-bold text-[11px]">
-                                    <TableCell className="py-4">
-                                      {safeFormat(record.date)}
-                                    </TableCell>
-                                    <TableCell className="py-4">
-                                      <Badge variant="outline" className={cn(
-                                        "text-[9px] font-black px-2 shadow-sm border-none",
-                                        ((record.status || '').toLowerCase() === 'present') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                      )}>
-                                        {(record.status || 'N/A').toUpperCase()}
-                                      </Badge>
-                                      {(record.is_late || record.isLate) && (
-                                        <Badge variant="outline" className="ml-1 bg-orange-100 text-orange-700 border-none text-[9px] font-black">LATE</Badge>
-                                      )}
-                                    </TableCell>
-                                    <TableCell className="py-4">{record.check_in || '--:--'}</TableCell>
-                                    <TableCell className="py-4">{record.check_out || '--:--'}</TableCell>
-                                    <TableCell className="py-4 text-muted-foreground normal-case font-medium max-w-[150px] truncate">{record.notes || '-'}</TableCell>
-                                  </TableRow>
-                                ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-                    )}
-
-                    {studentAttendance.length === 0 && (
-                      <div className="text-center py-16 bg-muted/5 rounded-3xl mt-8 border border-dashed border-muted/30">
-                        <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-muted/20 opacity-30">
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                  {/* Left Column: Calendar */}
+                  <Card className="xl:col-span-8 shadow-lg border-muted/50 overflow-hidden">
+                    <CardHeader className="bg-muted/10 border-b border-muted/30 flex flex-row items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-100 rounded-lg text-primary shadow-sm">
                           <Calendar className="h-5 w-5" />
                         </div>
-                        <p className="text-xs font-black text-muted-foreground uppercase tracking-widest opacity-40">No academic engagement records found</p>
+                        <div>
+                          <CardTitle className="font-heading text-xl">Attendance Calendar</CardTitle>
+                          <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60">
+                            {format(selectedMonth, 'MMMM yyyy')} Tracking
+                          </CardDescription>
+                        </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="font-bold h-8 rounded-xl"
+                          onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() - 1)))}
+                        >
+                          Prev
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="font-bold h-8 rounded-xl"
+                          onClick={() => setSelectedMonth(new Date())}
+                        >
+                          Today
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="font-bold h-8 rounded-xl"
+                          onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() + 1)))}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="flex justify-center">
+                        <div className="w-full max-w-2xl bg-white p-4 rounded-3xl border border-muted/50 shadow-inner">
+                          {/* Calendar Visualization */}
+                          <div className="grid grid-cols-7 gap-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                              <div key={day} className="text-center text-[10px] font-black text-muted-foreground uppercase py-2">{day}</div>
+                            ))}
+                            {(() => {
+                              const firstDayOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1).getDay();
+                              const daysInMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0).getDate();
+
+                              const items = [];
+                              // Empty slots for days before the 1st
+                              for (let i = 0; i < firstDayOfMonth; i++) {
+                                items.push(<div key={`empty-${i}`} className="h-16 sm:h-20 bg-muted/5 rounded-2xl border border-dashed border-muted/20" />);
+                              }
+
+                              // Days of the month
+                              for (let d = 1; d <= daysInMonth; d++) {
+                                const date = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), d);
+                                const dateStr = format(date, 'yyyy-MM-dd');
+                                const record = attendanceMap[dateStr];
+
+                                items.push(
+                                  <div
+                                    key={d}
+                                    className={cn(
+                                      "h-16 sm:h-20 rounded-2xl border p-2 flex flex-col justify-between transition-all group hover:shadow-md",
+                                      record ? (
+                                        record.status.toLowerCase() === 'present' ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+                                      ) : "bg-white border-muted/30"
+                                    )}
+                                  >
+                                    <span className="text-xs font-black text-gray-500">{d}</span>
+                                    {record && (
+                                      <div className="space-y-1">
+                                        <Badge className={cn(
+                                          "text-[8px] px-1 py-0 h-4 border-none flex items-center justify-center font-black",
+                                          record.status.toLowerCase() === 'present' ? "bg-green-500" : "bg-red-500"
+                                        )}>
+                                          {record.status.charAt(0).toUpperCase()}
+                                        </Badge>
+                                        <div className="text-[8px] font-bold text-gray-900 truncate flex flex-col">
+                                          <span>{record.check_in || '--:--'}</span>
+                                          {(record.is_late || record.isLate) && <span className="text-orange-600">LATE</span>}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return items;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-8 flex flex-wrap gap-4 justify-center">
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full bg-green-500" />
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Present</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full bg-red-500" />
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Absent</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full bg-white border border-muted/50" />
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">No Record</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Right Column: Mini Stats */}
+                  <div className="xl:col-span-4 space-y-6">
+                    <Card className="shadow-lg border-muted/50 overflow-hidden bg-gradient-to-br from-white to-orange-50/30">
+                      <CardHeader className="py-4 border-b border-muted/30">
+                        <CardTitle className="text-sm font-black uppercase tracking-widest text-orange-900">Monthly Stats</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-6 space-y-4">
+                        <div className="p-4 bg-white rounded-2xl border border-muted/50 text-center shadow-sm">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Attendance Rate</p>
+                          <p className="text-4xl font-black text-primary font-heading tracking-tighter">{attendanceRate}%</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-3 bg-white rounded-2xl border border-muted/50 text-center shadow-sm">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">Present</p>
+                            <p className="text-xl font-black text-green-600 font-heading">{presentCount}</p>
+                          </div>
+                          <div className="p-3 bg-white rounded-2xl border border-muted/50 text-center shadow-sm">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">Absent</p>
+                            <p className="text-xl font-black text-red-600 font-heading">{absentCount}</p>
+                          </div>
+                          <div className="p-3 bg-white rounded-2xl border border-muted/50 text-center shadow-sm">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">Late</p>
+                            <p className="text-xl font-black text-orange-600 font-heading">{lateCount}</p>
+                          </div>
+                          <div className="p-3 bg-white rounded-2xl border border-muted/50 text-center shadow-sm">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total</p>
+                            <p className="text-xl font-black text-gray-900 font-heading">{presentCount + absentCount}</p>
+                          </div>
+                        </div>
+
+                        <Button
+                          className="w-full rounded-xl font-bold uppercase tracking-wider text-xs h-12 shadow-md"
+                          onClick={downloadIndividualAttendance}
+                        >
+                          <Download className="h-4 w-4 mr-2" /> Download Report
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    {/* Recent Feed */}
+                    <Card className="shadow-lg border-muted/50 overflow-hidden">
+                      <CardHeader className="py-4 border-b border-muted/30">
+                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Recent Activity</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="divide-y divide-muted/20">
+                          {attendance.slice(0, 5).map((a, idx) => (
+                            <div key={idx} className="p-4 flex items-center justify-between">
+                              <div>
+                                <p className="text-[11px] font-bold text-gray-900">{format(new Date(a.date), 'dd MMM yyyy')}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-black">{a.status}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-[10px] font-black text-gray-700">{a.check_in || '--:--'}</p>
+                                {a.trainer_name && <p className="text-[9px] text-muted-foreground italic">by {a.trainer_name}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="fees" className="mt-6">
@@ -655,48 +747,101 @@ export default function StudentProfile({ params: propParams }: any) {
                           <IndianRupee className="h-5 w-5" />
                         </div>
                         <div>
-                          <CardTitle className="font-heading text-xl">Payment Records</CardTitle>
-                          <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60">Ledger of all financial transactions</CardDescription>
+                          <CardTitle className="font-heading text-xl">Financial Records</CardTitle>
+                          <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60">Monthly Subscription Status</CardDescription>
                         </div>
                       </div>
-                      <Button size="sm" className="font-bold uppercase tracking-wider text-[10px] h-8 shadow-md">Create Invoice</Button>
+                      <Button size="sm" className="font-bold uppercase tracking-wider text-[10px] h-8 shadow-md rounded-xl">Generate Invoice</Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="space-y-3">
-                      {studentFees.length > 0 ? (
-                        studentFees.map(fee => (
-                          <div key={fee.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border border-muted/50 p-4 rounded-2xl bg-white hover:bg-muted/5 transition-colors group">
-                            <div className="flex items-center gap-4 w-full sm:w-auto">
-                              <div className="h-12 w-12 bg-muted/30 rounded-xl flex items-center justify-center border border-muted/50 group-hover:scale-110 transition-transform">
-                                <FileText className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <CardContent className="p-4 sm:p-6 space-y-8">
+                    {/* Monthly Subscription View */}
+                    <div className="space-y-4">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Subscription History</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {monthlyFees.length > 0 ? (
+                          monthlyFees.map((mf, idx) => (
+                            <Card key={idx} className="border-muted/50 shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden group">
+                              <div className={cn(
+                                "h-2 w-full",
+                                mf.status === 'paid' ? "bg-green-500" : "bg-orange-500"
+                              )} />
+                              <CardContent className="p-5">
+                                <div className="flex justify-between items-start mb-4">
+                                  <div>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                      {new Date(mf.year, mf.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                    </p>
+                                    <h4 className="text-lg font-black text-gray-900 font-heading tracking-tight">Fee Amount: ₹{Number(mf.amount).toLocaleString('en-IN')}</h4>
+                                  </div>
+                                  <Badge className={cn(
+                                    "text-[9px] font-black px-2 shadow-sm border-none uppercase",
+                                    mf.status === 'paid' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                                  )}>
+                                    {mf.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center justify-between mt-4">
+                                  <div className="text-[10px] font-bold text-muted-foreground">
+                                    {Number(mf.paid_amount) > 0 ? `Paid: ₹${Number(mf.paid_amount).toLocaleString('en-IN')}` : 'Awaiting Payment'}
+                                  </div>
+                                  <div className="text-[10px] font-bold text-muted-foreground">
+                                    Due: {mf.due_date ? format(new Date(mf.due_date), 'dd MMM yyyy') : 'N/A'}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        ) : (
+                          <div className="col-span-full text-center py-10 bg-muted/5 rounded-3xl border border-dashed border-muted/30">
+                            <p className="text-xs font-black text-muted-foreground uppercase tracking-widest opacity-40">No monthly fee records generated yet</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <Separator className="my-8" />
+
+                    {/* All Transactions List */}
+                    <div className="space-y-4">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Recent Transactions</p>
+                      <div className="space-y-3">
+                        {studentFees.length > 0 ? (
+                          studentFees.map(fee => (
+                            <div key={fee.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border border-muted/50 p-4 rounded-2xl bg-white hover:bg-muted/5 transition-colors group">
+                              <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <div className="h-10 w-10 bg-muted/30 rounded-xl flex items-center justify-center border border-muted/50 group-hover:scale-110 transition-transform">
+                                  <FileText className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-black text-gray-900 font-heading text-sm uppercase tracking-tight truncate">{fee.type || fee.notes || 'Institutional Fee'}</p>
+                                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Recorded on {fee.paid_date ? format(new Date(fee.paid_date), 'dd MMM yyyy') : format(new Date(fee.created_at), 'dd MMM yyyy')}</p>
+                                </div>
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-black text-gray-900 font-heading text-sm uppercase tracking-tight truncate">{fee.type || fee.notes || 'Institutional Fee'}</p>
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Recorded on {fee.date || new Date().toLocaleDateString('en-IN')}</p>
+                              <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto mt-4 sm:mt-0 border-t sm:border-none pt-3 sm:pt-0">
+                                <div className="text-right">
+                                  <p className="text-lg font-black text-gray-900 font-heading flex items-center tracking-tighter">
+                                    <IndianRupee className="h-4 w-4 mr-0.5 text-muted-foreground/60" />
+                                    {safeCurrency(fee.amount)}
+                                  </p>
+                                  <Badge variant="outline" className={cn(
+                                    "text-[9px] font-black px-2 shadow-sm border-none uppercase leading-none mt-1",
+                                    fee.status === 'paid' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                                  )}>
+                                    {fee.status}
+                                  </Badge>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-muted/50">
+                                  <Download className="h-4 w-4 text-muted-foreground" />
+                                </Button>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto mt-4 sm:mt-0 border-t sm:border-none pt-3 sm:pt-0">
-                              <div className="text-right">
-                                <p className="text-xl font-black text-gray-900 font-heading flex items-center tracking-tighter">
-                                  <IndianRupee className="h-4 w-4 mr-0.5 text-muted-foreground/60" />
-                                  {safeCurrency(fee.amount)}
-                                </p>
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 text-[9px] font-black px-2 -mt-1 leading-none">VERIFIED PAID</Badge>
-                              </div>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-muted/50">
-                                <Download className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </div>
+                          ))) : (
+                          <div className="text-center py-10 bg-muted/5 rounded-3xl border border-dashed border-muted/30">
+                            <p className="text-xs font-black text-muted-foreground uppercase tracking-widest opacity-40">No confirmed financial records exist</p>
                           </div>
-                        ))) : (
-                        <div className="text-center py-16 bg-muted/5 rounded-3xl border border-dashed border-muted/30">
-                          <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-muted/20 opacity-30">
-                            <IndianRupee className="h-5 w-5" />
-                          </div>
-                          <p className="text-xs font-black text-muted-foreground uppercase tracking-widest opacity-40">No confirmed financial records exist</p>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

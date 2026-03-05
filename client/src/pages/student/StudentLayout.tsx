@@ -19,6 +19,8 @@ import { useStudentAuth } from '@/lib/student-auth';
 import { useAcademyBranding } from '@/hooks/use-academy-branding';
 import { updatePageTitle } from '@/lib/page-title';
 import { cn } from '@/lib/utils';
+import { studentApi } from '@/lib/student-api';
+import { NotificationPopover } from '@/components/NotificationPopover';
 import StudentDashboard from './Dashboard';
 import StudentProfilePage from './Profile';
 import StudentAttendance from './Attendance';
@@ -41,6 +43,31 @@ export default function StudentLayout() {
   const [location, setLocation] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await studentApi.getNotifications();
+      setNotifications(data);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000); // Poll every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await studentApi.markNotificationAsRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
 
   console.log('StudentLayout - Current location:', location);
   console.log('StudentLayout - Student data:', student);
@@ -221,6 +248,11 @@ export default function StudentLayout() {
             </div>
 
             <div className="flex items-center gap-3">
+              <NotificationPopover
+                notifications={notifications}
+                onMarkAsRead={handleMarkAsRead}
+                variant="student"
+              />
               <div className="hidden lg:flex flex-col items-end mr-4">
                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-0.5">ACADEMIC STATUS</p>
                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 font-bold py-0.5 shadow-sm">Verfied Enrolled</Badge>

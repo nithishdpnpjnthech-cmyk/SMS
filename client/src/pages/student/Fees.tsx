@@ -1,21 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   CreditCard,
   IndianRupee,
   Clock,
   CheckCircle,
-  AlertCircle,
-  Smartphone,
-  Building2,
-  Calendar
+  Calendar,
+  ShieldCheck,
+  Loader2,
+  ChevronRight
 } from 'lucide-react';
 import { studentApi } from '@/lib/student-api';
 import { useToast } from '@/hooks/use-toast';
+import { useStudentAuth } from '@/lib/student-auth';
+import { cn } from '@/lib/utils';
 
 interface FeeRecord {
   id: string;
@@ -27,8 +27,18 @@ interface FeeRecord {
   notes?: string;
 }
 
+interface EnrollmentRecord {
+  id: string;
+  studentId: string;
+  feeStructureId: string;
+  programName: string;
+  monthlyAmount: number;
+  status: string;
+}
+
 interface FeesData {
   fees: FeeRecord[];
+  enrollments: EnrollmentRecord[];
   summary: {
     totalFee: number;
     paidAmount: number;
@@ -40,9 +50,7 @@ export default function StudentFees() {
   const { toast } = useToast();
   const [feesData, setFeesData] = useState<FeesData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paymentDialog, setPaymentDialog] = useState(false);
-  const [selectedFee, setSelectedFee] = useState<FeeRecord | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const { student } = useStudentAuth();
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
@@ -60,41 +68,75 @@ export default function StudentFees() {
     }
   };
 
-  const handlePayment = async () => {
-    if (!selectedFee || !paymentMethod) {
-      toast({
-        title: 'Error',
-        description: 'Please select a payment method',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const handleSubscriptionPayment = async (enrollment: EnrollmentRecord, type: 'monthly' | 'quarterly') => {
     setPaymentLoading(true);
     try {
-      await studentApi.processPayment(selectedFee.id, paymentMethod);
-      toast({
-        title: 'Payment Successful',
-        description: 'Your payment has been processed successfully',
+      const order = await studentApi.initiateSubscription(enrollment.feeStructureId, type);
+
+      const options = {
+        key: order.key,
+        amount: order.amount,
+        currency: order.currency,
+        name: "HUURA ACADEMY",
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} Fee - ${enrollment.programName}`,
+        order_id: order.id,
+        handler: async (response: any) => {
+          try {
+            await studentApi.verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              feeId: order.feeId
+            });
+
+            toast({
+              title: 'Payment Successful',
+              description: 'Your subscription has been updated successfully.',
+            });
+
+            await loadFees();
+          } catch (err: any) {
+            toast({
+              title: 'Verification Failed',
+              description: err.message || 'Payment verification failed',
+              variant: 'destructive',
+            });
+          } finally {
+            setPaymentLoading(false);
+          }
+        },
+        prefill: {
+          name: student?.name || '',
+          email: student?.email || '',
+          contact: student?.phone || '',
+        },
+        theme: { color: "#f97316" },
+        modal: {
+          ondismiss: () => {
+            setPaymentLoading(false);
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        toast({
+          title: 'Payment Failed',
+          description: response.error.description,
+          variant: 'destructive',
+        });
+        setPaymentLoading(false);
       });
-      setPaymentDialog(false);
-      setSelectedFee(null);
-      setPaymentMethod('');
-      await loadFees(); // Reload fees data
+      rzp.open();
+
     } catch (error: any) {
       toast({
-        title: 'Payment Failed',
-        description: error.message || 'Payment could not be processed',
+        title: 'Initialization Failed',
+        description: error.message || 'Could not start payment process',
         variant: 'destructive',
       });
-    } finally {
       setPaymentLoading(false);
     }
-  };
-
-  const openPaymentDialog = (fee: FeeRecord) => {
-    setSelectedFee(fee);
-    setPaymentDialog(true);
   };
 
   if (loading) {
@@ -114,256 +156,169 @@ export default function StudentFees() {
   }
 
   return (
-    <div className="space-y-8 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white/50 p-4 sm:p-6 rounded-2xl border border-muted/50 backdrop-blur-sm shadow-sm">
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-heading">Fees & Payments</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Manage your tuition and other institutional fees.</p>
+    <div className="space-y-8 px-1 sm:px-4 lg:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 sm:p-8 rounded-3xl border border-muted/30 shadow-sm">
+        <div className="space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight font-heading">Fees & Payments</h1>
+          <p className="text-muted-foreground text-base max-w-md">Complete your course payments securely using our flexible subscription plans.</p>
         </div>
-        <div className="flex items-center gap-3 bg-orange-50/50 p-3 rounded-xl border border-orange-100/50">
-          <div className="p-2 bg-orange-100 rounded-lg text-orange-600 shadow-sm">
-            <IndianRupee className="h-5 w-5" />
+        <div className="flex items-center gap-4 bg-orange-50 px-6 py-4 rounded-2xl border border-orange-100 shadow-sm">
+          <div className="p-3 bg-orange-100 rounded-xl text-orange-600">
+            <IndianRupee className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-orange-700/70 uppercase tracking-widest">PENDING DUES</p>
-            <p className="text-xl font-black text-orange-900 font-heading">₹{feesData.summary.pendingAmount.toLocaleString('en-IN')}</p>
+            <p className="text-xs font-bold text-orange-700/70 uppercase tracking-widest">Completed Payments</p>
+            <p className="text-2xl font-black text-orange-900 font-heading tracking-tight">₹{feesData.summary.paidAmount.toLocaleString('en-IN')}</p>
           </div>
         </div>
       </div>
 
-      {/* Fee Records */}
+      {/* Subscription Plans Section */}
       <div className="space-y-6">
-        {feesData.fees.length > 0 ? (
-          feesData.fees.map((fee) => (
-            <Card key={fee.id} className={`group overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-muted/50 ${fee.status === 'paid'
-              ? 'hover:border-green-300'
-              : fee.status === 'overdue'
-                ? 'hover:border-red-300'
-                : 'hover:border-orange-300'
-              }`}>
-              <CardContent className="p-0">
-                <div className="flex flex-col sm:flex-row items-stretch">
-                  <div className={`w-full h-1 sm:w-2 sm:h-auto ${fee.status === 'paid'
-                    ? 'bg-green-500'
-                    : fee.status === 'overdue'
-                      ? 'bg-red-500'
-                      : 'bg-orange-500'
-                    }`}></div>
+        <div className="flex items-center gap-2 px-2">
+          <div className="h-2 w-2 rounded-full bg-primary" />
+          <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wider">Course Pricing & Subscriptions</h2>
+        </div>
 
-                  <div className="flex-1 p-5 sm:p-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="flex items-start gap-4">
-                        <div className="hidden sm:flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/30 group-hover:scale-110 transition-transform">
-                          {fee.status === 'paid' ? (
-                            <CheckCircle className="h-6 w-6 text-green-500" />
-                          ) : (
-                            <Clock className="h-6 w-6 text-orange-500" />
-                          )}
+        {feesData.enrollments.length > 0 ? (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {feesData.enrollments.map((enrollment) => (
+              <Card key={enrollment.id} className="overflow-hidden border-muted/50 shadow-md hover:shadow-xl transition-all duration-500 rounded-3xl group">
+                <CardContent className="p-0">
+                  <div className="flex flex-col h-full">
+                    <div className="p-6 sm:p-8 bg-gradient-to-br from-white to-muted/10 flex-1">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="space-y-1">
+                          <p className="text-xs font-black text-primary uppercase tracking-[0.2em]">Active Program</p>
+                          <h3 className="text-2xl font-black text-gray-900 font-heading">{enrollment.programName}</h3>
                         </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <div className="sm:hidden">
-                              {fee.status === 'paid' ? (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Clock className="h-4 w-4 text-orange-500" />
-                              )}
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900 truncate font-heading group-hover:text-primary transition-colors">
-                              {fee.notes || 'Institutional Fee'}
-                            </h3>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
-                            <div className="flex items-center gap-1.5 font-medium">
-                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span>Due: {new Date(fee.dueDate).toLocaleDateString('en-IN', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}</span>
-                            </div>
-                            {fee.paidDate && (
-                              <div className="flex items-center gap-1.5 bg-green-50 px-2 py-0.5 rounded-full border border-green-100 text-[10px] font-bold text-green-700">
-                                <CheckCircle className="h-3 w-3" />
-                                PAID ON {new Date(fee.paidDate).toLocaleDateString('en-IN').toUpperCase()}
-                              </div>
-                            )}
-                            {fee.paymentMethod && (
-                              <div className="flex items-center gap-1.5 bg-muted/40 px-2 py-0.5 rounded-full border border-muted/50 text-[10px] font-bold text-muted-foreground uppercase">
-                                VIA {fee.paymentMethod}
-                              </div>
-                            )}
-                          </div>
+                        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-all">
+                          <CreditCard className="h-6 w-6" />
                         </div>
                       </div>
 
-                      <div className="flex flex-row items-center justify-between md:justify-end gap-6 sm:gap-8 border-t md:border-none pt-5 md:pt-0 mt-2 md:mt-0">
-                        <div className="md:text-right">
-                          <div className="text-2xl sm:text-3xl font-black text-gray-900 flex items-center md:justify-end font-heading tracking-tight">
-                            <IndianRupee className="h-5 w-5 mr-0.5 text-muted-foreground" />
-                            {fee.amount.toLocaleString('en-IN')}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 rounded-2xl bg-white border border-muted/50 hover:border-primary/50 transition-all cursor-default shadow-sm hover:shadow-md h-full flex flex-col justify-between group/plan">
+                          <div>
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Monthly Plan</p>
+                            <div className="text-2xl font-black text-gray-900 flex items-center">
+                              <span className="text-sm mr-0.5 opacity-50">₹</span>{Number(enrollment.monthlyAmount).toLocaleString('en-IN')}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1">Billed every month</p>
                           </div>
-                          <Badge
-                            variant="outline"
-                            className={`mt-1 font-bold px-3 py-0.5 border-none shadow-sm ${fee.status === 'paid'
-                              ? 'bg-green-100 text-green-800'
-                              : fee.status === 'overdue'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-orange-100 text-orange-800'
-                              }`}
+                          <Button
+                            className="w-full mt-4 rounded-xl bg-orange-50 text-orange-700 hover:bg-orange-600 hover:text-white border-orange-200 transition-all font-bold h-10 active:scale-95"
+                            onClick={() => handleSubscriptionPayment(enrollment, 'monthly')}
+                            disabled={paymentLoading}
                           >
-                            {fee.status === 'paid' ? 'SUCCESS' : fee.status === 'overdue' ? 'OVERDUE' : 'PENDING'}
-                          </Badge>
+                            Select Monthly
+                          </Button>
                         </div>
 
-                        {fee.status === 'pending' && (
+                        <div className="p-4 rounded-2xl bg-white border border-muted/50 hover:border-primary/50 transition-all cursor-default shadow-sm hover:shadow-md h-full flex flex-col justify-between group/plan">
+                          <div className="relative">
+                            <Badge className="absolute -top-6 -right-2 bg-green-500 text-[9px] font-black uppercase text-white border-none px-2 py-0.5 shadow-sm">Save ₹500</Badge>
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Quarterly Plan</p>
+                            <div className="text-2xl font-black text-gray-900 flex items-center">
+                              <span className="text-sm mr-0.5 opacity-50">₹</span>{(Number(enrollment.monthlyAmount) * 3 - 500).toLocaleString('en-IN')}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1">Billed every 3 months</p>
+                          </div>
                           <Button
-                            onClick={() => openPaymentDialog(fee)}
-                            className="bg-primary hover:bg-primary/90 text-white shadow-md active:scale-95 transition-all px-6 py-5 rounded-xl text-sm font-bold"
+                            className="w-full mt-4 rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all font-bold h-10 active:scale-95"
+                            onClick={() => handleSubscriptionPayment(enrollment, 'quarterly')}
+                            disabled={paymentLoading}
                           >
-                            Pay Now
+                            Select Quarterly
                           </Button>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : (
-          <Card className="shadow-lg border-muted/50 overflow-hidden">
-            <CardContent className="text-center py-20">
-              <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6 opacity-50 shadow-inner">
-                <CreditCard className="h-10 w-10 text-muted-foreground" />
+          <Card className="border-dashed border-2 border-muted/50 bg-muted/5">
+            <CardContent className="p-12 text-center">
+              <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 grayscale opacity-50">
+                <ShieldCheck className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">No Fee Records Found</h3>
-              <p className="text-muted-foreground max-w-xs mx-auto">Your fee payment history and pending dues will appear here once generated.</p>
+              <p className="text-lg font-bold text-muted-foreground">No active enrollments found.</p>
+              <p className="text-sm text-muted-foreground/60 max-w-xs mx-auto">Please contact the administration to enroll in a course program.</p>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Payment Dialog */}
-      <Dialog open={paymentDialog} onOpenChange={setPaymentDialog}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
-          <DialogHeader className="p-6 bg-primary text-white">
-            <DialogTitle className="flex items-center gap-2 text-xl font-heading">
-              <CreditCard className="h-6 w-6" />
-              Pay Fee Online
-            </DialogTitle>
-            <DialogDescription className="text-white/80 pt-1">
-              Complete your payment for ₹{selectedFee?.amount.toLocaleString('en-IN')}
-            </DialogDescription>
-          </DialogHeader>
+      <div className="flex items-center gap-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100 max-w-2xl">
+        <div className="p-2 bg-blue-100 rounded-lg text-blue-600 shrink-0">
+          <ShieldCheck className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="font-bold text-sm text-blue-900">100% Secure Payments</p>
+          <p className="text-xs text-blue-700/70 font-medium leading-relaxed">
+            All payments are processed securely via Razorpay. We support UPI, Cards, and Net Banking. Your data is protected with industry-standard encryption.
+          </p>
+        </div>
+      </div>
 
-          <div className="p-6 space-y-6">
-            <div className="bg-orange-50/80 border border-orange-200 rounded-2xl p-6 shadow-inner text-center">
-              <p className="text-[10px] font-black text-orange-700 uppercase tracking-[0.2em] mb-2">Total Payable Amount</p>
-              <div className="text-4xl font-black text-orange-900 font-heading tracking-tight">
-                <span className="text-2xl mr-1 opacity-60">₹</span>
-                {selectedFee?.amount.toLocaleString('en-IN')}
+      {/* History Section */}
+      <div className="space-y-6 pt-4">
+        <div className="flex items-center gap-2 px-2">
+          <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
+          <h2 className="text-md font-bold text-muted-foreground uppercase tracking-wider">Transaction History</h2>
+        </div>
+
+        {feesData.fees.length > 0 ? (
+          <div className="space-y-3">
+            {feesData.fees.map((fee) => (
+              <div key={fee.id} className="flex flex-col sm:flex-row items-center justify-between p-4 bg-white border border-muted/50 rounded-2xl hover:border-primary/20 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                    fee.status === 'paid' ? "bg-green-50 text-green-600" : "bg-orange-50 text-orange-600"
+                  )}>
+                    {fee.status === 'paid' ? <CheckCircle className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">{fee.notes || 'Institutional Fee'}</h4>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(fee.dueDate).toLocaleDateString()}
+                      </p>
+                      {fee.paymentMethod && (
+                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest bg-muted/30 px-1.5 py-0.5 rounded">
+                          {fee.paymentMethod}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 mt-4 sm:mt-0 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="text-right">
+                    <p className="text-base font-black text-gray-900">₹{Number(fee.amount).toLocaleString('en-IN')}</p>
+                    <p className={cn(
+                      "text-[10px] font-black uppercase tracking-widest",
+                      fee.status === 'paid' ? "text-green-600" : "text-orange-600"
+                    )}>
+                      {fee.status === 'paid' ? 'SUCCESS' : 'PENDING'}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-colors hidden sm:block" />
+                </div>
               </div>
-              {selectedFee && (
-                <p className="text-xs font-bold text-orange-700/60 mt-2 uppercase">
-                  Due by: {new Date(selectedFee.dueDate).toLocaleDateString('en-IN')}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-sm font-black text-gray-500 uppercase tracking-widest pl-2">Payment Channels</h4>
-
-              <div className="grid gap-3">
-                <button
-                  onClick={() => setPaymentMethod('upi')}
-                  className={`group p-4 border-2 rounded-2xl text-left transition-all duration-200 ${paymentMethod === 'upi'
-                    ? 'border-primary bg-orange-50 shadow-md ring-2 ring-primary/20'
-                    : 'border-muted/50 hover:border-orange-200 hover:bg-muted/10'
-                    }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-colors ${paymentMethod === 'upi' ? 'bg-orange-100 text-orange-600' : 'bg-orange-100 text-orange-600'}`}>
-                      <Smartphone className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900">UPI Payment</p>
-                      <p className="text-xs text-muted-foreground font-medium">GPay, PhonePe, Paytm & Mobile Apps</p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setPaymentMethod('card')}
-                  className={`group p-4 border-2 rounded-2xl text-left transition-all duration-200 ${paymentMethod === 'card'
-                    ? 'border-primary bg-orange-50 shadow-md ring-2 ring-primary/20'
-                    : 'border-muted/50 hover:border-orange-200 hover:bg-muted/10'
-                    }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-colors ${paymentMethod === 'card' ? 'bg-orange-100 text-orange-600' : 'bg-orange-100 text-orange-600'}`}>
-                      <CreditCard className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900">Credit/Debit Cards</p>
-                      <p className="text-xs text-muted-foreground font-medium">Secure payment via all major networks</p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setPaymentMethod('netbanking')}
-                  className={`group p-4 border-2 rounded-2xl text-left transition-all duration-200 ${paymentMethod === 'netbanking'
-                    ? 'border-primary bg-orange-50 shadow-md ring-2 ring-primary/20'
-                    : 'border-muted/50 hover:border-orange-200 hover:bg-muted/10'
-                    }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-colors ${paymentMethod === 'netbanking' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-                      <Building2 className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900">Net Banking</p>
-                      <p className="text-xs text-muted-foreground font-medium">Direct payment from your bank account</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-2xl border border-muted/50">
-              <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                Your payment is secured with industry-standard encryption. Redirecting to payment gateway...
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setPaymentDialog(false);
-                  setSelectedFee(null);
-                  setPaymentMethod('');
-                }}
-                className="flex-1 h-12 rounded-xl font-bold border-muted/50 hover:bg-muted/10"
-                disabled={paymentLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handlePayment}
-                disabled={!paymentMethod || paymentLoading}
-                className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition-all active:scale-95"
-              >
-                {paymentLoading ? 'Processing...' : 'Complete Payment'}
-              </Button>
-            </div>
+            ))}
           </div>
-        </DialogContent>
-      </Dialog>
+        ) : (
+          <div className="text-center py-10 bg-muted/5 rounded-3xl border border-dashed border-muted/50">
+            <p className="text-sm text-muted-foreground font-medium italic">No transaction history available yet.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

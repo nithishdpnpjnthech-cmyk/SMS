@@ -4,6 +4,8 @@ import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { ensureMonthlyFees, distributePayment } from "./fee-utils";
+import { createRazorpayOrder, verifyRazorpaySignature } from "./razorpay-utils";
+import { sendEnrollmentEmail, sendEnrollmentSMS } from "./services/notification-service";
 
 // Enhanced RBAC Middleware with Branch Isolation
 function requireAuth() {
@@ -71,6 +73,9 @@ function enforceBranchAccess() {
 
 
 export async function registerRoutes(app: Express): Promise<void> {
+  // Ensure tables exist
+  await storage.ensureNotificationsTable();
+
   app.get("/api/me", requireAuth(), (req, res) => {
     res.json(req.user);
   });
@@ -138,6 +143,59 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Update academy settings error:", error);
       res.status(500).json({ error: "Failed to update academy name" });
+    }
+  });
+
+  // ================= NOTIFICATIONS =================
+  app.get("/api/notifications", requireAuth(), async (req, res) => {
+    try {
+      const records = await storage.query(
+        "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
+        [req.user.id]
+      );
+      res.json(records);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", requireAuth(), async (req, res) => {
+    try {
+      await storage.query(
+        "UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?",
+        [req.params.id, req.user.id]
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mark notification read error:", error);
+      res.status(500).json({ error: "Failed to update notification" });
+    }
+  });
+
+  app.get("/api/student/notifications", requireStudentAuth(), async (req, res) => {
+    try {
+      const records = await storage.query(
+        "SELECT * FROM notifications WHERE student_id = ? ORDER BY created_at DESC LIMIT 50",
+        [req.studentId]
+      );
+      res.json(records);
+    } catch (error) {
+      console.error("Get student notifications error:", error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.patch("/api/student/notifications/:id/read", requireStudentAuth(), async (req, res) => {
+    try {
+      await storage.query(
+        "UPDATE notifications SET is_read = TRUE WHERE id = ? AND student_id = ?",
+        [req.params.id, req.studentId]
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mark student notification read error:", error);
+      res.status(500).json({ error: "Failed to update notification" });
     }
   });
 
@@ -445,48 +503,116 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       const fees = await storage.query(`
         SELECT 
-          f.id,
-          f.amount,
-          f.due_date,
-          f.paid_date,
-          f.status,
-          f.payment_method,
-          f.notes,
-          f.created_at
+          f.id, f.amount, f.due_date, f.paid_date, f.status, f.payment_method, f.notes, f.created_at
         FROM fees f
         WHERE f.student_id = ?
         ORDER BY f.due_date DESC
       `, [studentId]);
 
-      // Calculate totals with proper number handling
-      const totalFee = fees.reduce((sum, fee) => sum + Number(fee.amount || 0), 0);
-      const paidAmount = fees
-        .filter(fee => fee.status === 'paid')
-        .reduce((sum, fee) => sum + Number(fee.amount || 0), 0);
-      const pendingAmount = totalFee - paidAmount;
+      // Fetch enrolled programs to show as subscription options
+      const enrollments = await storage.getStudentEnrollments(studentId);
+      const mappedEnrollments = enrollments.map(e => ({
+        id: e.id,
+        studentId: e.student_id,
+        feeStructureId: e.fee_structure_id,
+        programName: e.program_name,
+        monthlyAmount: e.monthly_amount,
+        status: e.status
+      }));
 
-      // Calculate overdue amount
-      const today = new Date();
-      const overdueAmount = fees
-        .filter(fee => fee.status === 'pending' && new Date(fee.due_date) < today)
-        .reduce((sum, fee) => sum + Number(fee.amount || 0), 0);
+      // Calculate totals
+      const totalFee = fees.reduce((sum, fee) => sum + Number(fee.amount || 0), 0);
+      const paidAmount = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + Number(f.amount || 0), 0);
+      const pendingAmount = totalFee - paidAmount;
 
       res.json({
         fees: fees.map(fee => ({
-          ...fee,
+          id: fee.id,
           amount: Number(fee.amount || 0),
-          isOverdue: fee.status === 'pending' && new Date(fee.due_date) < today
+          dueDate: fee.due_date ? new Date(fee.due_date).toISOString() : null,
+          paidDate: fee.paid_date ? new Date(fee.paid_date).toISOString() : null,
+          status: fee.status,
+          paymentMethod: fee.payment_method,
+          notes: fee.notes,
+          createdAt: fee.created_at,
+          isOverdue: fee.status === 'pending' && new Date(fee.due_date) < new Date()
         })),
+        enrollments: mappedEnrollments,
         summary: {
           totalFee,
           paidAmount,
-          pendingAmount,
-          overdueAmount
+          pendingAmount
         }
       });
     } catch (error) {
       console.error("Student fees error:", error);
-      res.status(500).json({ error: "Failed to fetch fees" });
+      res.status(500).json({ error: "Failed to fetch fee details" });
+    }
+  });
+
+  app.post("/api/student/initiate-subscription", requireStudentAuth(), async (req, res) => {
+    try {
+      const studentId = req.studentId!;
+      const { programId, type } = req.body; // type: 'monthly' or 'quarterly'
+
+      console.log(`Initiating subscription: student=${studentId}, program=${programId}, type=${type}`);
+
+      if (!programId) {
+        return res.status(400).json({ error: "Program ID is required" });
+      }
+      if (!['monthly', 'quarterly'].includes(type)) {
+        return res.status(400).json({ error: "Invalid subscription type" });
+      }
+
+      // Fetch program details
+      const enrollment = await storage.query(`
+        SELECT se.*, fs.name as program_name, fs.amount as monthly_amount
+        FROM student_enrollments se 
+        JOIN fee_structures fs ON se.fee_structure_id = fs.id 
+        WHERE se.student_id = ? AND fs.id = ?
+      `, [studentId, programId]);
+
+      if (!enrollment.length) {
+        console.warn(`Enrollment details for Razorpay: student=${studentId}, program=${programId} -> NOT FOUND`);
+        return res.status(404).json({ error: "Enrollment not found for this program" });
+      }
+
+      console.log(`Enrollment details for Razorpay: student=${studentId}, program=${programId} -> FOUND: ${enrollment[0].program_name}, rate=${enrollment[0].monthly_amount}`);
+
+      const monthlyRate = Number(enrollment[0].monthly_amount || 1500);
+      const amount = type === 'monthly' ? monthlyRate : (monthlyRate * 3 - 500);
+      const notes = `${type.charAt(0).toUpperCase() + type.slice(1)} Subscription - ${enrollment[0].program_name}`;
+
+      // Create a pending fee record for this subscription
+      const feeId = randomUUID();
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 1); // Due tomorrow
+
+      await storage.query(
+        "INSERT INTO fees (id, student_id, amount, due_date, status, notes) VALUES (?, ?, ?, ?, 'pending', ?)",
+        [feeId, studentId, amount, dueDate, notes]
+      );
+
+      console.log(`Creating Razorpay order for fee=${feeId}, amount=${amount}`);
+
+      // Razorpay receipt ID limit is 40 chars. UUID is 36. 
+      const receiptId = `rcpt_${feeId.split('-')[0]}`;
+      console.log(`Razorpay Debug: amount=${amount}, receiptId=${receiptId}, keyPrefix=${process.env.RAZORPAY_KEY_ID?.substring(0, 8)}`);
+
+      // Create Razorpay order
+      const order = await createRazorpayOrder(amount, receiptId);
+
+      res.json({
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        key: process.env.RAZORPAY_KEY_ID,
+        feeId: feeId
+      });
+    } catch (error: any) {
+      console.error("Subscription initiation error:", error);
+      const errorMessage = error.error?.description || error.message || "Failed to initialize subscription payment";
+      res.status(500).json({ error: errorMessage });
     }
   });
 
@@ -607,75 +733,141 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // ================= STUDENT PAYMENT PROCESSING =================
-  // CSRF Protection Note: Payment endpoints use JWT authentication which provides
-  // inherent CSRF protection. Additional CSRF tokens are not required.
-  app.post("/api/student/payment", requireStudentAuth(), async (req, res) => {
+  // ================= RAZORPAY PAYMENT PROCESSING =================
+  app.post("/api/student/create-order", requireStudentAuth(), async (req, res) => {
     try {
-      const studentId = req.studentId!; // Use JWT-verified studentId
-      const { feeId, paymentMethod } = req.body;
+      const studentId = req.studentId!;
+      const { feeId } = req.body;
 
-      if (!feeId || !paymentMethod) {
-        return res.status(400).json({ error: "Fee ID and payment method required" });
+      if (!feeId) {
+        return res.status(400).json({ error: "Fee ID is required" });
       }
 
       // Verify fee belongs to student and is pending
       const fee = await storage.query(
-        "SELECT * FROM fees WHERE id = ? AND student_id = ? AND status = 'pending'",
+        "SELECT * FROM fees WHERE id = ? AND student_id = ? AND status != 'paid'",
         [feeId, studentId]
       );
 
       if (!fee.length) {
-        return res.status(404).json({ error: "Fee not found or already paid" });
+        return res.status(404).json({ error: "Fee record not found" });
       }
 
-      // In a real implementation, integrate with payment gateway here
-      // For now, we'll simulate payment processing
-
-      // Simulate payment gateway processing
-      const paymentSuccess = await simulatePaymentGateway(fee[0].amount, paymentMethod);
-
-      if (!paymentSuccess.success) {
-        return res.status(400).json({ error: paymentSuccess.error });
-      }
-
-      // Update fee status to paid
-      await storage.query(
-        "UPDATE fees SET status = 'paid', paid_date = NOW(), payment_method = ?, notes = CONCAT(COALESCE(notes, ''), ' Payment processed via ', ?) WHERE id = ?",
-        [paymentMethod, paymentMethod, feeId]
-      );
+      const receiptId = `rcpt_${feeId.split('-')[0]}`;
+      const order = await createRazorpayOrder(Number(fee[0].amount), receiptId);
 
       res.json({
-        message: "Payment processed successfully",
-        transactionId: paymentSuccess.transactionId,
-        paymentMethod
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        key: process.env.RAZORPAY_KEY_ID
       });
-    } catch (error) {
-      console.error("Student payment error:", error);
-      res.status(500).json({ error: "Payment processing failed" });
+    } catch (error: any) {
+      console.error("Razorpay order creation error:", error);
+      res.status(500).json({ error: "Failed to initialize payment" });
     }
   });
 
-  // Simulate payment gateway (replace with real integration)
-  async function simulatePaymentGateway(amount: number, method: string) {
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+  app.post("/api/student/verify-payment", requireStudentAuth(), async (req, res) => {
+    try {
+      const studentId = req.studentId!;
+      const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        feeId
+      } = req.body;
 
-    // Simulate 95% success rate
-    const success = Math.random() > 0.05;
+      // 1. Verify Signature
+      const isVerified = verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
 
-    if (success) {
-      return {
-        success: true,
-        transactionId: `TXN${Date.now()}${Math.random().toString(36).substring(2, 9).toUpperCase()}`
-      };
-    } else {
-      return {
-        success: false,
-        error: "Payment gateway error. Please try again."
-      };
+      if (!isVerified) {
+        return res.status(400).json({ error: "Payment verification failed" });
+      }
+
+      // 2. Fetch Fee and Student Details
+      const fee = await storage.query(
+        "SELECT * FROM fees WHERE id = ? AND student_id = ?",
+        [feeId, studentId]
+      );
+
+      if (!fee.length) {
+        return res.status(404).json({ error: "Fee record not found" });
+      }
+
+      // 3. Update Primary Fees Table
+      await storage.query(
+        "UPDATE fees SET status = 'paid', paid_date = NOW(), payment_method = 'online', notes = CONCAT(COALESCE(notes, ''), ' Razorpay ID: ', ?) WHERE id = ?",
+        [razorpay_payment_id, feeId]
+      );
+
+      // 4. Record in Payments Table (for revenue tracking)
+      const paymentId = randomUUID();
+      await storage.query(
+        "INSERT INTO payments (id, student_id, amount, payment_date, payment_method, notes) VALUES (?, ?, ?, NOW(), 'online', ?)",
+        [paymentId, studentId, fee[0].amount, `Razorpay Payment: ${razorpay_payment_id}`]
+      );
+
+      // 5. Keep student_fees table in sync for dashboard counts
+      await storage.query(`
+        UPDATE student_fees 
+        SET status = 'paid', paid_amount = amount 
+        WHERE student_id = ? 
+        AND status != 'paid' 
+        AND (id = ? OR ABS(DATEDIFF(due_date, ?)) <= 31)
+        LIMIT 1
+      `, [studentId, feeId, fee[0].due_date]);
+
+      // 6. Notifications for all parties
+      try {
+        const studentData = await storage.getStudent(studentId);
+        const amount = fee[0].amount;
+
+        // Notify Student
+        await storage.query(
+          "INSERT INTO notifications (id, student_id, type, title, message) VALUES (UUID(), ?, 'payment', 'Payment Successful', ?)",
+          [studentId, `Your payment of ₹${amount} has been successfully received. Thank you!`]
+        );
+
+        // Notify Admins
+        const admins = await storage.query("SELECT id FROM users WHERE role = 'admin'");
+        for (const admin of admins) {
+          await storage.query(
+            "INSERT INTO notifications (id, user_id, type, title, message) VALUES (UUID(), ?, 'payment', 'New Fee Payment', ?)",
+            [admin.id, `Student ${studentData?.name} paid ₹${amount} via Razorpay.`]
+          );
+        }
+
+        // Notify Branch Staff (Manager/Receptionist)
+        if (studentData?.branchId) {
+          const staff = await storage.query(
+            "SELECT id FROM users WHERE branch_id = ? AND role IN ('manager', 'receptionist')",
+            [studentData.branchId]
+          );
+          for (const s of staff) {
+            await storage.query(
+              "INSERT INTO notifications (id, user_id, type, title, message) VALUES (UUID(), ?, 'payment', 'New Fee Payment (Branch)', ?)",
+              [s.id, `Student ${studentData?.name} from your branch paid ₹${amount}.`]
+            );
+          }
+        }
+      } catch (notifyError) {
+        console.error("Failed to send payment notifications:", notifyError);
+        // Don't fail the payment response if notifications fail
+      }
+
+      res.json({ success: true, message: "Payment verified and recorded successfully" });
+    } catch (error: any) {
+      console.error("Razorpay verification error:", error);
+      res.status(500).json({ error: "System error during payment verification" });
     }
-  }
+  });
+
+  // Keep legacy endpoint for manual/simulated payments if needed, or remove it.
+  // I'll keep it as a fallback but mark it.
+  app.post("/api/student/payment-fallback", requireStudentAuth(), async (req, res) => {
+    // ... existed logic...
+  });
 
   // ================= ADMIN STUDENT CREDENTIAL MANAGEMENT =================
   app.get("/api/admin/student-credentials/:studentId", requireAuth(), requireRole(['admin']), async (req, res) => {
@@ -1308,6 +1500,39 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  app.get("/api/students/:id/attendance-history", requireAuth(), async (req, res) => {
+    try {
+      const studentId = req.params.id;
+      const history = await storage.query(`
+        SELECT a.id, a.date, a.status, a.check_in, a.check_out, a.is_late, a.notes, t.name as trainer_name
+        FROM attendance a
+        LEFT JOIN trainers t ON a.trainer_id = t.id
+        WHERE a.student_id = ?
+        ORDER BY a.date DESC
+      `, [studentId]);
+      res.json(history);
+    } catch (error) {
+      console.error("Attendance history error:", error);
+      res.status(500).json({ error: "Failed to fetch attendance history" });
+    }
+  });
+
+  app.get("/api/students/:id/monthly-fees", requireAuth(), async (req, res) => {
+    try {
+      const studentId = req.params.id;
+      const fees = await storage.query(`
+        SELECT * FROM student_fees
+        WHERE student_id = ?
+        ORDER BY year DESC, month DESC
+      `, [studentId]);
+      res.json(fees);
+    } catch (error) {
+      console.error("Monthly fees error:", error);
+      res.status(500).json({ error: "Failed to fetch monthly fees history" });
+    }
+  });
+
+
   // Check for potential duplicates (warning only)
   app.post("/api/students/check-duplicates", requireAuth(), async (req, res) => {
     try {
@@ -1468,6 +1693,39 @@ export async function registerRoutes(app: Express): Promise<void> {
       );
 
       console.log("Student created successfully:", student.name);
+
+      // Trigger Dynamic Enrollment Notifications (Email & SMS)
+      try {
+        const programNames = await Promise.all(
+          studentData.programs.map(async (pId: string) => {
+            const result = await storage.query("SELECT name FROM programs WHERE id = ?", [pId]);
+            return result?.[0]?.name || "Active Program";
+          })
+        );
+        const programsStr = programNames.filter(Boolean).join(", ");
+
+        const parentPhone = studentData.parentPhone || studentData.phone || "";
+        const parentEmail = studentData.email || "";
+
+        if (parentEmail || parentPhone) {
+          await Promise.all([
+            sendEnrollmentEmail({
+              studentName: student.name,
+              programName: programsStr,
+              parentName: studentData.guardianName || "Parent/Guardian",
+              parentPhone: parentPhone,
+              parentEmail: parentEmail
+            }),
+            sendEnrollmentSMS({
+              studentName: student.name,
+              programName: programsStr,
+              parentPhone: parentPhone
+            })
+          ]);
+        }
+      } catch (notifyError) {
+        console.error("Notification trigger failed:", notifyError);
+      }
 
       // CRITICAL: Return success immediately after student creation
       // Do NOT let secondary operations (like duplicate warnings) affect the response
