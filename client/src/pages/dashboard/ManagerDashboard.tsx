@@ -2,7 +2,8 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Users, IndianRupee, AlertCircle, MapPin, Download } from "lucide-react";
+import { TrendingUp, Users, IndianRupee, AlertCircle, MapPin, Download, Calendar } from "lucide-react";
+import { Link } from "wouter";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from "recharts";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
@@ -158,94 +159,63 @@ export default function ManagerDashboard() {
           </Card>
         </div>
 
-        {/* Branch Performance */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="shadow-sm border-muted/50 overflow-hidden">
-            <CardHeader className="bg-muted/30 border-b border-muted/50">
-              <CardTitle className="text-lg font-heading">Attendance Overview</CardTitle>
-              <CardDescription>Today's student attendance across all batches</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="font-semibold text-muted-foreground">Present Today</span>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-3 font-bold">
-                      {stats.presentToday}
-                    </Badge>
-                  </div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden border border-muted/50">
-                    <div
-                      className="h-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)] transition-all duration-500"
-                      style={{ width: `${stats.presentToday + stats.absentToday > 0 ? (stats.presentToday / (stats.presentToday + stats.absentToday)) * 100 : 0}%` }}
-                    />
-                  </div>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link href="/fees/collect" className="contents">
+            <Card className="hover:border-primary/50 cursor-pointer transition-all hover:shadow-md hover:bg-muted/30 group">
+              <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                  <IndianRupee className="h-7 w-7" />
                 </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="font-semibold text-muted-foreground">Absent Today</span>
-                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 px-3 font-bold">
-                      {stats.absentToday}
-                    </Badge>
-                  </div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden border border-muted/50">
-                    <div
-                      className="h-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)] transition-all duration-500"
-                      style={{ width: `${stats.presentToday + stats.absentToday > 0 ? (stats.absentToday / (stats.presentToday + stats.absentToday)) * 100 : 0}%` }}
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-sm sm:text-base">Collect Fee</h3>
+                  <p className="text-[10px] text-muted-foreground">UPI & Cash</p>
                 </div>
-                <div className="pt-6 border-t border-muted/50">
-                  <div className="flex justify-between items-center p-3 bg-orange-50/50 rounded-xl border border-orange-100/50">
-                    <span className="font-bold text-orange-900/70">Overall Attendance Rate</span>
-                    <span className="text-lg font-black text-orange-700">
-                      {stats.presentToday + stats.absentToday > 0
-                        ? Math.round((stats.presentToday / (stats.presentToday + stats.absentToday)) * 100)
-                        : 0}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card className="shadow-sm border-muted/50 overflow-hidden">
-            <CardHeader className="bg-muted/30 border-b border-muted/50">
-              <CardTitle className="text-lg font-heading">Branch Information</CardTitle>
-              <CardDescription>Detailed branch profile and metrics</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Branch Name</p>
-                    <p className="text-lg font-black text-foreground font-heading">{branch?.name}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Contact Phone</p>
-                    <p className="text-base font-bold text-foreground">{branch?.phone || 'N/A'}</p>
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Operational Address</p>
-                    <p className="text-sm font-medium text-muted-foreground leading-relaxed">{branch?.address}</p>
-                  </div>
+          <Link href="/students" className="contents">
+            <Card className="hover:border-primary/50 cursor-pointer transition-all hover:shadow-md hover:bg-muted/30 group">
+              <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                  <Users className="h-7 w-7" />
                 </div>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-sm sm:text-base">All Students</h3>
+                  <p className="text-[10px] text-muted-foreground">Manage enrollment</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
 
-                <div className="pt-6 border-t border-muted/50">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-muted/20 rounded-2xl border border-muted/50 text-center shadow-inner">
-                      <p className="text-2xl sm:text-3xl font-black text-primary font-heading">{stats.totalStudents}</p>
-                      <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase mt-1">Total Students</p>
-                    </div>
-                    <div className="p-4 bg-muted/20 rounded-2xl border border-muted/50 text-center shadow-inner">
-                      <p className="text-xl sm:text-2xl font-black text-green-600 font-heading">{formatAmount(stats.totalRevenue).split('.')[0]}</p>
-                      <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase mt-1">Lifetime Revenue</p>
-                    </div>
-                  </div>
+          <Link href="/attendance" className="contents">
+            <Card className="hover:border-primary/50 cursor-pointer transition-all hover:shadow-md hover:bg-muted/30 group">
+              <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                  <Calendar className="h-7 w-7" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-sm sm:text-base">Attendance</h3>
+                  <p className="text-[10px] text-muted-foreground">Daily logs</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/reports" className="contents">
+            <Card className="hover:border-primary/50 cursor-pointer transition-all hover:shadow-md hover:bg-muted/30 group">
+              <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-yellow-100 text-yellow-600 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                  <TrendingUp className="h-7 w-7" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-sm sm:text-base">Analytics</h3>
+                  <p className="text-[10px] text-muted-foreground">View insights</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </div>
     </DashboardLayout>

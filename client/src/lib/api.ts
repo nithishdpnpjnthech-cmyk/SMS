@@ -273,6 +273,7 @@ export const api = {
 
   getStudentAttendanceHistory: async (id: string) => api.get(`/api/students/${id}/attendance-history`),
   getStudentMonthlyFees: async (id: string) => api.get(`/api/students/${id}/monthly-fees`),
+  getStudentDues: async (id: string) => api.get(`/api/students/${id}/dues`),
 
   // ================= PROGRAMS =================
   getPrograms: async () => api.get('/api/programs'),
@@ -289,4 +290,16 @@ export const api = {
   // ================= NOTIFICATIONS =================
   getNotifications: async () => api.get('/api/notifications'),
   markNotificationAsRead: async (id: string) => api.patch(`/api/notifications/${id}/read`, {}),
+
+  // ================= PAYMENT HISTORY =================
+  getPaymentHistory: async (params?: { month?: string; year?: string; studentId?: string; branchId?: string; limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.month) query.append('month', params.month);
+    if (params?.year) query.append('year', params.year);
+    if (params?.studentId) query.append('studentId', params.studentId);
+    if (params?.branchId) query.append('branchId', params.branchId);
+    if (params?.limit) query.append('limit', String(params.limit));
+    if (params?.offset) query.append('offset', String(params.offset));
+    return api.get(`/api/fees/payment-history?${query.toString()}`);
+  },
 };

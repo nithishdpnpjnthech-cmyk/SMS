@@ -65,7 +65,7 @@ function Router() {
       <ProtectedRoute path="/attendance/mark" component={MarkAttendance} allowedRoles={["admin", "trainer"]} />
 
       <ProtectedRoute path="/fees" component={FeesDashboard} allowedRoles={["admin", "manager", "receptionist"]} />
-      <ProtectedRoute path="/fees/collect" component={CollectFees} allowedRoles={["admin", "receptionist"]} />
+      <ProtectedRoute path="/fees/collect" component={CollectFees} allowedRoles={["admin", "manager", "receptionist"]} />
 
       <ProtectedRoute path="/trainers" component={TrainerList} allowedRoles={["admin", "manager"]} />
       <ProtectedRoute path="/trainers/attendance" component={TrainerAttendance} allowedRoles={["admin", "manager"]} />

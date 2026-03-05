@@ -1,4 +1,3 @@
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,20 +10,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
-import { Loader2, Search, CreditCard, IndianRupee, History, Receipt, Wallet, UserCheck } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { IndianRupee, Wallet, Search, Receipt, ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 export default function CollectFees() {
   const [, navigate] = useLocation();
@@ -56,7 +54,7 @@ export default function CollectFees() {
     }
   }, []);
 
-  // 🔍 SEARCH STUDENTS (Robust Implementation)
+  // 🔍 SEARCH STUDENTS
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (!searchTerm.trim()) {
@@ -64,100 +62,59 @@ export default function CollectFees() {
         return;
       }
 
-      console.log("DEBUG: Search initiates for:", searchTerm);
       try {
-        const res = await fetch(
-          `/api/students/search?q=${encodeURIComponent(searchTerm.trim())}`,
-          {
-            headers: {
-              "x-user-role": user?.role || "",
-              "x-user-id": user?.id || "",
-              "x-user-branch": user?.branchId || "",
-            },
-          }
-        );
-
-        console.log("DEBUG: Search API Status:", res.status);
-        if (!res.ok) throw new Error("Search failed");
-
-        const data = await res.json();
-        console.log("DEBUG: Search Data:", data);
-        const results = Array.isArray(data) ? data : [];
-        setAllStudents(results);
-
-        // ✅ AUTO-SELECT: If exactly one result matches perfectly or is the only one, select it
-        if (results.length === 1 && !selectedStudentId) {
-          handleStudentChange(results[0].id);
-        }
-      } catch (err) {
-        console.error("DEBUG: Search Error", err);
-        toast({
-          title: "Error",
-          description: "Failed to search students",
-          variant: "destructive",
-        });
-        setAllStudents([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, user, selectedStudentId]);
-
-  // 📊 Load fee calculation
-  const loadStudentDues = async (studentId: string) => {
-    if (!studentId) return;
-
-    setLoadingDues(true);
-    try {
-      const res = await fetch(
-        `/api/students/${studentId}/fee-calculation`,
-        {
+        const res = await fetch(`/api/students/search?q=${encodeURIComponent(searchTerm.trim())}`, {
           headers: {
             "x-user-role": user?.role || "",
             "x-user-id": user?.id || "",
             "x-user-branch": user?.branchId || "",
           },
-        }
-      );
-      const dues = await res.json();
-      setStudentDues(dues);
+        });
 
-      if (dues?.suggestedAmount > 0) {
-        setAmount(dues.suggestedAmount.toString());
+        if (!res.ok) throw new Error("Search failed");
+
+        const data = await res.json();
+        const results = Array.isArray(data) ? data : [];
+        setAllStudents(results);
+      } catch (err) {
+        console.error("Search error:", err);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleStudentChange = async (studentId: string) => {
+    setSelectedStudentId(studentId);
+    setSearchTerm("");
+    setAllStudents([]);
+
+    if (studentId) {
+      const student = allStudents.find((s) => s.id === studentId);
+      if (student) setPersistedStudent(student);
+      loadStudentDues(studentId);
+    }
+  };
+
+  const loadStudentDues = async (studentId: string) => {
+    setLoadingDues(true);
+    try {
+      const res = await api.getStudentDues(studentId);
+      setStudentDues(res);
+      // Auto-set the amount to the pending dues if it's 0 or empty
+      if (res && res.totalPending > 0 && !amount) {
+        setAmount(String(res.totalPending));
       }
     } catch (err) {
-      console.error(err);
-      setStudentDues(null);
+      console.error("Failed to load dues:", err);
     } finally {
       setLoadingDues(false);
     }
   };
 
-  const handleStudentChange = (studentId: string) => {
-    console.log("DEBUG: Selected Student ID:", studentId);
-    setSelectedStudentId(studentId);
-
-    // Persist logic: find the student object so we can keep displaying it
-    const student = allStudents.find(s => s.id === studentId);
-    if (student) {
-      setPersistedStudent(student);
-      // Optional: Update search term to match selection to avoid confusion
-      // setSearchTerm(student.name); 
-    }
-
-    setAmount("");
-    loadStudentDues(studentId);
-  };
-
-  // Determine which student data to show (persisted takes precedence if ID matches)
-  const selectedStudentData = (persistedStudent?.id === selectedStudentId)
-    ? persistedStudent
-    : allStudents.find((s) => s.id === selectedStudentId);
-
   // 💾 Collect Fee
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("DEBUG: Submitting Fee", { selectedStudentId, amount });
 
     if (!selectedStudentId || !amount) {
       toast({
@@ -169,215 +126,233 @@ export default function CollectFees() {
     }
 
     setIsLoading(true);
-    try {
-      const payload = {
-        studentId: selectedStudentId,
-        amount: Number(amount),
-        paymentMethod,
-        notes,
-      };
 
-      console.log("DEBUG: Payload", payload);
+    if (paymentMethod === 'cash') {
+      try {
+        const payload = {
+          studentId: selectedStudentId,
+          amount: Number(amount),
+          paymentMethod,
+          notes,
+        };
 
-      const res = await fetch("/api/fees/collect", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-role": user?.role || "",
-          "x-user-id": user?.id || "",
-          "x-user-branch": user?.branchId || "",
-        },
-        body: JSON.stringify(payload),
-      });
+        const res = await fetch("/api/fees/collect", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-role": user?.role || "",
+            "x-user-id": user?.id || "",
+            "x-user-branch": user?.branchId || "",
+          },
+          body: JSON.stringify(payload),
+        });
 
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error);
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error);
 
-      toast({
-        title: "Success",
-        description: `Fee collected successfully${result.remainingCredit > 0 ? `. Credit remaining: ₹${result.remainingCredit}` : ''}`,
-      });
+        toast({
+          title: "Success",
+          description: `Fee collected successfully${result.remainingCredit > 0 ? `. Credit remaining: ₹${result.remainingCredit}` : ''}`,
+        });
 
-      navigate("/fees");
-    } catch (err: any) {
-      console.error("DEBUG: Submit Error", err);
-      toast({
-        title: "Error",
-        description: err.message || "Failed to collect fee",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+        navigate("/fees");
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err.message || "Failed to collect fee",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // online payment
+      try {
+        const orderRes = await fetch("/api/fees/create-order", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: Number(amount),
+            studentId: selectedStudentId
+          }),
+        });
+
+        const order = await orderRes.json();
+        if (!orderRes.ok) throw new Error(order.error || "Failed to create payment order");
+
+        const options = {
+          key: order.key,
+          amount: order.amount,
+          currency: order.currency,
+          name: "HUURA ACADEMY",
+          description: notes || "Fee Payment",
+          order_id: order.id,
+          handler: async (response: any) => {
+            try {
+              setIsLoading(true);
+              const verifyRes = await fetch("/api/fees/verify-payment", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  ...response,
+                  studentId: selectedStudentId,
+                  amount: Number(amount),
+                  notes
+                }),
+              });
+
+              const result = await verifyRes.json();
+              if (!verifyRes.ok) throw new Error(result.error || "Payment verification failed");
+
+              toast({
+                title: "Success",
+                description: "Payment collected via UPI successfully",
+              });
+              navigate("/fees");
+            } catch (err: any) {
+              toast({
+                title: "Verification Failed",
+                description: err.message,
+                variant: "destructive",
+              });
+            } finally {
+              setIsLoading(false);
+            }
+          },
+          prefill: {
+            name: persistedStudent?.name || "",
+            email: persistedStudent?.email || "",
+            phone: persistedStudent?.phone || "",
+          },
+          theme: {
+            color: "#f97316",
+          },
+          modal: {
+            ondismiss: () => {
+              setIsLoading(false);
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } catch (err: any) {
+        toast({
+          title: "Payment Error",
+          description: err.message || "Failed to initiate UPI payment",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      }
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-8 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
-        <div className="bg-white/50 p-4 sm:p-6 rounded-2xl border border-muted/50 backdrop-blur-sm shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="p-3 bg-orange-100 rounded-xl text-orange-600 shadow-sm group hover:scale-105 transition-transform">
-              <CreditCard className="h-6 w-6 sm:h-8 sm:w-8" />
-            </div>
-            <div className="space-y-1">
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight font-heading">Collect Institutional Fee</h1>
-              <p className="text-muted-foreground text-sm font-medium">Record and reconcile student financial transactions.</p>
-            </div>
-          </div>
+      <div className="max-w-4xl mx-auto space-y-8 px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Back Link */}
+        <Link href="/fees">
+          <Button variant="ghost" className="pl-0 hover:pl-2 transition-all text-muted-foreground hover:text-primary mb-2">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            <span className="text-sm font-black uppercase tracking-widest">Back to Ledger</span>
+          </Button>
+        </Link>
+
+        {/* Header */}
+        <div className="flex flex-col gap-2 mb-8">
+          <h1 className="text-4xl font-black font-heading tracking-tight text-gray-900 uppercase">Fee Collection</h1>
+          <p className="text-muted-foreground font-medium text-sm">Disburse student fees and generate transaction receipts.</p>
         </div>
 
-        <Card className="shadow-lg border-muted/50 overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b border-muted/50 flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-heading">Financial Disbursement Form</CardTitle>
-            <History className="h-5 w-5 text-muted-foreground opacity-50" />
-          </CardHeader>
+        <form onSubmit={handleSubmit} className="space-y-8 pb-20">
+          <Card className="border-muted/50 shadow-2xl shadow-primary/5 rounded-[2rem] overflow-hidden bg-white/80 backdrop-blur-md">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-muted/50 p-8 sm:p-10">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20">
+                  <Receipt className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-black font-heading tracking-tight uppercase">Cashier Terminal</CardTitle>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1">Transaction Module</p>
+                </div>
+              </div>
+            </CardHeader>
 
-          <CardContent className="p-4 sm:p-8">
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <CardContent className="p-8 sm:p-10 space-y-8">
               {/* Student Search */}
               <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">FIND STUDENT IDENTITY *</Label>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">RECIPIENT IDENTIFICATION *</Label>
                 <div className="relative group">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 transition-colors group-focus-within:text-primary">
+                    <Search className="h-4 w-4" />
+                  </div>
                   <Input
-                    className="pl-10 h-12 rounded-xl border-muted/50 focus:ring-primary/20 transition-all font-bold pr-4"
-                    placeholder="Type name, ID or mobile number..."
+                    placeholder="Search by ID, Name or Phone..."
+                    className="pl-10 h-14 rounded-xl border-muted/50 focus:ring-primary/20 transition-all font-bold bg-white"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
-                </div>
-
-                <Select
-                  value={selectedStudentId}
-                  onValueChange={handleStudentChange}
-                >
-                  <SelectTrigger className={cn(
-                    "h-12 rounded-xl border-muted/50 bg-muted/20 font-bold focus:ring-primary/20 transition-all",
-                    selectedStudentId ? "bg-green-50/50 border-green-200 text-green-700" : ""
-                  )}>
-                    <SelectValue placeholder="Confirm student selection" />
-                  </SelectTrigger>
-
-                  <SelectContent className="rounded-xl shadow-xl border-muted/50">
-                    {/* 1. PERSISTED STUDENT: Always show if selected */}
-                    {persistedStudent && (
-                      <SelectItem key={persistedStudent.id} value={persistedStudent.id} className="font-bold py-3">
-                        <div className="flex items-center gap-2 text-green-700">
-                          <UserCheck className="h-4 w-4" />
-                          {persistedStudent.name} – {persistedStudent.program} ({persistedStudent.batch})
+                  {allStudents.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-muted/50 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-64 overflow-y-auto backdrop-blur-xl border-t-0 animate-in fade-in slide-in-from-top-2">
+                      {allStudents.map((s) => (
+                        <div
+                          key={s.id}
+                          className="p-4 hover:bg-primary/5 cursor-pointer border-b border-muted/30 last:border-0 transition-colors group/item"
+                          onClick={() => handleStudentChange(s.id)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-black text-gray-900 group-hover/item:text-primary transition-colors uppercase italic">{s.name}</p>
+                              <div className="flex gap-3 text-[10px] font-bold text-muted-foreground tracking-widest mt-1">
+                                <span>ID: {String(s.id).slice(0, 8).toUpperCase()}</span>
+                                <span>•</span>
+                                <span>{s.phone}</span>
+                              </div>
+                            </div>
+                            <div className="opacity-0 group-hover/item:opacity-100 transition-opacity">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                <ArrowLeft className="h-4 w-4 rotate-180" />
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </SelectItem>
-                    )}
-
-                    {/* 2. SEARCH RESULTS: Show search results (exclude persisted to avoid dupe) */}
-                    {allStudents
-                      .filter(s => s.id !== persistedStudent?.id)
-                      .map((student) => (
-                        <SelectItem key={student.id} value={student.id} className="font-bold py-3">
-                          {student.name} – {student.program} ({student.batch})
-                        </SelectItem>
                       ))}
-
-                    {/* 3. EMPTY STATE: Only if NO results and NO selection */}
-                    {allStudents.length === 0 && !persistedStudent && (
-                      <SelectItem value="__no_students__" disabled className="text-center py-8 opacity-50 font-black uppercase text-[10px] tracking-widest">
-                        Zero identities found
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-
-                {/* ✅ QUICK SELECTION HINT: Show results directly below if not selected */}
-                {!selectedStudentId && allStudents.length > 0 && (
-                  <div className="mt-2 p-2 bg-orange-50/50 rounded-xl border border-orange-100 flex flex-wrap gap-2">
-                    <p className="w-full text-[9px] font-black text-orange-400 uppercase tracking-widest mb-1 ml-1">Matching Identities (Click to Select):</p>
-                    {allStudents.map(student => (
-                      <button
-                        key={student.id}
-                        type="button"
-                        onClick={() => handleStudentChange(student.id)}
-                        className="px-3 py-1.5 bg-white border border-orange-200 rounded-lg text-[10px] font-bold text-orange-700 hover:bg-orange-600 hover:text-white transition-all shadow-sm"
-                      >
-                        {student.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {selectedStudentData && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-500">
-                  <div className="bg-gradient-to-br from-orange-50 via-white to-yellow-50 p-6 rounded-2xl border border-orange-100/50 flex flex-col sm:flex-row justify-between items-start gap-4 shadow-sm">
-                    <div className="space-y-1 w-full sm:w-auto">
-                      <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest leading-none mb-1.5">Selected Identity</p>
-                      <p className="text-xl font-black font-heading text-gray-900 truncate leading-none mb-1">{selectedStudentData.name}</p>
-                      <p className="text-xs font-bold text-muted-foreground truncate uppercase tracking-tight">
-                        {selectedStudentData.program} • {selectedStudentData.batch}
-                      </p>
+              {/* Selected Student Profile */}
+              {persistedStudent && (
+                <div className="bg-muted/30 rounded-3xl p-6 border border-muted/50 animate-in zoom-in-95 duration-300">
+                  <div className="flex items-start justify-between">
+                    <div className="flex gap-5">
+                      <div className="h-14 w-14 rounded-2xl bg-white shadow-xl flex items-center justify-center text-primary border border-muted/50">
+                        <span className="text-xl font-black font-heading uppercase">{persistedStudent.name.charAt(0)}</span>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-black font-heading tracking-tight uppercase leading-none mb-1">{persistedStudent.name}</h4>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-muted-foreground uppercase tracking-widest mt-2">
+                          <span className="flex items-center gap-1.5"><Sparkles className="h-3 w-3 text-primary" /> {persistedStudent.program || 'GENERAL PROGRAM'}</span>
+                          <span className="flex items-center gap-1.5">BATCH: {persistedStudent.batch || 'DEFAULT'}</span>
+                        </div>
+                      </div>
                     </div>
                     {studentDues && (
-                      <div className="text-left sm:text-right space-y-2 text-sm w-full sm:w-auto border-t sm:border-t-0 pt-4 sm:pt-0 border-orange-100/50 sm:pl-6 sm:border-l">
-                        <div className="flex sm:flex-col justify-between items-center sm:items-end">
-                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Base Subscription</p>
-                          <p className="font-black text-gray-900">₹{studentDues.monthlyFee.toLocaleString('en-IN')}</p>
-                        </div>
-                        <div className="flex sm:flex-col justify-between items-center sm:items-end">
-                          <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Aggregate Arrears</p>
-                          <p className="font-black text-xl text-orange-600 font-heading tracking-tighter">
-                            ₹{studentDues.pendingAmount.toLocaleString('en-IN')}
-                          </p>
-                        </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">AGGREGATE DUES</p>
+                        <p className="text-2xl font-black text-orange-600 font-heading tabular-nums">₹{studentDues.totalPending.toLocaleString()}</p>
                       </div>
                     )}
                   </div>
-
-                  {loadingDues && (
-                    <div className="flex justify-center p-8 bg-muted/10 rounded-2xl border border-dashed border-muted/50">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    </div>
-                  )}
-
-                  {studentDues?.feeDetails && studentDues.feeDetails.length > 0 && (
-                    <div className="border border-muted/50 rounded-2xl overflow-hidden shadow-sm">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader className="bg-muted/30">
-                            <TableRow>
-                              <TableHead className="text-[10px] font-black uppercase tracking-widest">Frequency</TableHead>
-                              <TableHead className="text-[10px] font-black uppercase tracking-widest">Service Item</TableHead>
-                              <TableHead className="text-[10px] font-black uppercase tracking-widest">Liability</TableHead>
-                              <TableHead className="text-[10px] font-black uppercase tracking-widest">Reconciled</TableHead>
-                              <TableHead className="text-[10px] font-black uppercase tracking-widest">Current Status</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {studentDues.feeDetails.map((fee: any) => (
-                              <TableRow key={fee.id} className="hover:bg-muted/20 transition-colors uppercase font-bold text-[11px]">
-                                <TableCell className="whitespace-nowrap">{fee.period}</TableCell>
-                                <TableCell className="whitespace-nowrap font-black text-gray-900">{fee.activity}</TableCell>
-                                <TableCell className="whitespace-nowrap">₹{fee.amount.toLocaleString('en-IN')}</TableCell>
-                                <TableCell className="whitespace-nowrap text-green-600">₹{fee.paid.toLocaleString('en-IN')}</TableCell>
-                                <TableCell className="whitespace-nowrap">
-                                  <span className={cn(
-                                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-inner",
-                                    fee.status === 'paid' ? 'bg-green-100 text-green-700' :
-                                      fee.status === 'partial' ? 'bg-orange-100 text-orange-700' :
-                                        'bg-red-100 text-red-700'
-                                  )}>
-                                    {fee.status}
-                                  </span>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
-              {/* Amount */}
+              {/* Amount & Method */}
               <div className="grid sm:grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">TRANSACTION VALUE *</Label>
@@ -394,9 +369,25 @@ export default function CollectFees() {
                       placeholder="0.00"
                     />
                   </div>
+                  {/* Quick Select Buttons */}
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAmount("1500")}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 ${amount === "1500" ? "bg-primary/10 border-primary text-primary shadow-sm" : "bg-muted/30 border-muted/50 text-muted-foreground hover:bg-muted/50"}`}
+                    >
+                      <Sparkles className="h-3 w-3" /> MONTHLY (₹1.5K)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAmount("4000")}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 ${amount === "4000" ? "bg-primary/10 border-primary text-primary shadow-sm" : "bg-muted/30 border-muted/50 text-muted-foreground hover:bg-muted/50"}`}
+                    >
+                      <Sparkles className="h-3 w-3" /> QUARTERLY (₹4K)
+                    </button>
+                  </div>
                 </div>
 
-                {/* Payment Method */}
                 <div className="space-y-3">
                   <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">DISBURSEMENT MODE *</Label>
                   <Select
@@ -404,14 +395,14 @@ export default function CollectFees() {
                     onValueChange={setPaymentMethod}
                   >
                     <SelectTrigger className="h-14 rounded-xl border-muted/50 focus:ring-primary/20 transition-all font-bold bg-white">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 uppercase tracking-wide">
                         <Wallet className="h-4 w-4 text-muted-foreground" />
                         <SelectValue />
                       </div>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl shadow-xl">
-                      <SelectItem value="cash" className="font-bold py-3"><div className="flex items-center gap-2">CASH SETTLEMENT</div></SelectItem>
-                      <SelectItem value="online" className="font-bold py-3"><div className="flex items-center gap-2">UPI / NET BANKING</div></SelectItem>
+                      <SelectItem value="cash" className="font-bold py-3 uppercase tracking-wide">CASH SETTLEMENT</SelectItem>
+                      <SelectItem value="online" className="font-bold py-3 uppercase tracking-wide">UPI / NET BANKING</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -437,29 +428,28 @@ export default function CollectFees() {
                   variant="outline"
                   onClick={() => navigate("/fees")}
                   className="w-full sm:w-auto font-black uppercase text-xs tracking-widest h-14 px-10 rounded-xl border-muted/50 hover:bg-muted/10 transition-all"
+                  disabled={isLoading}
                 >
-                  Discard
+                  Terminate Process
                 </Button>
                 <Button
                   type="submit"
+                  className="flex-1 font-black uppercase text-xs tracking-[0.2em] h-14 rounded-xl shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.98] bg-primary hover:bg-primary/90"
                   disabled={isLoading}
-                  className="w-full sm:flex-1 h-14 bg-primary hover:bg-primary/90 text-white font-black uppercase text-xs tracking-[0.2em] rounded-xl shadow-lg shadow-primary/20 active:scale-[0.99] transition-all disabled:opacity-50"
                 >
                   {isLoading ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>RECONCILING...</span>
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Processing Transaction...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <span>INITIALIZE LEDGER ENTRY</span>
-                    </div>
+                    <span>Authenticate & Authorize Disbursement</span>
                   )}
                 </Button>
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </form>
       </div>
     </DashboardLayout>
   );

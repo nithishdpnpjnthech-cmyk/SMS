@@ -4,19 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, BookOpen, Clock, FileText, Download, Edit, IndianRupee, Trash2, GraduationCap, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, BookOpen, Clock, FileText, Download, Edit, IndianRupee, Trash2, GraduationCap, Plus, Loader2, CreditCard } from "lucide-react";
 import { Link, useParams, useRoute } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import StudentCredentialsSection from "@/components/StudentCredentialsSection";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import html2canvas from "html2canvas";
 import {
   Table,
   TableBody,
@@ -45,6 +46,8 @@ export default function StudentProfile({ params: propParams }: any) {
   const [remarks, setRemarks] = useState<any[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const { branding } = useAcademyBranding();
+  const [showIdCard, setShowIdCard] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Defensive calculations for attendance stats
   const { presentCount, attendanceRate, absentCount, lateCount } = useMemo(() => {
@@ -341,6 +344,39 @@ export default function StudentProfile({ params: propParams }: any) {
     }
   };
 
+  const handleDownloadIdCard = async () => {
+    if (!cardRef.current) return;
+
+    // Use a small timeout to ensure everything is rendered
+    setTimeout(async () => {
+      try {
+        const canvas = await html2canvas(cardRef.current!, {
+          scale: 2,
+          backgroundColor: "#f97316",
+          useCORS: true,
+          logging: false,
+          width: cardRef.current!.offsetWidth,
+          height: cardRef.current!.offsetHeight
+        });
+
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = image;
+        link.download = `id-card-${student?.name?.replace(/\s+/g, '-').toLowerCase() || 'student'}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error('Download failed:', error);
+        toast({
+          title: "Download Failed",
+          description: "Could not generate PNG. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }, 100);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
@@ -402,17 +438,20 @@ export default function StudentProfile({ params: propParams }: any) {
                 <Button className="shadow-md hover:shadow-lg transition-all font-bold h-11 rounded-xl" variant="default" onClick={() => setIsEditOpen(true)}>
                   <Edit className="mr-2 h-4 w-4" /> Edit
                 </Button>
+                <Button className="shadow-sm font-bold h-11 rounded-xl" variant="outline" onClick={() => setShowIdCard(true)}>
+                  <CreditCard className="mr-2 h-4 w-4" /> ID Card
+                </Button>
                 <Button className="shadow-sm font-bold h-11 rounded-xl" variant="outline" onClick={handleDeactivate}>
                   Deactivate
                 </Button>
                 <Button
-                  className="col-span-2 shadow-sm font-bold h-11 rounded-xl text-red-600 border-red-100 hover:bg-red-50 group/suspend"
+                  className="shadow-sm font-bold h-11 rounded-xl text-red-600 border-red-100 hover:bg-red-50 group/suspend"
                   variant="outline"
                   onClick={handleSuspend}
                   disabled={student.status === 'suspended'}
                 >
                   <Trash2 className="mr-2 h-4 w-4 text-red-500 group-hover/suspend:scale-110 transition-transform" />
-                  {student.status === 'suspended' ? 'Profile Suspended' : 'Suspend Profile'}
+                  {student.status === 'suspended' ? 'Suspended' : 'Suspend'}
                 </Button>
               </div>
             </CardContent>
@@ -933,6 +972,105 @@ export default function StudentProfile({ params: propParams }: any) {
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* ID Card Modal */}
+        <Dialog open={showIdCard} onOpenChange={setShowIdCard}>
+          <DialogContent className="max-w-md bg-white border-0 shadow-2xl p-0 overflow-hidden">
+            <DialogHeader className="p-6 pb-2">
+              <DialogTitle className="flex items-center gap-3 text-xl font-black font-heading tracking-tight text-gray-900">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+                  <CreditCard className="h-6 w-6" />
+                </div>
+                Student ID Card
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="p-6 space-y-6">
+              {/* ID Card Preview */}
+              <div
+                ref={cardRef}
+                data-card="id-card"
+                className="relative w-full aspect-[1.6/1] bg-[#f97316] text-white rounded-2xl shadow-2xl overflow-hidden flex flex-col justify-between"
+                style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
+              >
+                {/* Decorative Pattern Overlay */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+                <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-black/10 rounded-full blur-3xl"></div>
+
+                {/* Card Header */}
+                <div className="relative z-10 p-6 flex justify-between items-start">
+                  <div className="space-y-0.5">
+                    <h3 className="font-black text-sm tracking-[0.2em] uppercase opacity-90">STUDENT IDENTITY</h3>
+                    <div className="h-0.5 w-8 bg-white/50 rounded-full"></div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-md">ACADEMY PASS</span>
+                  </div>
+                </div>
+
+                {/* Card Center Body */}
+                <div className="relative z-10 px-6 flex items-center gap-5">
+                  <div className="relative">
+                    <div className="w-20 h-20 bg-white rounded-2xl p-3 shadow-xl flex items-center justify-center">
+                      <img
+                        src="/logo.png"
+                        alt="Logo"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg">
+                      <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-0.5 flex-1 min-w-0">
+                    <h4 className="text-2xl font-black font-heading tracking-tight truncate leading-none mb-1 uppercase">{student.name}</h4>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/70">ID: {String(student.id || "").slice(0, 8)}</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      <span className="text-[8px] font-black uppercase tracking-wider bg-black/20 px-1.5 py-0.5 rounded leading-none">
+                        {student.program || 'GENERAL'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Footer Details */}
+                <div className="relative z-10 bg-black/20 backdrop-blur-md p-4 flex justify-between items-center border-t border-white/10">
+                  <div className="flex gap-4">
+                    <div className="space-y-0.5">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-white/50">BATCH</p>
+                      <p className="text-[10px] font-bold">{student.batch || 'DEFAULT'}</p>
+                    </div>
+                    <div className="space-y-0.5 border-l border-white/10 pl-4">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-white/50">JOINED</p>
+                      <p className="text-[10px] font-bold">{safeFormat(student.joining_date)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black tracking-tighter opacity-80 uppercase">HUURA ACADEMY</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Button
+                  onClick={() => setShowIdCard(false)}
+                  className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 text-gray-900 font-black uppercase text-xs tracking-widest rounded-xl transition-all"
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={handleDownloadIdCard}
+                  className="flex-1 h-12 bg-primary hover:bg-primary/90 text-white font-black uppercase text-xs tracking-widest rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download PNG
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

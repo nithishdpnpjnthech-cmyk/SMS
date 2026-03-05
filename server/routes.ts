@@ -555,16 +555,52 @@ export async function registerRoutes(app: Express): Promise<void> {
       const studentId = req.studentId!;
       const { programId, type } = req.body; // type: 'monthly' or 'quarterly'
 
-      console.log(`Initiating subscription: student=${studentId}, program=${programId}, type=${type}`);
+      if (!programId) return res.status(400).json({ error: "Program ID is required" });
+      if (!['monthly', 'quarterly'].includes(type)) return res.status(400).json({ error: "Invalid subscription type" });
 
-      if (!programId) {
-        return res.status(400).json({ error: "Program ID is required" });
-      }
-      if (!['monthly', 'quarterly'].includes(type)) {
-        return res.status(400).json({ error: "Invalid subscription type" });
+      // === PAYMENT CYCLE ENFORCEMENT ===
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      if (type === 'monthly') {
+        // Check if already paid this month (any payment in current calendar month)
+        const existing = await storage.query(`
+          SELECT id FROM payments 
+          WHERE student_id = ? 
+          AND MONTH(payment_date) = ? AND YEAR(payment_date) = ?
+          AND (notes LIKE '%Monthly%' OR notes LIKE '%monthly%' OR payment_method IS NOT NULL)
+          LIMIT 1
+        `, [studentId, currentMonth, currentYear]);
+
+        if (existing.length > 0) {
+          return res.status(409).json({
+            error: "Monthly fee already paid",
+            message: `You have already made a payment this month (${now.toLocaleString('en-IN', { month: 'long', year: 'numeric' })}). Your next payment is due on 1st of next month.`
+          });
+        }
+      } else if (type === 'quarterly') {
+        // Check if already paid in last 3 months
+        const existingQ = await storage.query(`
+          SELECT id, payment_date FROM payments 
+          WHERE student_id = ? 
+          AND payment_date >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+          AND (notes LIKE '%Quarterly%' OR notes LIKE '%quarterly%')
+          LIMIT 1
+        `, [studentId]);
+
+        if (existingQ.length > 0) {
+          const lastPaid = new Date(existingQ[0].payment_date);
+          const nextDue = new Date(lastPaid);
+          nextDue.setDate(nextDue.getDate() + 90);
+          return res.status(409).json({
+            error: "Quarterly fee already paid",
+            message: `You paid quarterly fees on ${lastPaid.toLocaleDateString('en-IN')}. Your next quarterly payment is due on ${nextDue.toLocaleDateString('en-IN')}.`
+          });
+        }
       }
 
-      // Fetch program details
+      // Fetch enrollment details
       const enrollment = await storage.query(`
         SELECT se.*, fs.name as program_name, fs.amount as monthly_amount
         FROM student_enrollments se 
@@ -573,33 +609,24 @@ export async function registerRoutes(app: Express): Promise<void> {
       `, [studentId, programId]);
 
       if (!enrollment.length) {
-        console.warn(`Enrollment details for Razorpay: student=${studentId}, program=${programId} -> NOT FOUND`);
         return res.status(404).json({ error: "Enrollment not found for this program" });
       }
 
-      console.log(`Enrollment details for Razorpay: student=${studentId}, program=${programId} -> FOUND: ${enrollment[0].program_name}, rate=${enrollment[0].monthly_amount}`);
-
       const monthlyRate = Number(enrollment[0].monthly_amount || 1500);
       const amount = type === 'monthly' ? monthlyRate : (monthlyRate * 3 - 500);
-      const notes = `${type.charAt(0).toUpperCase() + type.slice(1)} Subscription - ${enrollment[0].program_name}`;
+      const notes = `${type === 'monthly' ? 'Monthly' : 'Quarterly'} Subscription - ${enrollment[0].program_name}`;
 
-      // Create a pending fee record for this subscription
+      // Create a pending fee record
       const feeId = randomUUID();
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 1); // Due tomorrow
+      dueDate.setDate(dueDate.getDate() + 1);
 
       await storage.query(
         "INSERT INTO fees (id, student_id, amount, due_date, status, notes) VALUES (?, ?, ?, ?, 'pending', ?)",
         [feeId, studentId, amount, dueDate, notes]
       );
 
-      console.log(`Creating Razorpay order for fee=${feeId}, amount=${amount}`);
-
-      // Razorpay receipt ID limit is 40 chars. UUID is 36. 
       const receiptId = `rcpt_${feeId.split('-')[0]}`;
-      console.log(`Razorpay Debug: amount=${amount}, receiptId=${receiptId}, keyPrefix=${process.env.RAZORPAY_KEY_ID?.substring(0, 8)}`);
-
-      // Create Razorpay order
       const order = await createRazorpayOrder(amount, receiptId);
 
       res.json({
@@ -607,12 +634,84 @@ export async function registerRoutes(app: Express): Promise<void> {
         amount: order.amount,
         currency: order.currency,
         key: process.env.RAZORPAY_KEY_ID,
-        feeId: feeId
+        feeId: feeId,
+        subscriptionType: type
       });
     } catch (error: any) {
       console.error("Subscription initiation error:", error);
       const errorMessage = error.error?.description || error.message || "Failed to initialize subscription payment";
       res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  // === NEW: Student Cash Payment Record (Admin records cash, student sees it) ===
+  app.post("/api/student/record-cash-payment", requireStudentAuth(), async (req, res) => {
+    return res.status(400).json({ error: "Cash payments must be recorded by academy staff at the front desk. Please contact the receptionist or manager." });
+  });
+
+  // === NEW: Check payment eligibility ===
+  app.get("/api/student/payment-eligibility", requireStudentAuth(), async (req, res) => {
+    try {
+      const studentId = req.studentId!;
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      // Check monthly
+      const monthlyPaid = await storage.query(`
+        SELECT p.id, p.amount, p.payment_date, p.payment_method, p.notes
+        FROM payments p
+        WHERE p.student_id = ? 
+        AND MONTH(p.payment_date) = ? AND YEAR(p.payment_date) = ?
+        LIMIT 1
+      `, [studentId, currentMonth, currentYear]);
+
+      // Check quarterly (last 90 days)
+      const quarterlyPaid = await storage.query(`
+        SELECT p.id, p.amount, p.payment_date, p.payment_method, p.notes
+        FROM payments p
+        WHERE p.student_id = ?
+        AND p.payment_date >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+        AND (p.notes LIKE '%Quarterly%' OR p.notes LIKE '%quarterly%')
+        LIMIT 1
+      `, [studentId]);
+
+      const monthlyPaymentInfo = monthlyPaid[0] || null;
+      const quarterlyPaymentInfo = quarterlyPaid[0] || null;
+
+      let nextMonthlyDue = null;
+      if (monthlyPaymentInfo) {
+        const paid = new Date(monthlyPaymentInfo.payment_date);
+        nextMonthlyDue = new Date(paid.getFullYear(), paid.getMonth() + 1, 1).toISOString();
+      }
+
+      let nextQuarterlyDue = null;
+      if (quarterlyPaymentInfo) {
+        const paid = new Date(quarterlyPaymentInfo.payment_date);
+        const next = new Date(paid);
+        next.setDate(next.getDate() + 90);
+        nextQuarterlyDue = next.toISOString();
+      }
+
+      res.json({
+        canPayMonthly: !monthlyPaymentInfo,
+        canPayQuarterly: !quarterlyPaymentInfo,
+        monthlyPaidInfo: monthlyPaymentInfo ? {
+          amount: monthlyPaymentInfo.amount,
+          date: monthlyPaymentInfo.payment_date,
+          method: monthlyPaymentInfo.payment_method,
+          nextDue: nextMonthlyDue
+        } : null,
+        quarterlyPaidInfo: quarterlyPaymentInfo ? {
+          amount: quarterlyPaymentInfo.amount,
+          date: quarterlyPaymentInfo.payment_date,
+          method: quarterlyPaymentInfo.payment_method,
+          nextDue: nextQuarterlyDue
+        } : null
+      });
+    } catch (error) {
+      console.error("Payment eligibility check error:", error);
+      res.status(500).json({ error: "Failed to check payment eligibility" });
     }
   });
 
@@ -2871,7 +2970,89 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  app.get("/api/students/:id/dues", requireAuth(), async (req, res) => {
+    try {
+      const studentId = req.params.id;
+      const dues = await storage.query(`
+        SELECT SUM(amount) as total_pending
+        FROM fees
+        WHERE student_id = ? AND status = 'pending'
+      `, [studentId]);
+
+      res.json({
+        totalPending: parseFloat(dues[0]?.total_pending) || 0
+      });
+    } catch (error) {
+      console.error("Get student dues error:", error);
+      res.status(500).json({ error: "Failed to fetch student dues" });
+    }
+  });
+
   // Collect fee (fixed redirect)
+  // Admin/Manager/Receptionist Razorpay routes
+  app.post("/api/fees/create-order", requireAuth(), async (req, res) => {
+    try {
+      const { amount, studentId } = req.body;
+      if (!amount || !studentId) {
+        return res.status(400).json({ error: "Amount and student ID are required" });
+      }
+
+      // Generate a temporary ID for the receipt
+      const receiptId = `admin_${randomUUID().split('-')[0]}`;
+      const order = await createRazorpayOrder(Number(amount), receiptId);
+
+      res.json({
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        key: process.env.RAZORPAY_KEY_ID
+      });
+    } catch (error: any) {
+      console.error("Razorpay order creation error:", error);
+      res.status(500).json({ error: "Failed to initialize payment" });
+    }
+  });
+
+  app.post("/api/fees/verify-payment", requireAuth(), async (req, res) => {
+    try {
+      const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        studentId,
+        amount,
+        notes
+      } = req.body;
+
+      // 1. Verify Signature
+      const isVerified = verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+      if (!isVerified) {
+        return res.status(400).json({ error: "Payment verification failed" });
+      }
+
+      // 2. Create Payment Record (mark as online)
+      const payment = await storage.createPayment({
+        studentId,
+        amount: Number(amount),
+        paymentMethod: 'online',
+        notes: `${notes || ''} (Razorpay: ${razorpay_payment_id})`.trim()
+      });
+
+      // 3. Distribute to pending fees
+      const remaining = await distributePayment(studentId, parseFloat(amount));
+
+      res.json({
+        success: true,
+        message: "Fee collected successfully via Razorpay",
+        paymentId: payment.id,
+        remainingCredit: remaining
+      });
+    } catch (error) {
+      console.error("Razorpay verification error:", error);
+      res.status(500).json({ error: "Failed to verify and record payment" });
+    }
+  });
+
   app.post("/api/fees/collect", requireAuth(), async (req, res) => {
     try {
       const { studentId, amount, paymentMethod, notes } = req.body;
@@ -2901,6 +3082,136 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       console.error("Collect fee error:", error);
       res.status(500).json({ error: "Failed to collect fee" });
+    }
+  });
+
+  // === PAYMENT HISTORY ENDPOINT (Admin/Manager/Receptionist) ===
+  app.get("/api/fees/payment-history", requireAuth(), enforceBranchAccess(), async (req, res) => {
+    try {
+      const userRole = req.user.role;
+      const branchId = req.query.branchId as string | undefined;
+      const limit = parseInt(req.query.limit as string || '50');
+      const offset = parseInt(req.query.offset as string || '0');
+      const month = req.query.month as string | undefined;
+      const year = req.query.year as string | undefined;
+      const studentId = req.query.studentId as string | undefined;
+
+      let whereConditions = [];
+      let params: any[] = [];
+
+      // Branch access control
+      if (userRole !== 'admin') {
+        const effectiveBranchId = branchId || req.user.branchId;
+        if (effectiveBranchId) {
+          whereConditions.push("s.branch_id = ?");
+          params.push(effectiveBranchId);
+        }
+      } else if (branchId && branchId !== 'all') {
+        whereConditions.push("s.branch_id = ?");
+        params.push(branchId);
+      }
+
+      if (month) {
+        whereConditions.push("MONTH(p.payment_date) = ?");
+        params.push(month);
+      }
+      if (year) {
+        whereConditions.push("YEAR(p.payment_date) = ?");
+        params.push(year);
+      }
+      if (studentId) {
+        whereConditions.push("p.student_id = ?");
+        params.push(studentId);
+      }
+
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+      const payments = await storage.query(`
+        SELECT 
+          p.id,
+          p.student_id,
+          s.name as student_name,
+          s.phone as student_phone,
+          s.program as student_program,
+          s.batch as student_batch,
+          b.name as branch_name,
+          p.amount,
+          p.payment_date,
+          p.payment_method,
+          p.notes,
+          DATE_FORMAT(p.payment_date, '%d %b %Y') as formatted_date,
+          DATE_FORMAT(p.payment_date, '%h:%i %p') as formatted_time,
+          DAYNAME(p.payment_date) as day_name,
+          MONTH(p.payment_date) as payment_month,
+          YEAR(p.payment_date) as payment_year,
+          MONTHNAME(p.payment_date) as month_name
+        FROM payments p
+        JOIN students s ON p.student_id = s.id
+        LEFT JOIN branches b ON s.branch_id = b.id
+        ${whereClause}
+        ORDER BY p.payment_date DESC
+        LIMIT ? OFFSET ?
+      `, [...params, limit, offset]);
+
+      // Total count for pagination
+      const countResult = await storage.query(`
+        SELECT COUNT(*) as total
+        FROM payments p
+        JOIN students s ON p.student_id = s.id
+        ${whereClause}
+      `, params);
+
+      // Summary stats for current filter
+      const summaryResult = await storage.query(`
+        SELECT 
+          COUNT(*) as total_transactions,
+          COALESCE(SUM(p.amount), 0) as total_amount,
+          COALESCE(SUM(CASE WHEN p.payment_method = 'cash' THEN p.amount ELSE 0 END), 0) as cash_amount,
+          COALESCE(SUM(CASE WHEN p.payment_method = 'online' THEN p.amount ELSE 0 END), 0) as online_amount,
+          COALESCE(SUM(CASE WHEN DATE(p.payment_date) = CURDATE() THEN p.amount ELSE 0 END), 0) as today_amount,
+          COUNT(CASE WHEN DATE(p.payment_date) = CURDATE() THEN 1 END) as today_count
+        FROM payments p
+        JOIN students s ON p.student_id = s.id
+        ${whereClause}
+      `, params);
+
+      res.json({
+        payments: payments.map(p => ({
+          id: p.id,
+          studentId: p.student_id,
+          studentName: p.student_name,
+          studentPhone: p.student_phone,
+          studentProgram: p.student_program,
+          studentBatch: p.student_batch,
+          branchName: p.branch_name,
+          amount: Number(p.amount),
+          paymentDate: p.payment_date,
+          formattedDate: p.formatted_date,
+          formattedTime: p.formatted_time,
+          dayName: p.day_name,
+          month: p.payment_month,
+          year: p.payment_year,
+          monthName: p.month_name,
+          paymentMethod: p.payment_method || 'cash',
+          notes: p.notes
+        })),
+        pagination: {
+          total: countResult[0]?.total || 0,
+          limit,
+          offset
+        },
+        summary: {
+          totalTransactions: summaryResult[0]?.total_transactions || 0,
+          totalAmount: Number(summaryResult[0]?.total_amount || 0),
+          cashAmount: Number(summaryResult[0]?.cash_amount || 0),
+          onlineAmount: Number(summaryResult[0]?.online_amount || 0),
+          todayAmount: Number(summaryResult[0]?.today_amount || 0),
+          todayCount: summaryResult[0]?.today_count || 0
+        }
+      });
+    } catch (error) {
+      console.error("Payment history error:", error);
+      res.status(500).json({ error: "Failed to fetch payment history" });
     }
   });
 

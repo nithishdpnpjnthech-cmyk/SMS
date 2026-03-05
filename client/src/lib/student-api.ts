@@ -57,6 +57,10 @@ class StudentApiClient {
     return this.request('/fees');
   }
 
+  async getPaymentEligibility() {
+    return this.request('/payment-eligibility');
+  }
+
   async initiateSubscription(programId: string, type: 'monthly' | 'quarterly') {
     return this.request<{ id: string; amount: number; currency: string; key: string; feeId: string }>('/initiate-subscription', {
       method: 'POST',
