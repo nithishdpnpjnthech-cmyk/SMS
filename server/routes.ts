@@ -80,6 +80,47 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(req.user);
   });
 
+  // Profile update endpoint
+  app.put("/api/profile/update", requireAuth(), async (req, res) => {
+    try {
+      const { name, email } = req.body;
+      const userId = req.user.id;
+
+      await storage.query(
+        "UPDATE users SET name = ?, email = ? WHERE id = ?",
+        [name, email, userId]
+      );
+
+      res.json({ message: "Profile updated successfully" });
+    } catch (error) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  // Change password endpoint
+  app.put("/api/profile/change-password", requireAuth(), async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user.id;
+
+      const user = await storage.getUser(userId);
+      if (!user || user.password !== currentPassword) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      await storage.query(
+        "UPDATE users SET password = ? WHERE id = ?",
+        [newPassword, userId]
+      );
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Password change error:", error);
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+
   app.get("/api/debug/trainer-links", async (req, res) => {
     try {
       const users = await storage.query("SELECT id, username, role FROM users WHERE role = 'trainer'");

@@ -36,16 +36,31 @@ export default function Profile() {
     }
 
     try {
-      // TODO: Implement password change API call
+      const response = await fetch('/api/profile/change-password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user?.id || '',
+          'x-user-role': user?.role || '',
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to change password');
+      }
+
       toast({
         title: "Success",
         description: "Password changed successfully"
       });
       setIsPasswordDialogOpen(false);
-    } catch (error) {
+      (e.target as HTMLFormElement).reset();
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to change password",
+        description: error.message || "Failed to change password",
         variant: "destructive"
       });
     }
@@ -54,14 +69,28 @@ export default function Profile() {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
 
     try {
-      // TODO: Implement profile update API call
+      const response = await fetch('/api/profile/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user?.id || '',
+          'x-user-role': user?.role || '',
+        },
+        body: JSON.stringify({ name, email })
+      });
+
+      if (!response.ok) throw new Error('Failed to update profile');
+
       toast({
         title: "Success",
-        description: "Profile updated successfully"
+        description: "Profile updated successfully. Please refresh to see changes."
       });
       setIsUpdateDialogOpen(false);
+      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       toast({
         title: "Error",
@@ -165,7 +194,7 @@ export default function Profile() {
                 <User className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium">User ID</p>
-                  <p className="text-sm text-muted-foreground">{user?.id}</p>
+                  <p className="text-sm text-muted-foreground">user-{user?.role}</p>
                 </div>
               </div>
 
@@ -178,18 +207,10 @@ export default function Profile() {
               </div>
 
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Member Since</p>
-                  <p className="text-sm text-muted-foreground">January 2024</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                 <MapPin className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Branch</p>
-                  <p className="text-sm text-muted-foreground">{user?.branchId || 'Main Branch'}</p>
+                  <p className="text-sm text-muted-foreground">Main Branch</p>
                 </div>
               </div>
             </CardContent>
