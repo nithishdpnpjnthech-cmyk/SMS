@@ -80,6 +80,30 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json(req.user);
   });
 
+  // Get profile data
+  app.get("/api/profile", requireAuth(), async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        branchId: user.branchId
+      });
+    } catch (error) {
+      console.error("Get profile error:", error);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
   // Profile update endpoint
   app.put("/api/profile/update", requireAuth(), async (req, res) => {
     try {

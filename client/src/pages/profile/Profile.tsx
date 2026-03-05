@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { User, Mail, Phone, MapPin, Calendar, Shield, Download, Key, Settings as SettingsIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
@@ -17,6 +17,31 @@ export default function Profile() {
   const { toast } = useToast();
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProfile();
+  }, [user?.id]);
+
+  const loadProfile = async () => {
+    try {
+      const response = await fetch('/api/profile', {
+        headers: {
+          'x-user-id': user?.id || '',
+          'x-user-role': user?.role || '',
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProfileData(data);
+      }
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fix: Add proper handlers for profile buttons
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -87,10 +112,10 @@ export default function Profile() {
 
       toast({
         title: "Success",
-        description: "Profile updated successfully. Please refresh to see changes."
+        description: "Profile updated successfully"
       });
       setIsUpdateDialogOpen(false);
-      setTimeout(() => window.location.reload(), 1000);
+      await loadProfile();
     } catch (error) {
       toast({
         title: "Error",
@@ -153,12 +178,12 @@ export default function Profile() {
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src="https://github.com/shadcn.png" alt={user?.name || user?.username} />
-                  <AvatarFallback className="text-lg">{user?.name?.charAt(0) || user?.username?.charAt(0) || 'U'}</AvatarFallback>
+                  <AvatarImage src="https://github.com/shadcn.png" alt={profileData?.name || user?.username} />
+                  <AvatarFallback className="text-lg">{(profileData?.name || user?.username || 'U').charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-lg font-semibold">{user?.name || user?.username}</h3>
-                  <p className="text-muted-foreground">{user?.email}</p>
+                  <h3 className="text-lg font-semibold">{profileData?.name || user?.username}</h3>
+                  <p className="text-muted-foreground">{profileData?.email || 'No email'}</p>
                   <Badge variant="outline" className="mt-1">
                     <Shield className="mr-1 h-3 w-3" />
                     {user?.role}
@@ -169,11 +194,11 @@ export default function Profile() {
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" value={user?.name || user?.username || ''} readOnly />
+                  <Input id="name" value={profileData?.name || ''} readOnly />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" value={user?.email || ''} readOnly />
+                  <Input id="email" value={profileData?.email || ''} readOnly />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="role">Role</Label>
@@ -283,11 +308,11 @@ export default function Profile() {
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input id="name" name="name" defaultValue={user?.name || user?.username || ''} />
+                <Input id="name" name="name" defaultValue={profileData?.name || ''} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" defaultValue={user?.email || ''} />
+                <Input id="email" name="email" type="email" defaultValue={profileData?.email || ''} />
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>Cancel</Button>
