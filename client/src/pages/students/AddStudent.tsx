@@ -185,38 +185,34 @@ export default function AddStudent() {
   const handleDownload = async () => {
     if (!cardRef.current) return;
 
-    try {
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 3, // Higher resolution
-        backgroundColor: "#f97316", // Force solid orange background
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        onclone: (clonedDoc) => {
-          // Robust selector for the card during capture
-          const card = clonedDoc.querySelector('[data-card="id-card"]') as HTMLElement;
-          if (card) {
-            card.style.width = "480px";
-            card.style.height = "300px";
-            card.style.borderRadius = "24px";
-            card.style.transform = "none"; // Avoid issues with 3D transforms
-          }
-        }
-      });
+    // Use a small timeout to ensure everything is rendered
+    setTimeout(async () => {
+      try {
+        const canvas = await html2canvas(cardRef.current!, {
+          scale: 2,
+          backgroundColor: "#f97316",
+          useCORS: true,
+          logging: false,
+          width: cardRef.current!.offsetWidth,
+          height: cardRef.current!.offsetHeight
+        });
 
-      const image = canvas.toDataURL("image/png", 1.0);
-      const link = document.createElement("a");
-      link.href = image;
-      link.download = `student-id-${idCardData?.name || 'student'}.png`;
-      link.click();
-    } catch (error) {
-      console.error('Download failed:', error);
-      toast({
-        title: "Download Failed",
-        description: "Unable to download ID card. Please try again.",
-        variant: "destructive"
-      });
-    }
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = image;
+        link.download = `id-card-${idCardData?.name?.replace(/\s+/g, '-').toLowerCase() || 'student'}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error('Download failed:', error);
+        toast({
+          title: "Download Failed",
+          description: "Could not generate PNG. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }, 100);
   };
 
   return (
@@ -457,7 +453,7 @@ export default function AddStudent() {
                 {/* Card Center Body */}
                 <div className="relative z-10 px-6 flex items-center gap-5">
                   <div className="relative">
-                    <div className="w-20 h-20 bg-white rounded-2xl p-3 shadow-xl transform rotate-3 flex items-center justify-center">
+                    <div className="w-20 h-20 bg-white rounded-2xl p-3 shadow-xl flex items-center justify-center">
                       <img
                         src="/logo.png"
                         alt="Logo"
