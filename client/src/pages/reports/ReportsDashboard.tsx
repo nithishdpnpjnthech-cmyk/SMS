@@ -259,8 +259,8 @@ export default function ReportsDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 px-1 sm:px-4 lg:px-8 py-4 sm:py-6">
-        <div className="bg-white/50 p-4 sm:p-6 rounded-2xl border border-muted/50 backdrop-blur-sm shadow-sm">
+      <div className="space-y-6 px-1 sm:px-4 lg:px-8 py-3 sm:py-5">
+        <div className="bg-white/50 p-4 sm:p-5 rounded-2xl border border-muted/50 backdrop-blur-sm shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary rounded-xl text-white shadow-lg shadow-primary/20">
@@ -281,7 +281,7 @@ export default function ReportsDashboard() {
         {/* Stats Overview */}
         <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
           <Card className="shadow-lg border-muted/50 overflow-hidden group hover:scale-[1.02] transition-transform">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-2 bg-orange-50 rounded-lg text-primary">
                   <Users className="h-5 w-5" />
@@ -294,7 +294,7 @@ export default function ReportsDashboard() {
           </Card>
 
           <Card className="shadow-lg border-muted/50 overflow-hidden group hover:scale-[1.02] transition-transform border-t-4 border-t-green-500">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-2 bg-green-50 rounded-lg text-green-600">
                   <IndianRupee className="h-5 w-5" />
@@ -335,54 +335,56 @@ export default function ReportsDashboard() {
 
         {/* Report Generator */}
         <Card className="shadow-2xl border-muted/50 overflow-hidden bg-white/80 backdrop-blur-md">
-          <CardHeader className="bg-muted/30 border-b border-muted/50 p-6">
-            <CardTitle className="flex items-center gap-3 text-xl font-black font-heading tracking-tight">
-              <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-md">
-                <FileText className="h-5 w-5" />
+          <CardHeader className="bg-muted/30 border-b border-muted/50 p-5">
+            <CardTitle className="flex items-center gap-3 text-lg font-black font-heading tracking-tight">
+              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-white shadow-md">
+                <FileText className="h-4 w-4" />
               </div>
-              DISBURSEMENT RECONCILIATION & LOGS
+              REPORTS & AUDIT LOGS
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-8 space-y-10">
+          <CardContent className="p-6 sm:p-7 space-y-8">
             <div className="grid gap-8 grid-cols-1 md:grid-cols-3">
               <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">REPORT TYPE CLASSIFICATION</Label>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-wider ml-1">REPORT TYPE</Label>
                 <Select value={reportType} onValueChange={setReportType}>
-                  <SelectTrigger className="h-14 rounded-2xl border-muted/50 bg-white font-bold text-gray-900 focus:ring-primary/20 shadow-sm transition-all text-sm">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-primary" />
-                      <SelectValue />
+                  <SelectTrigger className="h-12 rounded-2xl border-muted/50 bg-white font-bold text-gray-900 focus:ring-primary/20 shadow-sm transition-all text-[11px] leading-tight px-3">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <BarChart3 className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <div className="truncate">
+                        <SelectValue />
+                      </div>
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="rounded-2xl shadow-2xl border-muted/50 font-bold p-2">
-                    <SelectItem value="students" className="rounded-xl py-3 cursor-pointer">STUDENT ENROLLMENT LOGS</SelectItem>
-                    <SelectItem value="fees" className="rounded-xl py-3 cursor-pointer">FINANCIAL REVENUE REPORTS</SelectItem>
-                    <SelectItem value="attendance" className="rounded-xl py-3 cursor-pointer">STUDENT ATTENDANCE LOGS (DAILY)</SelectItem>
-                    <SelectItem value="attendance_summary" className="rounded-xl py-3 cursor-pointer">STUDENT ATTENDANCE PERFORMANCE (TOTAL)</SelectItem>
-                    <SelectItem value="monthly_attendance_summary" className="rounded-xl py-3 cursor-pointer">STUDENT MONTHLY PERFORMANCE (MONTHLY)</SelectItem>
-                    <SelectItem value="trainers" className="rounded-xl py-3 cursor-pointer">TRAINER PERFORMANCE LOGS</SelectItem>
+                  <SelectContent className="rounded-2xl shadow-2xl border-muted/50 font-bold p-1">
+                    <SelectItem value="students" className="rounded-xl py-2 cursor-pointer text-xs">STUDENT ENROLLMENT LOGS</SelectItem>
+                    <SelectItem value="fees" className="rounded-xl py-2 cursor-pointer text-xs">FINANCIAL REVENUE REPORTS</SelectItem>
+                    <SelectItem value="attendance" className="rounded-xl py-2 cursor-pointer text-xs">STUDENT ATTENDANCE LOGS (DAILY)</SelectItem>
+                    <SelectItem value="attendance_summary" className="rounded-xl py-2 cursor-pointer text-xs">STUDENT ATTENDANCE PERFORMANCE (TOTAL)</SelectItem>
+                    <SelectItem value="monthly_attendance_summary" className="rounded-xl py-2 cursor-pointer text-xs">STUDENT MONTHLY PERFORMANCE (MONTHLY)</SelectItem>
+                    <SelectItem value="trainers" className="rounded-xl py-2 cursor-pointer text-xs">TRAINER PERFORMANCE LOGS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">STARTING AUDIT DATE</Label>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-wider ml-1">STARTING AUDIT DATE</Label>
                 <div className="relative group">
                   <CalendarCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
                   <Input
                     type="date"
-                    className="h-14 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-primary/20 shadow-sm"
+                    className="h-12 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-primary/20 shadow-sm"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
                   />
                 </div>
               </div>
               <div className="space-y-3">
-                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">ENDING AUDIT DATE</Label>
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-wider ml-1">ENDING AUDIT DATE</Label>
                 <div className="relative group">
                   <CalendarCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
                   <Input
                     type="date"
-                    className="h-14 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-primary/20 shadow-sm"
+                    className="h-12 pl-12 rounded-2xl border-muted/50 bg-white font-black text-gray-900 focus:ring-primary/20 shadow-sm"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
                   />
