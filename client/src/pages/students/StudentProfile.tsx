@@ -51,7 +51,6 @@ export default function StudentProfile({ params: propParams }: any) {
 
   // Defensive calculations for attendance stats
   const { presentCount, attendanceRate, absentCount, lateCount } = useMemo(() => {
-    // Filter attendance for the selected month visualization
     const monthFiltered = attendance.filter((a: any) => {
       const d = new Date(a.date);
       return d.getMonth() === selectedMonth.getMonth() && d.getFullYear() === selectedMonth.getFullYear();
@@ -60,9 +59,9 @@ export default function StudentProfile({ params: propParams }: any) {
     if (!Array.isArray(monthFiltered) || monthFiltered.length === 0) {
       return { presentCount: 0, attendanceRate: 0, absentCount: 0, lateCount: 0 };
     }
+    const lCount = monthFiltered.filter((a: any) => a?.is_late || a?.isLate).length;
     const pCount = monthFiltered.filter((a: any) => (a?.status || '').toLowerCase() === 'present').length;
     const aCount = monthFiltered.filter((a: any) => (a?.status || '').toLowerCase() === 'absent').length;
-    const lCount = monthFiltered.filter((a: any) => a?.is_late || a?.isLate).length;
     const rate = Math.round((pCount / monthFiltered.length) * 100);
     return { presentCount: pCount, attendanceRate: rate, absentCount: aCount, lateCount: lCount };
   }, [attendance, selectedMonth]);
@@ -95,6 +94,17 @@ export default function StudentProfile({ params: propParams }: any) {
     } else {
       setIsLoading(false);
     }
+  }, [activeStudentId]);
+
+  // Auto-refresh when window gains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      if (activeStudentId) {
+        loadStudentData(activeStudentId);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [activeStudentId]);
 
   const loadStudentData = async (id: string) => {
@@ -350,36 +360,56 @@ export default function StudentProfile({ params: propParams }: any) {
   };
 
   const handleDownloadIdCard = async () => {
-    if (!cardRef.current) return;
+    if (!cardRef.current) {
+      toast({
+        title: "Error",
+        description: "ID card not ready. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // Use a small timeout to ensure everything is rendered
-    setTimeout(async () => {
-      try {
-        const canvas = await html2canvas(cardRef.current!, {
-          scale: 2,
-          backgroundColor: "#f97316",
-          useCORS: true,
-          logging: false,
-          width: cardRef.current!.offsetWidth,
-          height: cardRef.current!.offsetHeight
-        });
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3,
+        backgroundColor: "#f97316",
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+      });
 
-        const image = canvas.toDataURL("image/png");
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          toast({
+            title: "Download Failed",
+            description: "Could not generate PNG. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = image;
+        link.href = url;
         link.download = `id-card-${student?.name?.replace(/\s+/g, '-').toLowerCase() || 'student'}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      } catch (error) {
-        console.error('Download failed:', error);
+        URL.revokeObjectURL(url);
+
         toast({
-          title: "Download Failed",
-          description: "Could not generate PNG. Please try again.",
-          variant: "destructive"
+          title: "Success",
+          description: "ID card downloaded successfully"
         });
-      }
-    }, 100);
+      }, 'image/png');
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({
+        title: "Download Failed",
+        description: "Could not generate PNG. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -664,29 +694,49 @@ export default function StudentProfile({ params: propParams }: any) {
                                 const date = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), d);
                                 const dateStr = format(date, 'yyyy-MM-dd');
                                 const record = attendanceMap[dateStr];
+                                const isLate = record && (record.is_late || record.isLate);
+                                const isPresent = record && record.status.toLowerCase() === 'present';
+                                const isAbsent = record && record.status.toLowerCase() === 'absent';
 
                                 items.push(
                                   <div
                                     key={d}
                                     className={cn(
-                                      "h-16 sm:h-20 rounded-2xl border p-2 flex flex-col justify-between transition-all group hover:shadow-md",
-                                      record ? (
-                                        record.status.toLowerCase() === 'present' ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
-                                      ) : "bg-white border-muted/30"
+                                      "h-16 sm:h-20 rounded-2xl border p-2 flex flex-col justify-between transition-all group hover:shadow-md relative",
+                                      isLate ? "bg-orange-50 border-orange-200" : 
+                                      isPresent ? "bg-green-50 border-green-200" : 
+                                      isAbsent ? "bg-red-50 border-red-200" : 
+                                      "bg-white border-muted/30"
                                     )}
                                   >
                                     <span className="text-xs font-black text-gray-500">{d}</span>
                                     {record && (
                                       <div className="space-y-1">
-                                        <Badge className={cn(
-                                          "text-[8px] px-1 py-0 h-4 border-none flex items-center justify-center font-black",
-                                          record.status.toLowerCase() === 'present' ? "bg-green-500" : "bg-red-500"
-                                        )}>
-                                          {record.status.charAt(0).toUpperCase()}
-                                        </Badge>
-                                        <div className="text-[8px] font-bold text-gray-900 truncate flex flex-col">
+                                        <div className="flex items-center justify-center">
+                                          {isPresent && !isLate && (
+                                            <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
+                                              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                              </svg>
+                                            </div>
+                                          )}
+                                          {isLate && (
+                                            <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center">
+                                              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                              </svg>
+                                            </div>
+                                          )}
+                                          {isAbsent && (
+                                            <div className="h-6 w-6 rounded-full bg-red-500 flex items-center justify-center">
+                                              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                                              </svg>
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="text-[8px] font-bold text-gray-900 truncate text-center">
                                           <span>{record.check_in || '--:--'}</span>
-                                          {(record.is_late || record.isLate) && <span className="text-orange-600">LATE</span>}
                                         </div>
                                       </div>
                                     )}
@@ -701,11 +751,27 @@ export default function StudentProfile({ params: propParams }: any) {
 
                       <div className="mt-8 flex flex-wrap gap-4 justify-center">
                         <div className="flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full bg-green-500" />
+                          <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
+                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
                           <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Present</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full bg-red-500" />
+                          <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center">
+                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Late</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-6 w-6 rounded-full bg-red-500 flex items-center justify-center">
+                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </div>
                           <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Absent</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1020,11 +1086,9 @@ export default function StudentProfile({ params: propParams }: any) {
                 <div className="relative z-10 px-6 flex items-center gap-5">
                   <div className="relative">
                     <div className="w-20 h-20 bg-white rounded-2xl p-3 shadow-xl flex items-center justify-center">
-                      <img
-                        src="/logo.png"
-                        alt="Logo"
-                        className="w-full h-full object-contain"
-                      />
+                      <div className="text-4xl font-black text-primary">
+                        {(student?.name || 'S').charAt(0).toUpperCase()}
+                      </div>
                     </div>
                     <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg">
                       <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>

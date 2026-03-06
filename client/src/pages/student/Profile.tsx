@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   User,
   Mail,
@@ -11,9 +13,13 @@ import {
   Users,
   Building,
   Calendar,
-  Shirt
+  Shirt,
+  CreditCard,
+  Download
 } from 'lucide-react';
 import { studentApi } from '@/lib/student-api';
+import { useToast } from '@/hooks/use-toast';
+import html2canvas from 'html2canvas';
 
 interface ProfileData {
   id: string;
@@ -40,6 +46,9 @@ interface ProfileData {
 export default function StudentProfile() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showIdCard, setShowIdCard] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadProfile();
@@ -59,6 +68,59 @@ export default function StudentProfile() {
   const getInitials = (name: string) => {
     if (!name) return 'S';
     return name.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const handleDownloadIdCard = async () => {
+    if (!cardRef.current) {
+      toast({
+        title: "Error",
+        description: "ID card not ready. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3,
+        backgroundColor: "#f97316",
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+      });
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          toast({
+            title: "Download Failed",
+            description: "Could not generate PNG. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `id-card-${profile?.name?.replace(/\s+/g, '-').toLowerCase() || 'student'}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "Success",
+          description: "ID card downloaded successfully"
+        });
+      }, 'image/png');
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({
+        title: "Download Failed",
+        description: "Could not generate PNG. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {
@@ -107,6 +169,14 @@ export default function StudentProfile() {
                     ID: {profile.id}
                   </div>
                 </div>
+
+                <Button
+                  onClick={() => setShowIdCard(true)}
+                  className="w-full mt-6 h-11 bg-primary hover:bg-primary/90 text-white font-black uppercase text-xs tracking-widest rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  View ID Card
+                </Button>
 
                 <div className="mt-8 space-y-4 text-left bg-muted/20 p-5 rounded-2xl border border-muted/50 shadow-inner">
                   {profile.email && (
@@ -324,6 +394,98 @@ export default function StudentProfile() {
           </Card>
         </div>
       </div>
+
+      {/* ID Card Modal */}
+      <Dialog open={showIdCard} onOpenChange={setShowIdCard}>
+        <DialogContent className="max-w-md bg-white border-0 shadow-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="flex items-center gap-3 text-xl font-black font-heading tracking-tight text-gray-900">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+                <CreditCard className="h-6 w-6" />
+              </div>
+              Student ID Card
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="p-6 space-y-6">
+            <div
+              ref={cardRef}
+              data-card="id-card"
+              className="relative w-full aspect-[1.6/1] bg-[#f97316] text-white rounded-2xl shadow-2xl overflow-hidden flex flex-col justify-between"
+              style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
+            >
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+              <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+              <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-black/10 rounded-full blur-3xl"></div>
+
+              <div className="relative z-10 p-6 flex justify-between items-start">
+                <div className="space-y-0.5">
+                  <h3 className="font-black text-sm tracking-[0.2em] uppercase opacity-90">STUDENT IDENTITY</h3>
+                  <div className="h-0.5 w-8 bg-white/50 rounded-full"></div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-md">ACADEMY PASS</span>
+                </div>
+              </div>
+
+              <div className="relative z-10 px-6 flex items-center gap-5">
+                <div className="relative">
+                  <div className="w-20 h-20 bg-white rounded-2xl p-3 shadow-xl flex items-center justify-center">
+                    <div className="text-4xl font-black text-primary">
+                      {(profile?.name || 'S').charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg">
+                    <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+
+                <div className="space-y-0.5 flex-1 min-w-0">
+                  <h4 className="text-2xl font-black font-heading tracking-tight truncate leading-none mb-1 uppercase">{profile?.name}</h4>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/70">ID: {String(profile?.id || "").slice(0, 8)}</p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <span className="text-[8px] font-black uppercase tracking-wider bg-black/20 px-1.5 py-0.5 rounded leading-none">
+                      {profile?.program || 'GENERAL'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative z-10 bg-black/20 backdrop-blur-md p-4 flex justify-between items-center border-t border-white/10">
+                <div className="flex gap-4">
+                  <div className="space-y-0.5">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-white/50">BATCH</p>
+                    <p className="text-[10px] font-bold">{profile?.batch || 'DEFAULT'}</p>
+                  </div>
+                  <div className="space-y-0.5 border-l border-white/10 pl-4">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-white/50">JOINED</p>
+                    <p className="text-[10px] font-bold">{profile?.joiningDate ? new Date(profile.joiningDate).toLocaleDateString('en-IN') : 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-black tracking-tighter opacity-80 uppercase">HUURA ACADEMY</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                onClick={() => setShowIdCard(false)}
+                className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 text-gray-900 font-black uppercase text-xs tracking-widest rounded-xl transition-all"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={handleDownloadIdCard}
+                className="flex-1 h-12 bg-primary hover:bg-primary/90 text-white font-black uppercase text-xs tracking-widest rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download PNG
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

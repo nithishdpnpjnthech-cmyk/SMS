@@ -103,7 +103,7 @@ export function NotificationPopover({ notifications, onMarkAsRead, variant = 'st
                                                 {notification.message}
                                             </p>
                                             <p className="text-[10px] text-muted-foreground/60 font-medium">
-                                                {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                                                {notification.createdAt ? formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true }) : 'Just now'}
                                             </p>
                                         </div>
                                         {!notification.isRead && (
