@@ -199,6 +199,65 @@ export default function StudentProfile({ params: propParams }: any) {
     return String(text);
   };
 
+  const generateInvoice = (fee: any) => {
+    try {
+      const academyName = branding?.academyName || "Academy Management System";
+      const invoiceDate = fee.paid_date ? new Date(fee.paid_date) : new Date(fee.created_at);
+      
+      // Create invoice content
+      const invoiceContent = [
+        [academyName.toUpperCase()],
+        ['PAYMENT INVOICE'],
+        [''],
+        [`Invoice Date: ${format(invoiceDate, 'dd/MM/yyyy')}`],
+        [`Invoice ID: INV-${fee.id.split('-')[0].toUpperCase()}`],
+        [''],
+        ['STUDENT DETAILS'],
+        [`Name: ${student?.name || 'N/A'}`],
+        [`ID: ${student?.id || 'N/A'}`],
+        [`Program: ${student?.program || 'N/A'}`],
+        [`Batch: ${student?.batch || 'N/A'}`],
+        [''],
+        ['PAYMENT DETAILS'],
+        [`Description: ${fee.type || fee.notes || 'Institutional Fee'}`],
+        [`Amount Paid: ₹${safeCurrency(fee.amount)}`],
+        [`Payment Method: ${fee.payment_method || 'Cash'}`],
+        [`Payment Date: ${fee.paid_date ? format(new Date(fee.paid_date), 'dd/MM/yyyy') : 'N/A'}`],
+        [`Status: ${fee.status.toUpperCase()}`],
+        [''],
+        ['Thank you for your payment!'],
+        [''],
+        [`Generated on: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`]
+      ];
+
+      const csvContent = invoiceContent
+        .map(row => row.map(field => `"${String(field || '').replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `invoice_${student?.name.replace(/\s+/g, '_').toLowerCase()}_${fee.id.split('-')[0]}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Success",
+        description: "Invoice downloaded successfully"
+      });
+    } catch (error) {
+      console.error("Invoice generation error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice",
+        variant: "destructive"
+      });
+    }
+  };
+
   const downloadIndividualAttendance = () => {
     if (studentAttendance.length === 0) {
       toast({
@@ -861,7 +920,6 @@ export default function StudentProfile({ params: propParams }: any) {
                           <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-60">Monthly Subscription Status</CardDescription>
                         </div>
                       </div>
-                      <Button size="sm" className="font-bold uppercase tracking-wider text-[10px] h-8 shadow-md rounded-xl">Generate Invoice</Button>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6 space-y-8">
@@ -941,9 +999,17 @@ export default function StudentProfile({ params: propParams }: any) {
                                     {fee.status}
                                   </Badge>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-muted/50">
-                                  <Download className="h-4 w-4 text-muted-foreground" />
-                                </Button>
+                                {fee.status === 'paid' && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-10 w-10 rounded-xl hover:bg-muted/50"
+                                    onClick={() => generateInvoice(fee)}
+                                    title="Download Invoice"
+                                  >
+                                    <Download className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           ))) : (
