@@ -1,170 +1,170 @@
-# Academy Manager - Student Management System
+# SMS Academy — Management System
 
-A comprehensive student management system built with React, Express, and PostgreSQL.
+A full-stack Student Management System for sports academies built with React (Vite) + Node.js (Express) + MySQL.
 
-## Prerequisites
+---
 
-Before you begin, ensure you have the following installed:
-- **Node.js** (v16 or higher) - [Download](https://nodejs.org/)
-- **npm** (comes with Node.js)
-- **PostgreSQL** (if running with a database) - [Download](https://www.postgresql.org/)
+## 📁 Project Structure
 
-## Installation
-
-### Step 1: Clone the Repository
-
-```bash
-git clone https://github.com/nithishdpnpjnthech-cmyk/SMS.git
-cd SMS
+```
+SMS/
+├── client/          → React frontend (TypeScript + Vite)
+│   └── src/
+│       ├── pages/   → All pages (admin, student, trainer portals)
+│       ├── components/ → Reusable UI components
+│       ├── lib/     → API clients, auth helpers
+│       └── hooks/   → Custom React hooks
+├── server/          → Node.js / Express backend
+│   ├── index.ts     → App entry point
+│   ├── routes.ts    → All API routes
+│   ├── db.ts        → MySQL connection pool
+│   ├── mysql-storage.ts → All DB queries
+│   └── services/    → Email / SMS notification service
+├── shared/
+│   └── schema.ts    → Shared TypeScript types
+├── database.sql     → ⭐ MASTER DATABASE SETUP — run this first!
+├── .env.example     → Environment variable template
+└── package.json     → Scripts and dependencies
 ```
 
-### Step 2: Install Dependencies
+---
 
-Install all required packages using npm:
+## 🚀 AWS Deployment Guide
+
+### Step 1 — Setup MySQL Database (AWS RDS)
+
+1. Create an **Amazon RDS MySQL 8.0** instance
+2. Note down: Host, Port (3306), Username, Password, DB name (`sms`)
+3. Connect to RDS and run the master setup script:
 
 ```bash
+mysql -h your-rds-endpoint -u admin -p < database.sql
+```
+
+This creates all **18 tables** and a default admin user.
+
+> **Default Admin Login:** `admin` / `password` — Change immediately after first login!
+
+---
+
+### Step 2 — Setup Environment Variables
+
+On your EC2 instance, create a `.env` file based on `.env.example`:
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Fill in your actual values:
+
+```env
+NODE_ENV=production
+PORT=5051
+DB_HOST=your-rds-endpoint.rds.amazonaws.com
+DB_USER=admin
+DB_PASSWORD=your-password
+DB_NAME=sms
+DB_PORT=3306
+RAZORPAY_KEY_ID=...
+RAZORPAY_KEY_SECRET=...
+EMAIL_USER=...
+EMAIL_PASS=...
+FAST2SMS_API_KEY=...
+```
+
+---
+
+### Step 3 — Install & Build
+
+```bash
+# Install dependencies
 npm install
-```
 
-This will install dependencies for both the client and server as defined in `package.json`.
-
-## Running the Project
-
-### Option 1: Development Mode (Recommended)
-
-Run both the backend server and frontend development server in development mode.
-
-#### Terminal 1 - Start the Backend Server
-
-```bash
-$env:NODE_ENV='development'; npx tsx server/index.ts
-```
-
-The server will start on **http://127.0.0.1:5000**
-
-Expected output:
-```
-1:40:51 PM [express] serving on port 5000
-```
-
-#### Terminal 2 - Start the Frontend Dev Server
-
-Open a new terminal and run:
-
-```bash
-npm run dev:client
-```
-
-The frontend will be available at **http://localhost:5000/**
-
-Expected output:
-```
-  VITE v7.1.12  ready in 741 ms
-  ➜  Local:   http://localhost:5000/
-  ➜  Network: http://172.26.0.1:5000/
-```
-
-### Option 2: Production Mode
-
-Build and run the application in production mode.
-
-#### Step 1: Build the Project
-
-```bash
+# Build the frontend (React → static files)
 npm run build
 ```
 
-This will compile the client and server for production.
+---
 
-#### Step 2: Start the Server
+### Step 4 — Run the Server
 
+**Option A: Direct (for testing)**
 ```bash
 npm start
 ```
 
-The application will be served on port 5000 with both API and client served from the same port.
-
-## Available Scripts
-
+**Option B: PM2 (recommended for production)**
 ```bash
-npm run dev:client    # Start Vite dev server for frontend (port 5000)
-npm run dev           # Start Express server in development mode
-npm run build         # Build both client and server for production
-npm start             # Run production server
-npm run check         # Run TypeScript type checking
-npm run db:push       # Push database schema changes using Drizzle
+npm install -g pm2
+pm2 start npm --name "sms-academy" -- start
+pm2 save
+pm2 startup
 ```
 
-## Project Structure
+The app will be available at: `http://your-ec2-ip:5051`
 
-```
-.
-├── client/                 # React frontend application
-│   ├── src/
-│   │   ├── components/    # Reusable React components
-│   │   ├── pages/         # Page components (dashboard, students, etc.)
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── lib/           # Utilities and helpers
-│   │   └── App.tsx        # Main app component
-│   └── index.html         # HTML entry point
-├── server/                # Express backend server
-│   ├── index.ts           # Main server file
-│   ├── routes.ts          # API routes
-│   ├── static.ts          # Static file serving
-│   └── storage.ts         # Data storage logic
-├── shared/               # Shared code between client and server
-│   └── schema.ts         # Database schema definitions
-├── package.json          # Project dependencies and scripts
-├── tsconfig.json         # TypeScript configuration
-└── vite.config.ts        # Vite bundler configuration
+---
+
+### Step 5 — Nginx Reverse Proxy (optional but recommended)
+
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:5051;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
 ```
 
-## Features
+---
 
-- **Student Management** - Add, view, and manage student information
-- **Attendance Tracking** - Track attendance with QR code scanning
-- **Fee Management** - Collect and manage student fees
-- **Branch Management** - Manage multiple academy branches
-- **Dashboard** - Role-based dashboards (Admin, Manager, Receptionist, Trainer)
-- **Reports** - Generate comprehensive reports
-- **Responsive UI** - Modern, responsive interface built with React and Shadcn UI components
+## 🔑 Default Login Credentials
 
-## Troubleshooting
+| Role    | Username | Password  |
+|---------|----------|-----------|
+| Admin   | admin    | password  |
 
-### Port Already in Use
-If port 5000 is already in use, you can specify a different port:
-```bash
-$env:PORT=3000; npx tsx server/index.ts
-```
+> ⚠️ Change all passwords immediately after first deployment!
 
-### ENOTSUP Error on Windows
-If you encounter "listen ENOTSUP" error, this is a known Windows issue with IPv6. The fix has been applied (using 127.0.0.1 instead of 0.0.0.0).
+---
 
-### Dependencies Installation Issues
-If `npm install` fails, try:
-```bash
-npm cache clean --force
-rm -r node_modules
-npm install
-```
+## 📋 Available npm Scripts
 
-## Environment Variables
+| Command          | Description                        |
+|------------------|------------------------------------|
+| `npm run dev`    | Start dev server (frontend + backend) |
+| `npm run build`  | Build frontend for production      |
+| `npm start`      | Start production server            |
 
-Create a `.env` file in the root directory (if needed):
-```
-NODE_ENV=development
-PORT=5000
-DATABASE_URL=postgresql://user:password@localhost:5432/academy
-```
+---
 
-## Database Setup
+## 🗄️ Database Tables (18 total)
 
-If using PostgreSQL, push the schema:
-```bash
-npm run db:push
-```
-
-## License
-
-MIT
-
+| # | Table | Purpose |
+|---|-------|---------|
+| 1 | `users` | Admin, manager, receptionist, trainer accounts |
+| 2 | `branches` | Academy branch locations |
+| 3 | `programs` | Sports programs (Karate, Yoga, etc.) |
+| 4 | `batches` | Batch/class groups |
+| 5 | `trainers` | Trainer profiles |
+| 6 | `students` | Student records + auth |
+| 7 | `student_portal_credentials` | Student login credentials |
+| 8 | `attendance` | Student attendance records |
+| 9 | `fee_structures` | Monthly fee per program |
+| 10 | `student_enrollments` | Student ↔ program mapping |
+| 11 | `student_fees` | Monthly fee records |
+| 12 | `payments` | Payment transactions (UPI/cash/card) |
+| 13 | `fees` | Legacy fee tracking |
+| 14 | `student_remarks` | Trainer/admin notes on students |
+| 15 | `student_uniforms` | Uniform issuance tracking |
+| 16 | `trainer_attendance` | Trainer clock-in/clock-out |
+| 17 | `notifications` | System notifications |
+| 18 | `system_settings` | App configuration |

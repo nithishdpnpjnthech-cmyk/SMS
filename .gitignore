@@ -1,9 +1,36 @@
-node_modules
-dist
-.DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
+# ── Build output ─────────────────────────────────────────────
+node_modules/
+dist/
+client/dist/
+server/public/
+
+# ── Environment (NEVER commit real .env) ─────────────────────
 .env
+.env.local
+.env.production
+
+# ── OS junk ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Vite & TypeScript ─────────────────────────────────────────
+vite.config.ts.*
+tsconfig.tsbuildinfo
+
+# ── Logs ──────────────────────────────────────────────────────
 *.log
+npm-debug.log*
+
+# ── Test / scratch files (not for production) ─────────────────
 test-integrations.ts
+server/simple-auth-test.ts
+server/test-auth-simple.ts
+server/test-authentication.ts
+
+# ── Old cleanup SQL scripts (superseded by database.sql) ──────
+cleanup-unused-tables.sql
+database-cleanup-final.sql
+
+# ── Archives ─────────────────────────────────────────────────
+*.tar.gz
+*.zip

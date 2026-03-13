@@ -18,6 +18,170 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
+// Alternative invoice generation using window.print
+const generateInvoicePrint = (data: { studentName: string; amount: number; paymentMethod: string; notes: string; date: Date }) => {
+  const invoiceWindow = window.open('', '_blank', 'width=800,height=600');
+  if (!invoiceWindow) {
+    alert('Please allow popups to generate invoice');
+    return;
+  }
+
+  const invoiceHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Fee Invoice</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .invoice { max-width: 800px; margin: 0 auto; border: 2px solid #f97316; padding: 30px; }
+        .header { text-align: center; border-bottom: 3px solid #f97316; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { color: #f97316; margin: 0; font-size: 32px; }
+        .details { margin: 20px 0; }
+        .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .label { font-weight: bold; color: #666; }
+        .value { color: #000; }
+        .amount { font-size: 24px; font-weight: bold; color: #f97316; text-align: right; margin-top: 20px; }
+        .footer { margin-top: 40px; text-align: center; color: #666; font-size: 12px; }
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="invoice">
+        <div class="header">
+          <h1>HUURA ACADEMY</h1>
+          <p>Fee Payment Invoice</p>
+        </div>
+        <div class="details">
+          <div class="row">
+            <span class="label">Invoice Date:</span>
+            <span class="value">${data.date.toLocaleDateString('en-IN')}</span>
+          </div>
+          <div class="row">
+            <span class="label">Student Name:</span>
+            <span class="value">${data.studentName}</span>
+          </div>
+          <div class="row">
+            <span class="label">Payment Method:</span>
+            <span class="value">${data.paymentMethod.toUpperCase()}</span>
+          </div>
+          ${data.notes ? `<div class="row"><span class="label">Notes:</span><span class="value">${data.notes}</span></div>` : ''}
+        </div>
+        <div class="amount">
+          Amount Paid: ₹${data.amount.toLocaleString('en-IN')}
+        </div>
+        <div class="footer">
+          <p>Thank you for your payment!</p>
+          <p>This is a computer-generated invoice.</p>
+        </div>
+      </div>
+      <div class="no-print" style="text-align: center; margin-top: 20px;">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #f97316; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Invoice</button>
+        <button onclick="window.close()" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">Close</button>
+      </div>
+    </body>
+    </html>
+  `;
+
+  invoiceWindow.document.write(invoiceHTML);
+  invoiceWindow.document.close();
+};
+
+const generateInvoice = (data: { studentName: string; amount: number; paymentMethod: string; notes: string; date: Date }) => {
+  try {
+    console.log('Generating invoice for:', data.studentName);
+    
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Fee Invoice</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 40px; }
+          .invoice { max-width: 800px; margin: 0 auto; border: 2px solid #f97316; padding: 30px; }
+          .header { text-align: center; border-bottom: 3px solid #f97316; padding-bottom: 20px; margin-bottom: 30px; }
+          .header h1 { color: #f97316; margin: 0; font-size: 32px; }
+          .details { margin: 20px 0; }
+          .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+          .label { font-weight: bold; color: #666; }
+          .value { color: #000; }
+          .amount { font-size: 24px; font-weight: bold; color: #f97316; text-align: right; margin-top: 20px; }
+          .footer { margin-top: 40px; text-align: center; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="invoice">
+          <div class="header">
+            <h1>HUURA ACADEMY</h1>
+            <p>Fee Payment Invoice</p>
+          </div>
+          <div class="details">
+            <div class="row">
+              <span class="label">Invoice Date:</span>
+              <span class="value">${data.date.toLocaleDateString('en-IN')}</span>
+            </div>
+            <div class="row">
+              <span class="label">Student Name:</span>
+              <span class="value">${data.studentName}</span>
+            </div>
+            <div class="row">
+              <span class="label">Payment Method:</span>
+              <span class="value">${data.paymentMethod.toUpperCase()}</span>
+            </div>
+            ${data.notes ? `<div class="row"><span class="label">Notes:</span><span class="value">${data.notes}</span></div>` : ''}
+          </div>
+          <div class="amount">
+            Amount Paid: ₹${data.amount.toLocaleString('en-IN')}
+          </div>
+          <div class="footer">
+            <p>Thank you for your payment!</p>
+            <p>This is a computer-generated invoice.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([invoiceHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `invoice-${data.studentName.replace(/\s+/g, '-')}-${Date.now()}.html`;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    
+    // Use setTimeout to ensure the link is properly added to DOM
+    setTimeout(() => {
+      try {
+        link.click();
+        console.log('Invoice download triggered successfully');
+      } catch (clickError) {
+        console.error('Error clicking download link:', clickError);
+        // Fallback to print method
+        generateInvoicePrint(data);
+      } finally {
+        // Clean up
+        setTimeout(() => {
+          if (document.body.contains(link)) {
+            document.body.removeChild(link);
+          }
+          URL.revokeObjectURL(url);
+        }, 100);
+      }
+    }, 100);
+    
+  } catch (error) {
+    console.error('Error generating invoice:', error);
+    // Fallback to print method
+    generateInvoicePrint(data);
+  }
+};
+
 declare global {
   interface Window {
     Razorpay: any;
@@ -155,6 +319,20 @@ export default function CollectFees() {
           description: `Fee collected successfully${result.remainingCredit > 0 ? `. Credit remaining: ₹${result.remainingCredit}` : ''}`,
         });
 
+        // Generate invoice
+        try {
+          generateInvoice({
+            studentName: persistedStudent?.name || 'Student',
+            amount: Number(amount),
+            paymentMethod,
+            notes,
+            date: new Date()
+          });
+        } catch (invoiceError) {
+          console.error('Invoice generation failed:', invoiceError);
+          // Don't fail the entire process if invoice generation fails
+        }
+
         // Reset form immediately
         setSelectedStudentId("");
         setPersistedStudent(null);
@@ -220,6 +398,20 @@ export default function CollectFees() {
                 title: "Success",
                 description: "Payment collected via UPI successfully",
               });
+              
+              // Generate invoice
+              try {
+                generateInvoice({
+                  studentName: persistedStudent?.name || 'Student',
+                  amount: Number(amount),
+                  paymentMethod: 'online',
+                  notes,
+                  date: new Date()
+                });
+              } catch (invoiceError) {
+                console.error('Invoice generation failed:', invoiceError);
+                // Don't fail the entire process if invoice generation fails
+              }
               
               // Reset form immediately
               setSelectedStudentId("");
@@ -449,6 +641,57 @@ export default function CollectFees() {
                 >
                   Terminate Process
                 </Button>
+                
+                {/* Test Invoice Buttons - for debugging */}
+                {persistedStudent && amount && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        try {
+                          generateInvoice({
+                            studentName: persistedStudent.name,
+                            amount: Number(amount),
+                            paymentMethod: paymentMethod || 'cash',
+                            notes: notes || 'Test invoice',
+                            date: new Date()
+                          });
+                        } catch (error) {
+                          console.error('Test invoice failed:', error);
+                          alert('Invoice generation failed. Check console for details.');
+                        }
+                      }}
+                      className="w-full sm:w-auto font-black uppercase text-xs tracking-widest h-14 px-10 rounded-xl border-muted/50 hover:bg-muted/10 transition-all"
+                      disabled={isLoading}
+                    >
+                      Test Download
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        try {
+                          generateInvoicePrint({
+                            studentName: persistedStudent.name,
+                            amount: Number(amount),
+                            paymentMethod: paymentMethod || 'cash',
+                            notes: notes || 'Test invoice',
+                            date: new Date()
+                          });
+                        } catch (error) {
+                          console.error('Test print invoice failed:', error);
+                          alert('Print invoice generation failed. Check console for details.');
+                        }
+                      }}
+                      className="w-full sm:w-auto font-black uppercase text-xs tracking-widest h-14 px-10 rounded-xl border-muted/50 hover:bg-muted/10 transition-all"
+                      disabled={isLoading}
+                    >
+                      Test Print
+                    </Button>
+                  </>
+                )}
+                
                 <Button
                   type="submit"
                   className="flex-1 font-black uppercase text-xs tracking-[0.2em] h-14 rounded-xl shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.98] bg-primary hover:bg-primary/90"

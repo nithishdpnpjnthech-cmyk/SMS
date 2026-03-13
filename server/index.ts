@@ -17,7 +17,7 @@ app.use((req, res, next) => {
   try {
     const shortBody = req.body && Object.keys(req.body).length ? JSON.stringify(Object.assign({}, req.body, { password: req.body.password ? '***' : undefined })).slice(0, 1000) : '';
     console.log(`[req] ${new Date().toISOString()} ${req.method} ${req.originalUrl} origin=${req.get('origin') || '-'} body=${shortBody}`);
-  } catch (e) {}
+  } catch (e) { }
   next();
 });
 
@@ -41,7 +41,9 @@ app.use((req, res, next) => {
           'http://localhost:5175',
           'http://127.0.0.1:5175',
           'http://localhost:5050',
-          'http://127.0.0.1:5050'
+          'http://127.0.0.1:5050',
+          // Allow production domain via env variable (set on AWS)
+          ...(process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : [])
         ];
         if (allowedOrigins.includes(origin)) {
           res.header('Access-Control-Allow-Origin', origin);

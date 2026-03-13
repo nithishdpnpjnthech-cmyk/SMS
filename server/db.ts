@@ -24,18 +24,15 @@ class Database {
       port: Number(process.env.DB_PORT) || 3306,
     };
 
-    // 🔍 TEMP DEBUG (REMOVE AFTER CONFIRMATION)
-    console.log(
-      "DB CONFIG CHECK →",
-      config.user,
-      config.password ? "PASSWORD_LOADED" : "PASSWORD_MISSING"
-    );
+    // Confirm DB connectivity on startup
+    console.log(`✅ DB connecting → host=${config.host} db=${config.database} user=${config.user}`);
 
     this.pool = mysql.createPool({
       ...config,
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: 20,   // Suitable for production (AWS RDS)
       queueLimit: 0,
+      connectTimeout: 10000, // 10s connection timeout
     });
   }
 
